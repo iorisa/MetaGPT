@@ -12,9 +12,7 @@ import typer
 
 from metagpt.actions import UserRequirement
 from metagpt.actions.prepare_documents import PrepareDocuments
-from metagpt.actions.requirement_analysis.format_use_case_actor import (
-    FormatUseCaseActor,
-)
+from metagpt.actions.requirement_analysis import activity, use_case
 from metagpt.config import CONFIG
 from metagpt.roles import Role
 from metagpt.schema import Message
@@ -27,13 +25,28 @@ class RequirementAnalyzer(Role):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         # Set events or actions the Architect should watch or be aware of
-        self._watch({UserRequirement, PrepareDocuments, FormatUseCaseActor})
+        self._watch(
+            {
+                UserRequirement,
+                PrepareDocuments,
+                use_case.IdentifyActor,
+                use_case.IdentifyUseCase,
+                use_case.IdentifySystem,
+                activity.EnrichUseCase,
+            }
+        )
 
     async def _observe(self, ignore_memory=False) -> int:
         return await super()._observe(ignore_memory=True)
 
     async def _think(self) -> bool:
-        handlers = {any_to_str(UserRequirement): PrepareDocuments(), any_to_str(PrepareDocuments): FormatUseCaseActor()}
+        handlers = {
+            any_to_str(UserRequirement): PrepareDocuments(),
+            any_to_str(PrepareDocuments): use_case.IdentifyActor(),
+            any_to_str(use_case.IdentifyActor): use_case.IdentifyUseCase(),
+            any_to_str(use_case.IdentifyUseCase): use_case.IdentifySystem(),
+            any_to_str(use_case.IdentifySystem): activity.EnrichUseCase(),
+        }
         self.rc.todo = handlers.get(self.rc.news[0].cause_by, None)
         return bool(self.rc.todo is not None)
 

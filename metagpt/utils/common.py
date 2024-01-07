@@ -24,7 +24,7 @@ import traceback
 import typing
 from pathlib import Path
 from typing import Any, List, Tuple, Union
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 import aiofiles
 import loguru
@@ -408,8 +408,8 @@ def concat_namespace(*args, delimiter=":") -> str:
     return delimiter.join(str(value) for value in args)
 
 
-def split_namespace(ns_class_name: str, delimiter=":") -> List[str]:
-    return ns_class_name.split(delimiter)
+def split_namespace(ns_class_name: str, delimiter=":", count=1) -> List[str]:
+    return ns_class_name.split(delimiter, count)
 
 
 def parse_json_code_block(markdown_text: str) -> List[str]:
@@ -417,13 +417,19 @@ def parse_json_code_block(markdown_text: str) -> List[str]:
     return [v.strip() for v in json_blocks]
 
 
-def concat_affix(text, affix="brace"):
+def add_affix(text, affix="brace"):
     mappings = {
         "brace": lambda x: "{" + x + "}",
         "url": lambda x: quote("{" + x + "}"),
     }
     encoder = mappings.get(affix, lambda x: x)
     return encoder(text)
+
+
+def remove_affix(text, affix="brace"):
+    mappings = {"brace": lambda x: x[1:-1], "url": lambda x: unquote(x)[1:-1]}
+    decoder = mappings.get(affix, lambda x: x)
+    return decoder(text)
 
 
 def general_after_log(i: "loguru.Logger", sec_format: str = "%0.3f") -> typing.Callable[["RetryCallState"], None]:

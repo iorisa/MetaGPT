@@ -26,11 +26,29 @@ class DiGraphRepository(GraphRepository):
     async def insert(self, subject: str, predicate: str, object_: str):
         self._repo.add_edge(subject, object_, predicate=predicate)
 
-    async def upsert(self, subject: str, predicate: str, object_: str):
-        pass
+    async def delete(self, subject: str = None, predicate: str = None, object_: str = None) -> int:
+        rows = []
+        for s, o, p in self._repo.edges(data="predicate"):
+            if subject and subject != s:
+                continue
+            if object_ and object_ != o:
+                continue
+            rows.append(SPO(subject=s, object_=o, predicate=p))
+        if not rows:
+            return 0
 
-    async def update(self, subject: str, predicate: str, object_: str):
-        pass
+        affected = []
+        unaffected = []
+        for r in rows:
+            self._repo.remove_edge(r.subject, r.object_)
+            if predicate and predicate == r.predicate:
+                affected.append(r)
+            else:
+                unaffected.append(r)
+
+        for r in unaffected:
+            self._repo.add_edge(r.subject, r.object_, predicate=r.predicate)
+        return len(affected)
 
     async def select(self, subject: str = None, predicate: str = None, object_: str = None) -> List[SPO]:
         result = []

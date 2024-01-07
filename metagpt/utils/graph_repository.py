@@ -56,11 +56,7 @@ class GraphRepository(ABC):
         pass
 
     @abstractmethod
-    async def upsert(self, subject: str, predicate: str, object_: str):
-        pass
-
-    @abstractmethod
-    async def update(self, subject: str, predicate: str, object_: str):
+    async def delete(self, subject: str = None, predicate: str = None, object_: str = None) -> int:
         pass
 
     @abstractmethod
