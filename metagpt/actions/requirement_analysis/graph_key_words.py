@@ -23,3 +23,4 @@ class GraphKeyWords:
     hasOutput = "hasOutput"
     hasAction = "hasAction"
     hasReason = "hasReason"
+    associate = "associate"

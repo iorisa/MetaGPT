@@ -46,9 +46,17 @@ class IdentifyActor(Action):
             rsp = await self.llm.aask(
                 requirement,
                 system_msgs=[
-                    "You are a translation tool that converts text into UML 2.0 actors according to the UML 2.0 standard.",
-                    'Actor names must convey information relevant to the requirements; the use of generic terms like "user", "actor" and "system" is prohibited.',
-                    'Translate each actor\'s information into a JSON format with keys "actor_name", "actor_description", and a "reason" key to explain the basis of the translation, citing specific descriptions from the original text.',
+                    "You are a translation tool that converts text into UML 2.0 actors according to the UML 2.0 "
+                    "standard.",
+                    "Actor names must clearly represent information related to the original requirements; "
+                    'the use of generic terms like "user", "actor" and "system" is prohibited.',
+                    "Translate each actor's information into a JSON format that includes "
+                    'a "actor_name" key for the actor\'s name containing the original description phrases referenced '
+                    "from the original requirements, "
+                    'an "actor_description" key to describes the actor including the original description phrases or '
+                    "sentence referenced from the original requirements, "
+                    'and a "reason" key to explain the basis of the translation, citing specific descriptions from '
+                    "the original text.",
                 ],
             )
             logger.info(rsp)

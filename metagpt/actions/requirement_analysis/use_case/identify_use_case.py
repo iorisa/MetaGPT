@@ -7,6 +7,7 @@
 @Desc    : The implementation of the Chapter 2.2.4 of RFC145.
 """
 from pathlib import Path
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -41,8 +42,21 @@ class IdentifyUseCase(Action):
             rsp = await self.llm.aask(
                 requirement,
                 system_msgs=[
-                    "You are a translation tool that converts text into UML 2.0 use cases according to the UML 2.0 standard.",
-                    'Translate the information of each use case into JSON format. Use a "name" key for the title of the use case starting with a verb, a "description" key for a summary of the use case, a "detail" key to describe the specific operations to be carried out in the use case, a "goal" key to explain the problem the use case aims to solve, and a "reason" key to provide the basis for the translation, citing specific descriptions from the original text.',
+                    "You are a translation tool that converts text into UML 2.0 use cases according to the UML 2.0 "
+                    "standard.",
+                    "Translate the information from each use case into a single markdown JSON format. ",
+                    'Use a "name" key for the title of the use case starting with a verb, '
+                    'a "description" key for a summary of the use case, '
+                    'a "detail" key to describe the specific operations to be carried out in the use case, '
+                    'a "goal" key to explain the problem the use case aims to solve, '
+                    'a "references" key to list all original description phrases or sentences referred from the '
+                    "original requirements, "
+                    'a potentially "performers" key to list all original description phrases that describe entities '
+                    "performing actions in the use case, "
+                    'a potentially empty "recipients" key to list all original description phrases describing entities '
+                    "that are the target of actions in the use case, "
+                    'and a "reason" key to provide the basis for the translation, citing specific descriptions from '
+                    "the original text.",
                 ],
             )
             logger.info(rsp)
@@ -53,6 +67,9 @@ class IdentifyUseCase(Action):
                 description: str
                 detail: str
                 goal: str
+                references: List[str]
+                performers: Optional[List[str]] = None
+                recipients: Optional[List[str]] = None
                 reason: str
 
             use_case_namespace = concat_namespace(self.context.kwargs.namespace, GraphKeyWords.UseCase, delimiter="_")

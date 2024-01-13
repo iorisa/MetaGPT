@@ -31,7 +31,7 @@ import loguru
 from pydantic_core import to_jsonable_python
 from tenacity import RetryCallState, _utils
 
-from metagpt.const import MESSAGE_ROUTE_TO_ALL
+from metagpt.const import MESSAGE_ROUTE_TO_ALL, REASON_KEY
 from metagpt.logs import logger
 from metagpt.utils.exceptions import handle_exception
 
@@ -588,3 +588,21 @@ def list_files(root: str | Path) -> List[Path]:
     except Exception as e:
         logger.error(f"Error: {e}")
     return files
+
+
+def json_to_markdown_prompt(json_val: str, exclude: List[str] = None, include: typing.Dict[str, Any] = None) -> str:
+    if exclude is None:
+        exclude = [REASON_KEY]
+
+    m = json.loads(json_val)
+    if include:
+        for k, v in include.items():
+            if k not in m:
+                m[k] = v
+    prompt = ""
+    for k, v in m.items():
+        if k in exclude:
+            continue
+        val = "\n".join(v) if isinstance(v, list) else v
+        prompt += f"##{k}\n{val}\n\n---\n"
+    return prompt

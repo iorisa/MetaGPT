@@ -52,12 +52,19 @@ class IdentifySystem(Action):
         for r in rows:
             ns, val = split_namespace(r.subject)
             actor_name = remove_affix(val)
-            prompt = f'{requirement}\nn\n---\nBased on the above requirement description, does "{actor_name}" refer to the "system" in the Use Case Diagram?'
+            prompt = (
+                f"{requirement}\nn\n---\nBased on the above requirement description, "
+                f'does "{actor_name}" refer to the "system" in the Use Case Diagram?'
+            )
             rsp = await self.llm.aask(
                 prompt,
                 system_msgs=[
-                    'You are an actor classification tool based on the UML 2.0 standard. Your responsibility is to distinguish whether a specified actor represents the "system" in the Use Case Diagram.',
-                    'Return a JSON object in Markdown format with an "is_system" key containing a boolean value, and a "reason" key explaining why.',
+                    "You are an actor classification tool based on the UML 2.0 standard.",
+                    'Your responsibility is to distinguish whether a specified actor represents the "system" in '
+                    "the Use Case Diagram.",
+                    "Return a JSON object in Markdown format with "
+                    'an "is_system" key containing a boolean value, '
+                    'and a "reason" key explaining why.',
                 ],
             )
             logger.info(rsp)

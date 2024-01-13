@@ -18,6 +18,7 @@ from metagpt.schema import Message
 from metagpt.utils.common import (
     add_affix,
     concat_namespace,
+    json_to_markdown_prompt,
     parse_json_code_block,
     remove_affix,
     split_namespace,
@@ -31,7 +32,7 @@ class EnrichUseCase(Action):
         filename = Path(self.project_repo.workdir.name).with_suffix(".json")
         doc = await self.project_repo.docs.graph_repo.get(filename=filename)
         graph_db = DiGraphRepository(name=filename).load_json(doc.content)
-        use_case_namespace = concat_namespace(self.context.namespace, GraphKeyWords.UseCase, delimiter="_")
+        use_case_namespace = concat_namespace(self.context.kwargs.namespace, GraphKeyWords.UseCase, delimiter="_")
         use_case_names = await graph_db.select(
             predicate=concat_namespace(use_case_namespace, GraphKeyWords.Is),
             object_=concat_namespace(use_case_namespace, GraphKeyWords.useCase),
@@ -48,25 +49,34 @@ class EnrichUseCase(Action):
         return Message(content="", cause_by=self)
 
     async def _enrich_use_case(self, graph_db: GraphRepository, ns_use_case_name: str, use_case_detail: str):
+        prompt = json_to_markdown_prompt(use_case_detail)
         rsp = await self.llm.aask(
-            use_case_detail,
+            prompt,
             system_msgs=[
                 "You are a tool that translates UML use case text into markdown a JSON format.",
-                'Actor names must convey information relevant to the requirements; the use of generic terms like "user", "actor" and "system" is prohibited.',
-                'Transform the given use case text into a Markdown JSON object that includes a "actors" key to list relevant actors, an "inputs" key to list relevant use case inputs, an "outputs" key to list relevant use case outputs, an "actions" key to list the consecutive actions that need to be performed, and a "reason" key explaining why.',
+                "Use case descriptions should strive to retain the original information as much as possible.",
+                "In cases of missing information, it is permissible to reasonably expand on the original information.",
+                "The names of the performer and recipient must clearly represent information related to the "
+                'original requirements; the use of generic terms such as "the user"", "the actor", and "the system" '
+                "is prohibited.",
+                "Transform the given use case text into a Markdown JSON object that includes "
+                'a "references" key to list all original description phrases referred from the original requirements, '
+                'an "inputs" key to list relevant use case inputs, an "outputs" key to list relevant use case outputs, '
+                'an "actions" key to list the consecutive actions that need to be performed, '
+                'and a "reason" key explaining why.',
             ],
         )
         logger.info(rsp)
         json_blocks = parse_json_code_block(rsp)
 
         class _JsonCodeBlock(BaseModel):
-            actors: List[str]
+            references: List[str]
             inputs: List[str]
             outputs: List[str]
             actions: List[str]
             reason: str
 
-        activity_namespace = concat_namespace(self.context.namespace, GraphKeyWords.Activity, delimiter="_")
+        activity_namespace = concat_namespace(self.context.kwargs.namespace, GraphKeyWords.Activity, delimiter="_")
         for block in json_blocks:
             m = _JsonCodeBlock.model_validate_json(block)
             await graph_db.insert(
@@ -74,12 +84,6 @@ class EnrichUseCase(Action):
                 predicate=concat_namespace(activity_namespace, GraphKeyWords.hasDetail),
                 object_=concat_namespace(activity_namespace, add_affix(block)),
             )
-            for actor in m.actors:
-                await graph_db.insert(
-                    subject=ns_use_case_name,
-                    predicate=concat_namespace(activity_namespace, GraphKeyWords.hasActor),
-                    object_=concat_namespace(activity_namespace, add_affix(actor)),
-                )
             for input in m.inputs:
                 await graph_db.insert(
                     subject=ns_use_case_name,
@@ -103,5 +107,6 @@ class EnrichUseCase(Action):
                 predicate=concat_namespace(activity_namespace, GraphKeyWords.hasReason),
                 object_=concat_namespace(activity_namespace, add_affix(m.reason)),
             )
-        await graph_db.save()
+
+        await graph_db.save(path=self.project_repo.docs.graph_repo.workdir)
         return Message(content=rsp, cause_by=self)
