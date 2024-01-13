@@ -15,8 +15,8 @@ import uuid
 
 import pytest
 
-from metagpt.config import CONFIG, Config
 from metagpt.const import DEFAULT_WORKSPACE_ROOT, TEST_DATA_PATH
+from metagpt.context import CONTEXT
 from metagpt.llm import LLM
 from metagpt.logs import logger
 from metagpt.utils.git_repository import GitRepository
@@ -30,7 +30,6 @@ ALLOW_OPENAI_API_CALL = int(
 
 @pytest.fixture(scope="session")
 def rsp_cache():
-    # model_version = CONFIG.openai_api_model
     rsp_cache_file_path = TEST_DATA_PATH / "rsp_cache.json"  # read repo-provided
     new_rsp_cache_file_path = TEST_DATA_PATH / "rsp_cache_new.json"  # exporting a new copy
     if os.path.exists(rsp_cache_file_path):
@@ -75,7 +74,7 @@ def llm_mock(rsp_cache, mocker, request):
 class Context:
     def __init__(self):
         self._llm_ui = None
-        self._llm_api = LLM(provider=CONFIG.get_default_llm_provider_enum())
+        self._llm_api = LLM()
 
     @property
     def llm_api(self):
@@ -89,9 +88,9 @@ class Context:
 @pytest.fixture(scope="package")
 def llm_api():
     logger.info("Setting up the test")
-    _context = Context()
+    g_context = Context()
 
-    yield _context.llm_api
+    yield g_context.llm_api
 
     logger.info("Tearing down the test")
 
@@ -141,12 +140,13 @@ def loguru_caplog(caplog):
 # init & dispose git repo
 @pytest.fixture(scope="function", autouse=True)
 def setup_and_teardown_git_repo(request):
-    CONFIG.git_repo = GitRepository(local_path=DEFAULT_WORKSPACE_ROOT / f"unittest/{uuid.uuid4().hex}")
-    CONFIG.git_reinit = True
+    CONTEXT.git_repo = GitRepository(local_path=DEFAULT_WORKSPACE_ROOT / f"unittest/{uuid.uuid4().hex}")
+    CONTEXT.config.git_reinit = True
 
     # Destroy git repo at the end of the test session.
     def fin():
-        CONFIG.git_repo.delete_repository()
+        if CONTEXT.git_repo:
+            CONTEXT.git_repo.delete_repository()
 
     # Register the function for destroying the environment.
     request.addfinalizer(fin)
@@ -154,7 +154,7 @@ def setup_and_teardown_git_repo(request):
 
 @pytest.fixture(scope="session", autouse=True)
 def init_config():
-    Config()
+    pass
 
 
 @pytest.fixture(scope="function")

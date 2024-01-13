@@ -10,7 +10,6 @@ from typing import Callable, Coroutine, Literal, Optional, Union, overload
 
 from semantic_kernel.skill_definition import sk_function
 
-from metagpt.config import CONFIG
 from metagpt.tools import SearchEngineType
 
 
@@ -43,10 +42,9 @@ class SearchEngine:
 
     def __init__(
         self,
-        engine: Optional[SearchEngineType] = None,
+        engine: Optional[SearchEngineType] = SearchEngineType.SERPER_GOOGLE,
         run_func: Callable[[str, int, bool], Coroutine[None, None, Union[str, list[str]]]] = None,
     ):
-        engine = engine or CONFIG.search_engine
         if engine == SearchEngineType.SERPAPI_GOOGLE:
             module = "metagpt.tools.search_engine_serpapi"
             run_func = importlib.import_module(module).SerpAPIWrapper().run

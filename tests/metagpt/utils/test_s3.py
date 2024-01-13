@@ -12,7 +12,7 @@ import aiofiles
 import mock
 import pytest
 
-from metagpt.config import CONFIG
+from metagpt.config2 import Config
 from metagpt.utils.common import aread
 from metagpt.utils.s3 import S3
 
@@ -35,22 +35,18 @@ async def test_s3(mock_session_class):
     mock_session_class.return_value = mock_session_object
 
     # Prerequisites
-    # assert CONFIG.S3_ACCESS_KEY and CONFIG.S3_ACCESS_KEY != "YOUR_S3_ACCESS_KEY"
-    # assert CONFIG.S3_SECRET_KEY and CONFIG.S3_SECRET_KEY != "YOUR_S3_SECRET_KEY"
-    # assert CONFIG.S3_ENDPOINT_URL and CONFIG.S3_ENDPOINT_URL != "YOUR_S3_ENDPOINT_URL"
-    # assert CONFIG.S3_BUCKET and CONFIG.S3_BUCKET != "YOUR_S3_BUCKET"
-
-    conn = S3()
-    assert conn.is_valid
+    s3 = Config.default().s3
+    assert s3
+    conn = S3(s3)
     object_name = "unittest.bak"
-    await conn.upload_file(bucket=CONFIG.S3_BUCKET, local_path=__file__, object_name=object_name)
+    await conn.upload_file(bucket=s3.bucket, local_path=__file__, object_name=object_name)
     pathname = (Path(__file__).parent / uuid.uuid4().hex).with_suffix(".bak")
     pathname.unlink(missing_ok=True)
-    await conn.download_file(bucket=CONFIG.S3_BUCKET, object_name=object_name, local_path=str(pathname))
+    await conn.download_file(bucket=s3.bucket, object_name=object_name, local_path=str(pathname))
     assert pathname.exists()
-    url = await conn.get_object_url(bucket=CONFIG.S3_BUCKET, object_name=object_name)
+    url = await conn.get_object_url(bucket=s3.bucket, object_name=object_name)
     assert url
-    bin_data = await conn.get_object(bucket=CONFIG.S3_BUCKET, object_name=object_name)
+    bin_data = await conn.get_object(bucket=s3.bucket, object_name=object_name)
     assert bin_data
     async with aiofiles.open(__file__, mode="r", encoding="utf-8") as reader:
         data = await reader.read()
@@ -58,18 +54,14 @@ async def test_s3(mock_session_class):
     assert "http" in res
 
     # Mock session env
+    s3.access_key = "ABC"
     type(reader_mock).url = mock.PropertyMock(return_value="")
-    old_options = CONFIG.options.copy()
-    new_options = old_options.copy()
-    new_options["S3_ACCESS_KEY"] = "YOUR_S3_ACCESS_KEY"
-    CONFIG.set_context(new_options)
     try:
-        conn = S3()
-        assert not conn.is_valid
+        conn = S3(s3)
         res = await conn.cache("ABC", ".bak", "script")
         assert not res
-    finally:
-        CONFIG.set_context(old_options)
+    except Exception:
+        pass
 
     await reader.close()
 

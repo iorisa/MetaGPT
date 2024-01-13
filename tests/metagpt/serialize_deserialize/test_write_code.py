@@ -9,7 +9,7 @@ from metagpt.actions import WriteCode
 from metagpt.schema import CodingContext, Document
 
 
-def test_write_design_serialize():
+def test_write_design_serdeser():
     action = WriteCode()
     ser_action_dict = action.model_dump()
     assert ser_action_dict["name"] == "WriteCode"
@@ -17,12 +17,12 @@ def test_write_design_serialize():
 
 
 @pytest.mark.asyncio
-async def test_write_code_deserialize():
+async def test_write_code_serdeser():
     context = CodingContext(
         filename="test_code.py", design_doc=Document(content="write add function to calculate two numbers")
     )
     doc = Document(content=context.model_dump_json())
-    action = WriteCode(context=doc)
+    action = WriteCode(i_context=doc)
     serialized_data = action.model_dump()
     new_action = WriteCode(**serialized_data)
 

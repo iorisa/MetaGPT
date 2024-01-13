@@ -14,7 +14,7 @@ from typing import Callable
 import pytest
 
 import tests.data.search
-from metagpt.config import CONFIG
+from metagpt.config2 import config
 from metagpt.logs import logger
 from metagpt.tools import SearchEngineType
 from metagpt.tools.search_engine import SearchEngine
@@ -49,14 +49,14 @@ class MockSearchEnine:
 async def test_search_engine(search_engine_type, run_func: Callable, max_results: int, as_string: bool, aiohttp_mocker):
     # Prerequisites
     cache_json_path = None
+    # FIXME: 不能使用全局的config，而是要自己实例化对应的config
     if search_engine_type is SearchEngineType.SERPAPI_GOOGLE:
-        assert CONFIG.SERPAPI_API_KEY and CONFIG.SERPAPI_API_KEY != "YOUR_API_KEY"
+        assert config.search
         cache_json_path = search_cache_path / f"serpapi-metagpt-{max_results}.json"
     elif search_engine_type is SearchEngineType.DIRECT_GOOGLE:
-        assert CONFIG.GOOGLE_API_KEY and CONFIG.GOOGLE_API_KEY != "YOUR_API_KEY"
-        assert CONFIG.GOOGLE_CSE_ID and CONFIG.GOOGLE_CSE_ID != "YOUR_CSE_ID"
+        assert config.search
     elif search_engine_type is SearchEngineType.SERPER_GOOGLE:
-        assert CONFIG.SERPER_API_KEY and CONFIG.SERPER_API_KEY != "YOUR_API_KEY"
+        assert config.search
         cache_json_path = search_cache_path / f"serper-metagpt-{max_results}.json"
 
     if cache_json_path:
