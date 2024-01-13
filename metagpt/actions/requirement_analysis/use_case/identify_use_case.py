@@ -6,12 +6,12 @@
 @File    : identify_use_case.py
 @Desc    : The implementation of the Chapter 2.2.4 of RFC145.
 """
+from pathlib import Path
+
 from pydantic import BaseModel
 
 from metagpt.actions import Action
 from metagpt.actions.requirement_analysis.graph_key_words import GraphKeyWords
-from metagpt.config import CONFIG
-from metagpt.const import GRAPH_REPO_FILE_REPO
 from metagpt.logs import logger
 from metagpt.schema import Message
 from metagpt.utils.common import (
@@ -25,13 +25,14 @@ from metagpt.utils.di_graph_repository import DiGraphRepository
 
 
 class IdentifyUseCase(Action):
-    async def run(self, with_messages: Message, schema: str = CONFIG.prompt_schema):
-        graph_repo_pathname = CONFIG.git_repo.workdir / GRAPH_REPO_FILE_REPO / CONFIG.git_repo.workdir.name
-        graph_db = await DiGraphRepository.load_from(str(graph_repo_pathname.with_suffix(".json")))
+    async def run(self, with_messages: Message = None):
+        filename = Path(self.project_repo.workdir.name).with_suffix(".json")
+        doc = await self.project_repo.docs.graph_repo.get(filename=filename)
+        graph_db = DiGraphRepository(name=filename).load_json(doc.content)
 
         rows = await graph_db.select(
-            subject=concat_namespace(CONFIG.namespace, GraphKeyWords.OriginalRequirement),
-            predicate=concat_namespace(CONFIG.namespace, GraphKeyWords.Is),
+            subject=concat_namespace(self.context.kwargs.namespace, GraphKeyWords.OriginalRequirement),
+            predicate=concat_namespace(self.context.kwargs.namespace, GraphKeyWords.Is),
         )
 
         for r in rows:
@@ -54,7 +55,7 @@ class IdentifyUseCase(Action):
                 goal: str
                 reason: str
 
-            use_case_namespace = concat_namespace(CONFIG.namespace, GraphKeyWords.UseCase, delimiter="_")
+            use_case_namespace = concat_namespace(self.context.kwargs.namespace, GraphKeyWords.UseCase, delimiter="_")
             for block in json_blocks:
                 m = _JsonCodeBlock.model_validate_json(block)
                 await graph_db.insert(
@@ -67,5 +68,5 @@ class IdentifyUseCase(Action):
                     predicate=concat_namespace(use_case_namespace, GraphKeyWords.hasDetail),
                     object_=concat_namespace(use_case_namespace, add_affix(block)),
                 )
-        await graph_db.save()
+        await self.project_repo.docs.graph_repo.save(filename=filename, content=graph_db.json())
         return Message(content=rsp, cause_by=self)

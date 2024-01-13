@@ -8,5 +8,6 @@
 """
 
 from metagpt.actions.requirement_analysis.activity.enrich_use_case import EnrichUseCase
+from metagpt.actions.requirement_analysis.activity.identify_actor import IdentifyActor
 
-__all__ = [EnrichUseCase]
+__all__ = [EnrichUseCase, IdentifyActor]

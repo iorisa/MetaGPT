@@ -6,14 +6,13 @@
 @File    : enrich_use_case.py
 @Desc    : The implementation of the Chapter 2.2.6 of RFC145.
 """
+from pathlib import Path
 from typing import List
 
 from pydantic import BaseModel
 
 from metagpt.actions import Action
 from metagpt.actions.requirement_analysis.graph_key_words import GraphKeyWords
-from metagpt.config import CONFIG
-from metagpt.const import GRAPH_REPO_FILE_REPO
 from metagpt.logs import logger
 from metagpt.schema import Message
 from metagpt.utils.common import (
@@ -28,10 +27,11 @@ from metagpt.utils.graph_repository import GraphRepository
 
 
 class EnrichUseCase(Action):
-    async def run(self, with_messages: Message, schema: str = CONFIG.prompt_schema):
-        graph_repo_pathname = CONFIG.git_repo.workdir / GRAPH_REPO_FILE_REPO / CONFIG.git_repo.workdir.name
-        graph_db = await DiGraphRepository.load_from(str(graph_repo_pathname.with_suffix(".json")))
-        use_case_namespace = concat_namespace(CONFIG.namespace, GraphKeyWords.UseCase, delimiter="_")
+    async def run(self, with_messages: Message = None):
+        filename = Path(self.project_repo.workdir.name).with_suffix(".json")
+        doc = await self.project_repo.docs.graph_repo.get(filename=filename)
+        graph_db = DiGraphRepository(name=filename).load_json(doc.content)
+        use_case_namespace = concat_namespace(self.context.namespace, GraphKeyWords.UseCase, delimiter="_")
         use_case_names = await graph_db.select(
             predicate=concat_namespace(use_case_namespace, GraphKeyWords.Is),
             object_=concat_namespace(use_case_namespace, GraphKeyWords.useCase),
@@ -44,7 +44,7 @@ class EnrichUseCase(Action):
                 ns, val = split_namespace(r.object_)
                 detail = remove_affix(val)
                 await self._enrich_use_case(graph_db, use_case_name.subject, detail)
-        await graph_db.save()
+        await self.project_repo.docs.graph_repo.save(filename=filename, content=graph_db.json())
         return Message(content="", cause_by=self)
 
     async def _enrich_use_case(self, graph_db: GraphRepository, ns_use_case_name: str, use_case_detail: str):
@@ -66,7 +66,7 @@ class EnrichUseCase(Action):
             actions: List[str]
             reason: str
 
-        activity_namespace = concat_namespace(CONFIG.namespace, GraphKeyWords.Activity, delimiter="_")
+        activity_namespace = concat_namespace(self.context.namespace, GraphKeyWords.Activity, delimiter="_")
         for block in json_blocks:
             m = _JsonCodeBlock.model_validate_json(block)
             await graph_db.insert(

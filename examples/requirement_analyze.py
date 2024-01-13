@@ -13,7 +13,7 @@ import typer
 from metagpt.actions import UserRequirement
 from metagpt.actions.prepare_documents import PrepareDocuments
 from metagpt.actions.requirement_analysis import activity, use_case
-from metagpt.config import CONFIG
+from metagpt.context import Context
 from metagpt.roles import Role
 from metagpt.schema import Message
 from metagpt.utils.common import any_to_str, aread
@@ -33,6 +33,7 @@ class RequirementAnalyzer(Role):
                 use_case.IdentifyUseCase,
                 use_case.IdentifySystem,
                 activity.EnrichUseCase,
+                activity.IdentifyActor,
             }
         )
 
@@ -46,15 +47,16 @@ class RequirementAnalyzer(Role):
             any_to_str(use_case.IdentifyActor): use_case.IdentifyUseCase(),
             any_to_str(use_case.IdentifyUseCase): use_case.IdentifySystem(),
             any_to_str(use_case.IdentifySystem): activity.EnrichUseCase(),
+            any_to_str(activity.EnrichUseCase): activity.IdentifyActor(),
         }
         self.rc.todo = handlers.get(self.rc.news[0].cause_by, None)
         return bool(self.rc.todo is not None)
 
 
-async def analyze(requirement_filename: str):
+async def analyze(ctx: Context, requirement_filename: str):
     requirement = await aread(filename=requirement_filename, encoding="utf-8")
     msg = Message(content=requirement, cause_by=UserRequirement)
-    architect = RequirementAnalyzer()
+    architect = RequirementAnalyzer(context=ctx)
     while msg:
         architect.put_message(msg)
         msg = await architect.run()
@@ -65,8 +67,9 @@ def startup(
     filename: str = typer.Argument(..., help="The filename of original text requirements."),
     namespace: str = typer.Argument("RFC145", help="Namespace of this project."),
 ):
-    CONFIG.namespace = namespace
-    asyncio.run(analyze(filename))
+    ctx = Context()
+    ctx.kwargs.namespace = namespace
+    asyncio.run(analyze(ctx, filename))
 
 
 if __name__ == "__main__":
