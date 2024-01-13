@@ -9,5 +9,6 @@
 
 from metagpt.actions.requirement_analysis.activity.enrich_use_case import EnrichUseCase
 from metagpt.actions.requirement_analysis.activity.identify_actor import IdentifyActor
+from metagpt.actions.requirement_analysis.activity.identify_system import IdentifySystem
 
-__all__ = [EnrichUseCase, IdentifyActor]
+__all__ = [EnrichUseCase, IdentifyActor, IdentifySystem]

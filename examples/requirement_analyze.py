@@ -48,6 +48,7 @@ class RequirementAnalyzer(Role):
             any_to_str(use_case.IdentifyUseCase): use_case.IdentifySystem(context=self.context),
             any_to_str(use_case.IdentifySystem): activity.EnrichUseCase(context=self.context),
             any_to_str(activity.EnrichUseCase): activity.IdentifyActor(context=self.context),
+            any_to_str(activity.IdentifyActor): activity.IdentifySystem(context=self.context),
         }
         self.rc.todo = handlers.get(self.rc.news[0].cause_by, None)
         return bool(self.rc.todo is not None)

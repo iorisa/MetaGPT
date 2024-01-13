@@ -590,7 +590,9 @@ def list_files(root: str | Path) -> List[Path]:
     return files
 
 
-def json_to_markdown_prompt(json_val: str, exclude: List[str] = None, include: typing.Dict[str, Any] = None) -> str:
+def json_to_markdown_prompt(
+    json_val: str, exclude: List[str] = None, include: typing.Dict[str, Any] = None, depth: int = 2
+) -> str:
     if exclude is None:
         exclude = [REASON_KEY]
 
@@ -600,9 +602,10 @@ def json_to_markdown_prompt(json_val: str, exclude: List[str] = None, include: t
             if k not in m:
                 m[k] = v
     prompt = ""
+    title_flag = "#" * depth
     for k, v in m.items():
         if k in exclude:
             continue
         val = "\n".join(v) if isinstance(v, list) else v
-        prompt += f"##{k}\n{val}\n\n---\n"
+        prompt += f"{title_flag} {k}\n{val}\n\n---\n"
     return prompt

@@ -53,17 +53,20 @@ class EnrichUseCase(Action):
         rsp = await self.llm.aask(
             prompt,
             system_msgs=[
-                "You are a tool that translates UML use case text into markdown a JSON format.",
-                "Use case descriptions should strive to retain the original information as much as possible.",
-                "In cases of missing information, it is permissible to reasonably expand on the original information.",
-                "The names of the performer and recipient must clearly represent information related to the "
-                'original requirements; the use of generic terms such as "the user"", "the actor", and "the system" '
-                "is prohibited.",
-                "Transform the given use case text into a Markdown JSON object that includes "
+                # "You are a tool that translates UML use case text into markdown a JSON format.",
+                # "Use case descriptions should strive to retain the original information as much as possible.",
+                # "In cases of missing information, it is permissible to reasonably expand on the original information.",
+                # "The names of the performer and recipient must clearly represent information related to the "
+                # 'original requirements; the use of generic terms such as "the user"", "the actor", and "the system" '
+                # "is prohibited.",
+                "You are a tool to enrich use case detail.",
+                "You return a Markdown JSON object including "
                 'a "references" key to list all original description phrases referred from the original requirements, '
                 'an "inputs" key to list relevant use case inputs, an "outputs" key to list relevant use case outputs, '
                 'an "actions" key to list the consecutive actions that need to be performed, '
                 'and a "reason" key explaining why.',
+                'You enrich the "actions" contents by reasonably expanding on the original information. '
+                "The content must not contradict the original information.",
             ],
         )
         logger.info(rsp)
