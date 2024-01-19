@@ -235,3 +235,11 @@ class OpenAILLM(BaseLLM):
     async def amoderation(self, content: Union[str, list[str]]):
         """Moderate content."""
         return await self.aclient.moderations.create(input=content)
+
+    async def atext_to_speech(self, **kwargs):
+        """text to speech"""
+        return await self.aclient.audio.speech.create(**kwargs)
+
+    async def aspeech_to_text(self, **kwargs):
+        """speech to text"""
+        return await self.aclient.audio.transcriptions.create(**kwargs)

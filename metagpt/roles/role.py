@@ -261,7 +261,7 @@ class Role(SerializationMixin, ContextMixin, BaseModel):
         self._reset()
         for action in actions:
             if not isinstance(action, Action):
-                i = action()
+                i = action(context=self.context)
             else:
                 if self.is_human and not isinstance(action.llm, HumanProvider):
                     logger.warning(
@@ -481,6 +481,8 @@ class Role(SerializationMixin, ContextMixin, BaseModel):
             rsp = await self._act_by_order()
         elif self.rc.react_mode == RoleReactMode.PLAN_AND_ACT:
             rsp = await self._plan_and_act()
+        else:
+            raise ValueError(f"Unsupported react mode: {self.rc.react_mode}")
         self._set_state(state=-1)  # current reaction is complete, reset state to -1 and todo back to None
         return rsp
 
