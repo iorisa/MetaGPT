@@ -29,27 +29,35 @@ from metagpt.utils.di_graph_repository import DiGraphRepository
 from metagpt.utils.graph_repository import GraphRepository
 
 
+class ActivityEnrichUseCase(BaseModel):
+    references: List[str]
+    inputs: List[str]
+    outputs: List[str]
+    actions: List[str]
+    reason: str
+
+
 class EnrichUseCase(Action):
     graph_db: Optional[GraphRepository] = None
 
     async def run(self, with_messages: Message = None):
         filename = Path(self.context.repo.workdir.name).with_suffix(".json")
-        doc = await self.context.repo.docs.graph_repo.get(filename=filename)
-        self.graph_db = DiGraphRepository(name=filename).load_json(doc.content)
-        use_case_namespace = concat_namespace(self.context.kwargs.namespace, GraphKeyWords.UseCase, delimiter="_")
+        self.graph_db = await DiGraphRepository.load_from(self.context.repo.docs.graph_repo.workdir / filename)
         use_case_names = await self.graph_db.select(
-            predicate=concat_namespace(use_case_namespace, GraphKeyWords.Is),
-            object_=concat_namespace(use_case_namespace, GraphKeyWords.useCase),
+            predicate=concat_namespace(self.context.kwargs.ns.use_case, GraphKeyWords.Is_),
+            object_=concat_namespace(self.context.kwargs.ns.use_case, GraphKeyWords.UseCase_),
         )
         for use_case_name in use_case_names:
             rows = await self.graph_db.select(
-                subject=use_case_name.subject, predicate=concat_namespace(use_case_namespace, GraphKeyWords.hasDetail)
+                subject=use_case_name.subject,
+                predicate=concat_namespace(self.context.kwargs.ns.use_case, GraphKeyWords.Has_ + GraphKeyWords.Detail),
             )
             for r in rows:
-                ns, val = split_namespace(r.object_)
-                detail = remove_affix(val)
+                detail = remove_affix(split_namespace(r.object_)[-1])
                 await self._enrich_use_case(use_case_name.subject, detail)
-        await self.project_repo.docs.graph_repo.save(filename=filename, content=self.graph_db.json())
+
+        await self.graph_db.save()
+        # rows = await self.graph_db.select()
         return Message(content="", cause_by=self)
 
     @retry(
@@ -62,12 +70,6 @@ class EnrichUseCase(Action):
         rsp = await self.llm.aask(
             prompt,
             system_msgs=[
-                # "You are a tool that translates UML use case text into markdown a JSON format.",
-                # "Use case descriptions should strive to retain the original information as much as possible.",
-                # "In cases of missing information, it is permissible to reasonably expand on the original information.",
-                # "The names of the performer and recipient must clearly represent information related to the "
-                # 'original requirements; the use of generic terms such as "the user"", "the actor", and "the system" '
-                # "is prohibited.",
                 "You are a tool to enrich use case detail.",
                 "You return a Markdown JSON object including "
                 'a "references" key to list all original description phrases referred from the original requirements, '
@@ -77,48 +79,68 @@ class EnrichUseCase(Action):
                 'You enrich the "actions" contents by reasonably expanding on the original information. '
                 "The content must not contradict the original information.",
             ],
+            stream=False,
         )
         logger.info(rsp)
         json_blocks = parse_json_code_block(rsp)
 
-        class _JsonCodeBlock(BaseModel):
-            references: List[str]
-            inputs: List[str]
-            outputs: List[str]
-            actions: List[str]
-            reason: str
-
-        activity_namespace = concat_namespace(self.context.kwargs.namespace, GraphKeyWords.Activity, delimiter="_")
         for block in json_blocks:
-            m = _JsonCodeBlock.model_validate_json(block)
+            m = ActivityEnrichUseCase.model_validate_json(block)
             await self.graph_db.insert(
                 subject=ns_use_case_name,
-                predicate=concat_namespace(activity_namespace, GraphKeyWords.hasDetail),
-                object_=concat_namespace(activity_namespace, add_affix(block)),
+                predicate=concat_namespace(self.context.kwargs.ns.activity_use_case, GraphKeyWords.Is_),
+                object_=concat_namespace(self.context.kwargs.ns.activity_use_case, GraphKeyWords.UseCase_),
+            )
+            await self.graph_db.insert(
+                subject=ns_use_case_name,
+                predicate=concat_namespace(
+                    self.context.kwargs.ns.activity_use_case, GraphKeyWords.Has_ + GraphKeyWords.Detail
+                ),
+                object_=concat_namespace(self.context.kwargs.ns.activity_use_case, add_affix(m.model_dump_json())),
+            )
+            await self.graph_db.insert(
+                subject=ns_use_case_name,
+                predicate=concat_namespace(
+                    self.context.kwargs.ns.activity_use_case, GraphKeyWords.Has_ + GraphKeyWords.Reason
+                ),
+                object_=concat_namespace(self.context.kwargs.ns.activity_use_case, add_affix(m.reason)),
             )
             for input in m.inputs:
                 await self.graph_db.insert(
                     subject=ns_use_case_name,
-                    predicate=concat_namespace(activity_namespace, GraphKeyWords.hasInput),
-                    object_=concat_namespace(activity_namespace, add_affix(input)),
+                    predicate=concat_namespace(
+                        self.context.kwargs.ns.activity_input, GraphKeyWords.Has_ + GraphKeyWords.Input
+                    ),
+                    object_=concat_namespace(self.context.kwargs.ns.activity_input, add_affix(input)),
+                )
+                await self.graph_db.insert(
+                    subject=concat_namespace(self.context.kwargs.ns.activity_input, add_affix(input)),
+                    predicate=concat_namespace(self.context.kwargs.ns.activity_input, GraphKeyWords.Is_),
+                    object_=concat_namespace(self.context.kwargs.ns.activity_input, GraphKeyWords.Input_),
                 )
             for output in m.outputs:
                 await self.graph_db.insert(
                     subject=ns_use_case_name,
-                    predicate=concat_namespace(activity_namespace, GraphKeyWords.hasOutput),
-                    object_=concat_namespace(activity_namespace, add_affix(output)),
+                    predicate=concat_namespace(
+                        self.context.kwargs.ns.activity_output, GraphKeyWords.Has_ + GraphKeyWords.Output
+                    ),
+                    object_=concat_namespace(self.context.kwargs.ns.activity_output, add_affix(output)),
+                )
+                await self.graph_db.insert(
+                    subject=concat_namespace(self.context.kwargs.ns.activity_output, add_affix(output)),
+                    predicate=concat_namespace(self.context.kwargs.ns.activity_output, GraphKeyWords.Is_),
+                    object_=concat_namespace(self.context.kwargs.ns.activity_output, GraphKeyWords.Output_),
                 )
             for action in m.actions:
                 await self.graph_db.insert(
                     subject=ns_use_case_name,
-                    predicate=concat_namespace(activity_namespace, GraphKeyWords.hasAction),
-                    object_=concat_namespace(activity_namespace, add_affix(action)),
+                    predicate=concat_namespace(
+                        self.context.kwargs.ns.activity_action, GraphKeyWords.Has_ + GraphKeyWords.Action
+                    ),
+                    object_=concat_namespace(self.context.kwargs.ns.activity_action, add_affix(action)),
                 )
-            await self.graph_db.insert(
-                subject=ns_use_case_name,
-                predicate=concat_namespace(activity_namespace, GraphKeyWords.hasReason),
-                object_=concat_namespace(activity_namespace, add_affix(m.reason)),
-            )
-
-        await self.graph_db.save(path=self.project_repo.docs.graph_repo.workdir)
-        return Message(content=rsp, cause_by=self)
+                await self.graph_db.insert(
+                    subject=concat_namespace(self.context.kwargs.ns.activity_action, add_affix(action)),
+                    predicate=concat_namespace(self.context.kwargs.ns.activity_action, GraphKeyWords.Is_),
+                    object_=concat_namespace(self.context.kwargs.ns.activity_action, GraphKeyWords.Action_),
+                )

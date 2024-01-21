@@ -21,6 +21,7 @@ from metagpt.const import (
     GRAPH_REPO_FILE_REPO,
     PRD_PDF_FILE_REPO,
     PRDS_FILE_REPO,
+    REQUIREMENT_ANALYSIS_FILE_REPO,
     REQUIREMENT_FILENAME,
     RESOURCES_FILE_REPO,
     SD_OUTPUT_FILE_REPO,
@@ -64,6 +65,7 @@ class ResourceFileRepositories(FileRepository):
     api_spec_and_task: FileRepository
     code_summary: FileRepository
     sd_output: FileRepository
+    requirement_analysis: FileRepository
 
     def __init__(self, git_repo):
         super().__init__(git_repo=git_repo, relative_path=RESOURCES_FILE_REPO)
@@ -76,6 +78,7 @@ class ResourceFileRepositories(FileRepository):
         self.api_spec_and_task = git_repo.new_file_repository(relative_path=TASK_PDF_FILE_REPO)
         self.code_summary = git_repo.new_file_repository(relative_path=CODE_SUMMARIES_PDF_FILE_REPO)
         self.sd_output = git_repo.new_file_repository(relative_path=SD_OUTPUT_FILE_REPO)
+        self.requirement_analysis = git_repo.new_file_repository(relative_path=REQUIREMENT_ANALYSIS_FILE_REPO)
 
 
 class ProjectRepo(FileRepository):

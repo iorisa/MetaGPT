@@ -404,7 +404,7 @@ def any_to_name(val):
     return any_to_str(val).split(".")[-1]
 
 
-def concat_namespace(*args, delimiter=":") -> str:
+def concat_namespace(*args: object, delimiter: object = ":") -> str:
     return delimiter.join(str(value) for value in args)
 
 
@@ -613,5 +613,7 @@ def json_to_markdown_prompt(
         if k in exclude:
             continue
         val = "\n".join(v) if isinstance(v, list) else v
-        prompt += f"{title_flag} {k}\n{val}\n\n---\n"
+        prompt += f"{title_flag} {k}\n{val}\n"
+        if depth <= 2:
+            prompt += "\n---\n"
     return prompt

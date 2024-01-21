@@ -29,18 +29,26 @@ from metagpt.utils.di_graph_repository import DiGraphRepository
 from metagpt.utils.graph_repository import SPO, GraphRepository
 
 
+class UseCaseActorDetail(BaseModel):
+    actor_name: str
+    actor_description: str
+    reason: str = ""
+    actor_named_reason: str = ""
+
+    def get_markdown(self, indent=0) -> str:
+        prefix = "  " * indent
+        return prefix + f"- {self.actor_name}: {self.actor_description}\n"
+
+
 class IdentifyActor(Action):
     graph_db: Optional[GraphRepository] = None
 
     async def run(self, with_messages: Message = None):
         filename = Path(self.context.repo.workdir.name).with_suffix(".json")
-        self.graph_db = DiGraphRepository(name=filename)
-        doc = await self.project_repo.docs.graph_repo.get(filename)
-        if doc:
-            self.graph_db.load_json(doc.content)
+        self.graph_db = await DiGraphRepository.load_from(self.context.repo.docs.graph_repo.workdir / filename)
         rows = await self.graph_db.select(
-            subject=concat_namespace(self.context.kwargs.namespace, GraphKeyWords.OriginalRequirement),
-            predicate=concat_namespace(self.context.kwargs.namespace, GraphKeyWords.Is),
+            subject=concat_namespace(self.context.kwargs.ns.namespace, GraphKeyWords.OriginalRequirement),
+            predicate=concat_namespace(self.context.kwargs.ns.namespace, GraphKeyWords.Is_),
         )
         if not rows:
             rows = await self._insert_requiremnt_to_db()
@@ -48,21 +56,22 @@ class IdentifyActor(Action):
         rsp = ""
         for r in rows:
             rsp = await self._identify_one(r)
-        await self.context.repo.docs.graph_repo.save(filename=filename, content=self.graph_db.json())
+        await self.graph_db.save()
+        # rows = await self.graph_db.select()
         return Message(content=rsp, cause_by=self)
 
     async def _insert_requiremnt_to_db(self):
         doc = await self.context.repo.docs.get(filename=REQUIREMENT_FILENAME)
         await self.graph_db.insert(
-            subject=concat_namespace(self.context.kwargs.namespace, GraphKeyWords.OriginalRequirement),
-            predicate=concat_namespace(self.context.kwargs.namespace, GraphKeyWords.Is),
-            object_=concat_namespace(self.context.kwargs.namespace, add_affix(doc.content)),
+            subject=concat_namespace(self.context.kwargs.ns.namespace, GraphKeyWords.OriginalRequirement),
+            predicate=concat_namespace(self.context.kwargs.ns.namespace, GraphKeyWords.Is_),
+            object_=concat_namespace(self.context.kwargs.ns.namespace, add_affix(doc.content)),
         )
         return [
             SPO(
                 subject="",
                 predicate="",
-                object_=concat_namespace(self.context.kwargs.namespace, add_affix(doc.content)),
+                object_=concat_namespace(self.context.kwargs.ns.namespace, add_affix(doc.content)),
             )
         ]
 
@@ -72,43 +81,36 @@ class IdentifyActor(Action):
         after=general_after_log(logger),
     )
     async def _identify_one(self, spo):
-        ns, val = split_namespace(spo.object_)
-        requirement = remove_affix(val)
+        requirement = remove_affix(split_namespace(spo.object_)[-1])
         rsp = await self.llm.aask(
             requirement,
             system_msgs=[
                 "You are a translation tool that converts text into UML 2.0 actors according to the UML 2.0 "
                 "standard.",
-                "Actor names must clearly represent information related to the original requirements; "
-                'the use of generic terms like "user", "actor" and "system" is prohibited.',
+                "Actor names must be in phrases that clearly describe or represent information related to the original requirements.",
                 "Translate each actor's information into a JSON format that includes "
                 'a "actor_name" key for the actor\'s name containing the original description phrases referenced '
                 "from the original requirements, "
                 'an "actor_description" key to describes the actor including the original description phrases or '
                 "sentence referenced from the original requirements, "
                 'and a "reason" key to explain the basis of the translation, citing specific descriptions from '
-                "the original text.",
+                "the original text, "
+                'an "actor_named_reason" key explaining the actor name references what modifier from the original requirement and why was it named as such.',
             ],
         )
         logger.info(rsp)
         json_blocks = parse_json_code_block(rsp)
 
-        class _JsonCodeBlock(BaseModel):
-            actor_name: str
-            actor_description: str
-            reason: str
-
-        use_case_namespace = concat_namespace(self.context.kwargs.namespace, GraphKeyWords.UseCase, delimiter="_")
         for block in json_blocks:
-            m = _JsonCodeBlock.model_validate_json(block)
+            m = UseCaseActorDetail.model_validate_json(block)
             await self.graph_db.insert(
-                subject=concat_namespace(use_case_namespace, add_affix(m.actor_name)),
-                predicate=concat_namespace(use_case_namespace, GraphKeyWords.Is),
-                object_=concat_namespace(use_case_namespace, GraphKeyWords.actor),
+                subject=concat_namespace(self.context.kwargs.ns.use_case, add_affix(m.actor_name)),
+                predicate=concat_namespace(self.context.kwargs.ns.use_case, GraphKeyWords.Is_),
+                object_=concat_namespace(self.context.kwargs.ns.use_case, GraphKeyWords.Actor_),
             )
             await self.graph_db.insert(
-                subject=concat_namespace(use_case_namespace, add_affix(m.actor_name)),
-                predicate=concat_namespace(use_case_namespace, GraphKeyWords.hasDetail),
-                object_=concat_namespace(use_case_namespace, add_affix(block)),
+                subject=concat_namespace(self.context.kwargs.ns.use_case, add_affix(m.actor_name)),
+                predicate=concat_namespace(self.context.kwargs.ns.use_case, GraphKeyWords.Has_ + GraphKeyWords.Detail),
+                object_=concat_namespace(self.context.kwargs.ns.use_case, add_affix(block)),
             )
         return rsp

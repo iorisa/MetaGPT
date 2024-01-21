@@ -7,13 +7,16 @@
 @Desc    : The implementation of the Chapter 2.2.7 of RFC145.
 """
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 from metagpt.actions import Action
 from metagpt.actions.requirement_analysis.graph_key_words import GraphKeyWords
+from metagpt.actions.requirement_analysis.use_case.identify_actor import (
+    UseCaseActorDetail,
+)
 from metagpt.logs import logger
 from metagpt.schema import Message
 from metagpt.utils.common import (
@@ -29,20 +32,35 @@ from metagpt.utils.di_graph_repository import DiGraphRepository
 from metagpt.utils.graph_repository import GraphRepository
 
 
+class ActorAction(BaseModel):
+    performing_actor: str
+    action_name: str
+    recipient_actor: str
+    reason: str
+
+
+class UseCaseActorActionDetail(BaseModel):
+    detail: List[ActorAction]
+    actors: List[UseCaseActorDetail]
+
+
 class IdentifyActor(Action):
     graph_db: Optional[GraphRepository] = None
 
     async def run(self, with_messages: Message = None):
         filename = Path(self.context.repo.workdir.name).with_suffix(".json")
-        doc = await self.context.repo.docs.graph_repo.get(filename)
-        self.graph_db = DiGraphRepository(name=filename).load_json(doc.content)
-        activity_namespace = concat_namespace(self.context.kwargs.namespace, GraphKeyWords.Activity, delimiter="_")
-        rows = await self.graph_db.select(predicate=concat_namespace(activity_namespace, GraphKeyWords.hasDetail))
+        self.graph_db = await DiGraphRepository.load_from(self.context.repo.docs.graph_repo.workdir / filename)
+        rows = await self.graph_db.select(
+            predicate=concat_namespace(
+                self.context.kwargs.ns.activity_use_case, GraphKeyWords.Has_ + GraphKeyWords.Detail
+            )
+        )
 
         for r in rows:
-            await self._identify_one(spo=r, activity_namespace=activity_namespace)
+            await self._identify_one(r)
 
-        await self.project_repo.docs.graph_repo.save(filename=filename, content=self.graph_db.json())
+        await self.graph_db.save()
+        # rows = await self.graph_db.select()
         return Message(content="", cause_by=self)
 
     @retry(
@@ -50,58 +68,102 @@ class IdentifyActor(Action):
         stop=stop_after_attempt(6),
         after=general_after_log(logger),
     )
-    async def _identify_one(self, spo, activity_namespace):
-        class _JsonCodeBlock(BaseModel):
-            actor_name: str
-            description: str
-            reason: str
+    async def _identify_one(self, spo):
+        rows = await self.graph_db.select(
+            subject=concat_namespace(self.context.kwargs.ns.namespace, GraphKeyWords.OriginalRequirement),
+            predicate=concat_namespace(self.context.kwargs.ns.namespace, GraphKeyWords.Is_),
+        )
+        original_requirement = remove_affix(split_namespace(rows[0].object_)[-1])
+        prompt = f"## Original Requirements\n{original_requirement}\n"
+        prompt += "\n---\n"
 
-        ns, detail = split_namespace(spo.object_)
-        detail = remove_affix(detail)
-        prompt = json_to_markdown_prompt(detail, include={"recipients": [], "performers": []})
+        actors = await self.graph_db.select(
+            predicate=concat_namespace(self.context.kwargs.ns.use_case, GraphKeyWords.Is_),
+            object_=concat_namespace(self.context.kwargs.ns.use_case, GraphKeyWords.Actor_),
+        )
+        prompt += "## Actor List\n"
+        for r in actors:
+            affixed_actor_name = split_namespace(r.subject)[-1]
+            await self.graph_db.insert(
+                subject=concat_namespace(self.context.kwargs.ns.activity_actor, affixed_actor_name),
+                predicate=concat_namespace(self.context.kwargs.ns.activity_actor, GraphKeyWords.Is_),
+                object_=concat_namespace(self.context.kwargs.ns.activity_actor, GraphKeyWords.Actor_),
+            )
+            rows = await self.graph_db.select(
+                subject=r.subject,
+                predicate=concat_namespace(self.context.kwargs.ns.use_case, GraphKeyWords.Has_ + GraphKeyWords.Detail),
+            )
+            json_data = remove_affix(split_namespace(rows[0].object_)[-1])
+            actor = UseCaseActorDetail.model_validate_json(json_data)
+            prompt += actor.get_markdown()
+        prompt += "\n---\n"
+
+        detail = remove_affix(split_namespace(spo.object_)[-1])
+        prompt += json_to_markdown_prompt(detail)
         rsp = await self.llm.aask(
             prompt,
             system_msgs=[
                 "You are a UML 2.0 actor detector tool.",
-                "You need to examine the relationship between performers and recipients with actions, "
-                "identifying hidden actors not explicitly mentioned in the context.",
-                "Actor names must clearly represent information related to the original requirements; "
-                'the use of generic terms like "user", "actor" and "system" is prohibited.',
-                "Return each actor in a single markdown JSON format includes "
-                'an "actor_name" key for the actor, '
-                'a "description" key to describes the actor including the original description phrases or '
-                "sentence referenced from the original requirements, "
-                'a "reason" key explaining why.',
+                "You need to examine the relationship between performers and recipients through actions, matching each action with its possible performer and recipient. "
+                'If neither of the actors in the "Actor List" matches the action, you can add a new actor.',
+                "Return a markdown JSON object with:\n"
+                'an "detail" key list all action objects, each action object contains:\n'
+                '  - a "performing_actor" key for the name of performing actor containing the original description phrases referenced from the original requirements, '
+                '  - an "action_name" key for the name of the action performed by the performer actor, '
+                '  - a "recipient_actor" key for the name of recipient actor containing the original description phrases referenced from the original requirements, '
+                '  - a "reason" key explaining why. '
+                'an "actors" key list all actor objects, each actor object contains:\n'
+                '  - an "actor_name" key for the actor\'s name, '
+                '  - an "actor_description" key to describes the actor including the original description phrases or '
+                "sentence referenced from the original requirements.",
             ],
+            stream=False,
         )
         logger.info(rsp)
         json_blocks = parse_json_code_block(rsp)
+        data = UseCaseActorActionDetail.model_validate_json(json_blocks[0])
 
-        use_case_namespace = concat_namespace(self.context.kwargs.namespace, GraphKeyWords.UseCase, delimiter="_")
-        for block in json_blocks:
-            actor = _JsonCodeBlock.model_validate_json(block)
+        await self.graph_db.insert(
+            subject=spo.subject,  # ns_use_case
+            predicate=concat_namespace(
+                self.context.kwargs.ns.activity_actor_action,
+                GraphKeyWords.Has_ + GraphKeyWords.Extend + GraphKeyWords.Detail,
+            ),
+            object_=concat_namespace(self.context.kwargs.ns.activity_actor_action, add_affix(data.model_dump_json())),
+        )
+        for actor in data.actors:
             await self.graph_db.insert(
-                subject=concat_namespace(activity_namespace, add_affix(actor.actor_name)),
-                predicate=concat_namespace(activity_namespace, GraphKeyWords.Is),
-                object_=concat_namespace(activity_namespace, GraphKeyWords.actor),
+                subject=spo.subject,  # ns_use_case
+                predicate=concat_namespace(self.context.kwargs.ns.activity_actor, GraphKeyWords.Associate_),
+                object_=concat_namespace(self.context.kwargs.ns.activity_actor, add_affix(actor.actor_name)),
             )
             await self.graph_db.insert(
-                subject=concat_namespace(activity_namespace, add_affix(actor.actor_name)),
-                predicate=concat_namespace(activity_namespace, GraphKeyWords.hasDetail),
-                object_=concat_namespace(activity_namespace, add_affix(actor.description)),
+                subject=concat_namespace(self.context.kwargs.ns.activity_actor, add_affix(actor.actor_name)),
+                predicate=concat_namespace(self.context.kwargs.ns.activity_actor, GraphKeyWords.Is_),
+                object_=concat_namespace(self.context.kwargs.ns.activity_actor, GraphKeyWords.Actor_),
             )
             await self.graph_db.insert(
-                subject=concat_namespace(use_case_namespace, add_affix(actor.actor_name)),
-                predicate=concat_namespace(use_case_namespace, GraphKeyWords.Is),
-                object_=concat_namespace(use_case_namespace, GraphKeyWords.actor),
+                subject=concat_namespace(self.context.kwargs.ns.activity_actor, add_affix(actor.actor_name)),
+                predicate=concat_namespace(
+                    self.context.kwargs.ns.activity_actor, GraphKeyWords.Has_ + GraphKeyWords.Detail
+                ),
+                object_=concat_namespace(self.context.kwargs.ns.activity_actor, add_affix(actor.actor_description)),
             )
-            await self.graph_db.insert(
-                subject=concat_namespace(use_case_namespace, add_affix(actor.actor_name)),
-                predicate=concat_namespace(use_case_namespace, GraphKeyWords.associate),
-                object_=r.subject,
+            rows = await self.graph_db.select(
+                subject=concat_namespace(self.context.kwargs.ns.activity_actor, add_affix(actor.actor_name)),
+                predicate=concat_namespace(self.context.kwargs.ns.activity_actor, GraphKeyWords.Is_),
+                object_=concat_namespace(self.context.kwargs.ns.activity_actor, GraphKeyWords.Actor_),
             )
-            await self.graph_db.insert(
-                subject=r.subject,
-                predicate=concat_namespace(use_case_namespace, GraphKeyWords.associate),
-                object_=concat_namespace(use_case_namespace, add_affix(actor.actor_name)),
-            )
+            if not rows:
+                await self.graph_db.insert(
+                    subject=concat_namespace(self.context.kwargs.ns.activity_actor, add_affix(actor.actor_name)),
+                    predicate=concat_namespace(
+                        self.context.kwargs.ns.activity_actor, GraphKeyWords.Has_ + GraphKeyWords.Detail
+                    ),
+                    object_=concat_namespace(self.context.kwargs.ns.activity_actor, add_affix(actor.model_dump_json())),
+                )
+                await self.graph_db.insert(
+                    subject=concat_namespace(self.context.kwargs.ns.activity_actor, add_affix(actor.actor_name)),
+                    predicate=concat_namespace(self.context.kwargs.ns.activity_actor, GraphKeyWords.Is_),
+                    object_=concat_namespace(self.context.kwargs.ns.activity_actor, GraphKeyWords.Actor_),
+                )

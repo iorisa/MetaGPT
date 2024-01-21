@@ -9,26 +9,58 @@
 
 
 class GraphKeyWords:
-    OriginalRequirement = "OriginalRequirement"
-    Is = "is"
-    notIs = "notIs"
-    UseCase = "UseCase"
-    Activity = "Activity"
-    Input = "Input"
-    Output = "Output"
     Action = "Action"
-    useCase = "useCase"
-    system_ = "system"
-    actor = "actor"
-    class_ = "class"
-    action = "action"
-    hasDetail = "hasDetail"
-    hasActor = "hasActor"
-    hasInput = "hasInput"
-    hasOutput = "hasOutput"
-    hasAction = "hasAction"
-    hasReason = "hasReason"
-    hasClass = "hasClass"
-    hasProperty = "hasProperty"
-    associate = "associate"
+    Action_ = "action"
+    Activity = "Activity"
+    Actor = "Actor"
+    Actor_ = "actor"
+    Argument = "Argument"
+    Associate_ = "associate"
+
     Class = "Class"
+    Class_ = "class"
+    ControlFlow = "ControlFlow"
+    ControlFlow_ = "controlFlow"
+
+    Detail = "Detail"
+    Do_ = "do"
+
+    Extend = "Extend"
+
+    Has_ = "has"
+
+    If = "If"
+    IfCondition = "IfCondition"
+    IfCondition_ = "ifCondition"
+    Input = "Input"
+    Input_ = "input"
+    Is_ = "is"
+
+    List = "List"
+
+    Missing_ = "missing_"
+
+    Not_ = "not_"
+
+    OriginalRequirement = "OriginalRequirement"
+    Output = "Output"
+    Output_ = "output"
+
+    PostOp = "PostOp"
+    PostOp_ = "postOp"
+    Property = "Property"
+    Property_ = "property"
+    PreOp = "PreOp"
+    PreOp_ = "preOp"
+
+    Reason = "Reason"
+    Reference = "Reference"
+
+    Swimlane = "Swimlane"
+    Swimlane_ = "swimlane"
+    System_ = "system"
+
+    UseCase = "UseCase"
+    UseCase_ = "useCase"
+
+    Missing_ = "missing"

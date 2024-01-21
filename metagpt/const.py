@@ -99,6 +99,7 @@ CODE_SUMMARIES_FILE_REPO = "docs/code_summary"
 CODE_SUMMARIES_PDF_FILE_REPO = "resources/code_summary"
 RESOURCES_FILE_REPO = "resources"
 SD_OUTPUT_FILE_REPO = "resources/sd_output"
+REQUIREMENT_ANALYSIS_FILE_REPO = "resources/requirement_analysis"
 GRAPH_REPO_FILE_REPO = "docs/graph_repo"
 CLASS_VIEW_FILE_REPO = "docs/class_view"
 

@@ -7,13 +7,13 @@
 @Desc    : The implementation of the Chapter 2.2.11 of RFC145.
 """
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
-from pydantic import BaseModel
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 from metagpt.actions import Action
 from metagpt.actions.requirement_analysis.graph_key_words import GraphKeyWords
+from metagpt.actions.requirement_analysis.text_to_class import ParameterList
 from metagpt.logs import logger
 from metagpt.schema import Message
 from metagpt.utils.common import (
@@ -23,6 +23,7 @@ from metagpt.utils.common import (
     json_to_markdown_prompt,
     parse_json_code_block,
     remove_affix,
+    split_namespace,
 )
 from metagpt.utils.di_graph_repository import DiGraphRepository
 from metagpt.utils.graph_repository import SPO, GraphRepository
@@ -33,12 +34,20 @@ class IdentifyOutput(Action):
 
     async def run(self, with_messages: Message = None):
         filename = Path(self.context.repo.workdir.name).with_suffix(".json")
-        doc = await self.context.repo.docs.graph_repo.get(filename)
-        self.graph_db = DiGraphRepository(name=filename).load_json(doc.content)
-        activity_namespace = concat_namespace(self.context.kwargs.namespace, GraphKeyWords.Activity, delimiter="_")
-        rows = await self.graph_db.select(predicate=concat_namespace(activity_namespace, GraphKeyWords.hasDetail))
+        self.graph_db = await DiGraphRepository.load_from(self.context.repo.docs.graph_repo.workdir / filename)
+        rows = await self.graph_db.select(
+            predicate=concat_namespace(
+                self.context.kwargs.ns.activity_use_case, GraphKeyWords.Has_ + GraphKeyWords.Detail
+            )
+        )
         for r in rows:
-            await self._parse_action(r)
+            ns, _ = split_namespace(r.subject)
+            if ns != self.context.kwargs.ns.use_case:
+                continue
+            await self._parse_output(r)
+
+        await self.graph_db.save()
+        # rows = await self.graph_db.select()
         return Message(content="", cause_by=self)
 
     @retry(
@@ -47,31 +56,44 @@ class IdentifyOutput(Action):
         after=general_after_log(logger),
     )
     async def _parse_output(self, spo: SPO):
-        use_case_detail = remove_affix(spo.object_)
+        use_case_detail = remove_affix(split_namespace(spo.object_)[-1])
         prompt = json_to_markdown_prompt(use_case_detail)
         rsp = await self.llm.aask(
             msg=prompt,
             system_msgs=[
-                "You are a tool that analyzes use case descriptions and lists all outputs of the use case.",
-                'Return a JSON object in Markdown format with an "outputs" key to list all possible outputs produced by the use case and a "reason" key to provide explanations.',
+                "You are a tool that analyzes use case descriptions and generates a list of all possible outputs produced by the use case.",
+                'Return a Markdown JSON object with all possible outputs listed under the "outputs" key, which contains a list of output objects. Each output object has a "name" key containing the title, a "description" key containing the output description, and a "reason" key providing explanations.',
             ],
+            stream=False,
         )
         logger.info(rsp)
         json_blocks = parse_json_code_block(rsp)
 
-        class _JsonCodeBlock(BaseModel):
-            actions: List[str]
-            reason: str
-
-        activity_namespace = concat_namespace(
-            self.context.kwargs.namespace, GraphKeyWords.Activity, GraphKeyWords.Output, delimiter="_"
-        )
         for block in json_blocks:
-            m = _JsonCodeBlock.model_validate_json(block)
-
+            m = ParameterList.model_validate_json(block)
             await self.graph_db.insert(
                 subject=spo.subject,
-                predicate=concat_namespace(activity_namespace, GraphKeyWords.hasDetail),
-                object_=concat_namespace(activity_namespace, add_affix(m.model_dump_json(exclude_none=True))),
+                predicate=concat_namespace(
+                    self.context.kwargs.ns.activity_use_case_output, GraphKeyWords.Has_ + GraphKeyWords.Detail
+                ),
+                object_=concat_namespace(
+                    self.context.kwargs.ns.activity_use_case_output, add_affix(m.model_dump_json())
+                ),
             )
-        await self.graph_db.save()
+            for i in m.outputs:
+                await self.graph_db.insert(
+                    subject=spo.subject,
+                    predicate=concat_namespace(
+                        self.context.kwargs.ns.activity_use_case_output, GraphKeyWords.Has_ + GraphKeyWords.Output
+                    ),
+                    object_=concat_namespace(
+                        self.context.kwargs.ns.activity_use_case_output, add_affix(i.model_dump_json())
+                    ),
+                )
+                await self.graph_db.insert(
+                    subject=concat_namespace(
+                        self.context.kwargs.ns.activity_use_case_output, add_affix(i.model_dump_json())
+                    ),
+                    predicate=concat_namespace(self.context.kwargs.ns.activity_use_case_output, GraphKeyWords.Is_),
+                    object_=concat_namespace(self.context.kwargs.ns.activity_use_case_output, GraphKeyWords.Output_),
+                )
