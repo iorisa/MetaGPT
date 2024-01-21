@@ -8,7 +8,10 @@
 
 
 # since we original write docs/*.md in markdown format, so I convert json back to markdown
-def json_to_markdown(data, depth=2):
+from typing import List
+
+
+def json_to_markdown(data, depth=2, exclude: List[str] = None):
     """
     Convert a JSON object to Markdown with headings for keys and lists for arrays, supporting nested objects.
 
@@ -23,6 +26,8 @@ def json_to_markdown(data, depth=2):
 
     if isinstance(data, dict):
         for key, value in data.items():
+            if exclude and key in exclude:
+                continue
             if isinstance(value, list):
                 # Handle JSON arrays
                 markdown += "#" * depth + f" {key}\n\n"

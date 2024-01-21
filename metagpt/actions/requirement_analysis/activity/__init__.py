@@ -14,6 +14,7 @@ from metagpt.actions.requirement_analysis.activity.identify_input import Identif
 from metagpt.actions.requirement_analysis.activity.identify_input_class import IdentifyInputClass
 from metagpt.actions.requirement_analysis.activity.identify_output import IdentifyOutput
 from metagpt.actions.requirement_analysis.activity.identify_system import IdentifySystem
+from metagpt.actions.requirement_analysis.activity.order_actions import OrderActions
 
 __all__ = [
     EnrichUseCase,
@@ -24,4 +25,5 @@ __all__ = [
     IdentifyOutput,
     IdentifyInputClass,
     IdentifyOutputClass,
+    OrderActions,
 ]

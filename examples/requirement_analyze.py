@@ -34,6 +34,12 @@ class RequirementAnalyzer(Role):
                 use_case.IdentifySystem,
                 activity.EnrichUseCase,
                 activity.IdentifyActor,
+                activity.IdentifySystem,
+                activity.IdentifyInput,
+                activity.IdentifyAction,
+                activity.IdentifyOutput,
+                activity.IdentifyInputClass,
+                activity.IdentifyOutputClass,
             }
         )
 
@@ -52,7 +58,9 @@ class RequirementAnalyzer(Role):
             any_to_str(activity.IdentifySystem): activity.IdentifyInput(context=self.context),
             any_to_str(activity.IdentifyInput): activity.IdentifyAction(context=self.context),
             any_to_str(activity.IdentifyAction): activity.IdentifyOutput(context=self.context),
-            any_to_str(activity.IdentifyOutput): activity.Identify,
+            any_to_str(activity.IdentifyOutput): activity.IdentifyInputClass(context=self.context),
+            any_to_str(activity.IdentifyInputClass): activity.IdentifyOutputClass(context=self.context),
+            any_to_str(activity.IdentifyOutputClass): activity.OrderActions(context=self.context),
         }
         self.rc.todo = handlers.get(self.rc.news[0].cause_by, None)
         return bool(self.rc.todo is not None)

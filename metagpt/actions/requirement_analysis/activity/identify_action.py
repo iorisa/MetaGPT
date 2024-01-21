@@ -74,7 +74,7 @@ class IdentifyAction(Action):
             await self.graph_db.insert(
                 subject=spo.subject,
                 predicate=concat_namespace(activity_namespace, GraphKeyWords.hasDetail),
-                object_=concat_namespace(activity_namespace, remove_affix(block)),
+                object_=concat_namespace(activity_namespace, add_affix(block)),
             )
             await self.graph_db.insert(
                 subject=spo.subject,

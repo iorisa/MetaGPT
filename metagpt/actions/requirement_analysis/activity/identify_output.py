@@ -17,6 +17,7 @@ from metagpt.actions.requirement_analysis.graph_key_words import GraphKeyWords
 from metagpt.logs import logger
 from metagpt.schema import Message
 from metagpt.utils.common import (
+    add_affix,
     concat_namespace,
     general_after_log,
     json_to_markdown_prompt,
@@ -71,6 +72,6 @@ class IdentifyOutput(Action):
             await self.graph_db.insert(
                 subject=spo.subject,
                 predicate=concat_namespace(activity_namespace, GraphKeyWords.hasDetail),
-                object_=concat_namespace(activity_namespace, remove_affix(m.model_dump_json(exclude_none=True))),
+                object_=concat_namespace(activity_namespace, add_affix(m.model_dump_json(exclude_none=True))),
             )
         await self.graph_db.save()
