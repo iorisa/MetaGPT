@@ -135,9 +135,35 @@ def test_repair_json_format():
 }
 """
     target_output = """{
-    "Language": "en_us",  
+    "Language": "en_us",
     "Programming Language": "Python"
 }"""
+    output = repair_llm_raw_output(output=raw_output, req_keys=[None], repair_type=RepairType.JSON)
+    assert output == target_output
+
+    raw_output = """
+{
+    "Language": "en_us",  // define language
+    "Programming Language": "Python" # define code language
+}
+"""
+    target_output = """{
+    "Language": "en_us",
+    "Programming Language": "Python"
+}"""
+    output = repair_llm_raw_output(output=raw_output, req_keys=[None], repair_type=RepairType.JSON)
+    assert output == target_output
+
+    raw_output = """
+    {
+        "Language": "#en_us#",  // define language
+        "Programming Language": "//Python # Code // Language//" # define code language
+    }
+    """
+    target_output = """{
+        "Language": "#en_us#",
+        "Programming Language": "//Python # Code // Language//"
+    }"""
     output = repair_llm_raw_output(output=raw_output, req_keys=[None], repair_type=RepairType.JSON)
     assert output == target_output
 
@@ -183,6 +209,11 @@ value
     output = repair_invalid_json(raw_output, "Expecting ',' delimiter: line 4 column 1")
     output = repair_invalid_json(output, "Expecting ',' delimiter: line 4 column 1")
     output = repair_invalid_json(output, "Expecting ',' delimiter: line 4 column 1")
+    assert output == target_output
+
+    raw_output = '{"key": "url "http" \\"https\\" "}'
+    target_output = '{"key": "url \\"http\\" \\"https\\" "}'
+    output = repair_invalid_json(raw_output, "Expecting ',' delimiter: line 1 column 15 (char 14)")
     assert output == target_output
 
 

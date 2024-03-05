@@ -8,31 +8,37 @@
 import uuid
 from pathlib import Path
 
+import aioboto3
 import aiofiles
-import mock
 import pytest
 
 from metagpt.config2 import Config
+from metagpt.configs.s3_config import S3Config
 from metagpt.utils.common import aread
 from metagpt.utils.s3 import S3
 
 
 @pytest.mark.asyncio
-@mock.patch("aioboto3.Session")
-async def test_s3(mock_session_class):
+async def test_s3(mocker):
     # Set up the mock response
     data = await aread(__file__, "utf-8")
-    mock_session_object = mock.Mock()
-    reader_mock = mock.AsyncMock()
+    reader_mock = mocker.AsyncMock()
     reader_mock.read.side_effect = [data.encode("utf-8"), b"", data.encode("utf-8")]
-    type(reader_mock).url = mock.PropertyMock(return_value="https://mock")
-    mock_client = mock.AsyncMock()
+    type(reader_mock).url = mocker.PropertyMock(return_value="https://mock")
+    mock_client = mocker.AsyncMock()
     mock_client.put_object.return_value = None
     mock_client.get_object.return_value = {"Body": reader_mock}
     mock_client.__aenter__.return_value = mock_client
     mock_client.__aexit__.return_value = None
-    mock_session_object.client.return_value = mock_client
-    mock_session_class.return_value = mock_session_object
+    mocker.patch.object(aioboto3.Session, "client", return_value=mock_client)
+    mock_config = mocker.Mock()
+    mock_config.s3 = S3Config(
+        access_key="mock_access_key",
+        secret_key="mock_secret_key",
+        endpoint="http://mock.endpoint",
+        bucket="mock_bucket",
+    )
+    mocker.patch.object(Config, "default", return_value=mock_config)
 
     # Prerequisites
     s3 = Config.default().s3
@@ -55,7 +61,7 @@ async def test_s3(mock_session_class):
 
     # Mock session env
     s3.access_key = "ABC"
-    type(reader_mock).url = mock.PropertyMock(return_value="")
+    type(reader_mock).url = mocker.PropertyMock(return_value="")
     try:
         conn = S3(s3)
         res = await conn.cache("ABC", ".bak", "script")

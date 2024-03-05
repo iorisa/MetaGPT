@@ -120,14 +120,22 @@ def repair_json_format(output: str) -> str:
     elif output.startswith("{") and output.endswith("]"):
         output = output[:-1] + "}"
 
-    # remove `#` in output json str, usually appeared in `glm-4`
+    # remove comments in output json string, after json value content, maybe start with #, maybe start with //
     arr = output.split("\n")
     new_arr = []
-    for line in arr:
-        idx = line.find("#")
-        if idx >= 0:
-            line = line[:idx]
-        new_arr.append(line)
+    for json_line in arr:
+        # look for # or // comments and make sure they are not inside the string value
+        comment_index = -1
+        for match in re.finditer(r"(\".*?\"|\'.*?\')|(#|//)", json_line):
+            if match.group(1):  # if the string value
+                continue
+            if match.group(2):  # if comments
+                comment_index = match.start(2)
+                break
+        # if comments, then delete them
+        if comment_index != -1:
+            json_line = json_line[:comment_index].rstrip()
+        new_arr.append(json_line)
     output = "\n".join(new_arr)
     return output
 
@@ -201,6 +209,17 @@ def repair_invalid_json(output: str, error: str) -> str:
         elif (rline[col_no] in ["'", '"']) and (line.startswith('"') or line.startswith("'")) and "," not in line:
             # problem, `"""` or `'''` without `,`
             new_line = f",{line}"
+        elif col_no - 1 >= 0 and rline[col_no - 1] in ['"', "'"]:
+            # backslash problem like \" in the output
+            char = rline[col_no - 1]
+            nearest_char_idx = rline[col_no:].find(char)
+            new_line = (
+                rline[: col_no - 1]
+                + "\\"
+                + rline[col_no - 1 : col_no + nearest_char_idx]
+                + "\\"
+                + rline[col_no + nearest_char_idx :]
+            )
         elif '",' not in line and "," not in line and '"' not in line:
             new_line = f'{line}",'
         elif not line.endswith(","):

@@ -13,6 +13,7 @@ from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 from metagpt.actions import WriteCode
 from metagpt.actions.action import Action
+from metagpt.const import REQUIREMENT_FILENAME
 from metagpt.logs import logger
 from metagpt.schema import CodingContext
 from metagpt.utils.common import CodeParser
@@ -137,6 +138,7 @@ class WriteCodeReview(Action):
     async def run(self, *args, **kwargs) -> CodingContext:
         iterative_code = self.i_context.code_doc.content
         k = self.context.config.code_review_k_times or 1
+
         for i in range(k):
             format_example = FORMAT_EXAMPLE.format(filename=self.i_context.code_doc.filename)
             task_content = self.i_context.task_doc.content if self.i_context.task_doc else ""
@@ -144,16 +146,24 @@ class WriteCodeReview(Action):
                 self.i_context.task_doc,
                 exclude=self.i_context.filename,
                 project_repo=self.repo.with_src_path(self.context.src_workspace),
+                use_inc=self.config.inc,
             )
-            context = "\n".join(
-                [
-                    "## System Design\n" + str(self.i_context.design_doc) + "\n",
-                    "## Tasks\n" + task_content + "\n",
-                    "## Code Files\n" + code_context + "\n",
+
+            ctx_list = [
+                "## System Design\n" + str(self.i_context.design_doc) + "\n",
+                "## Task\n" + task_content + "\n",
+                "## Code Files\n" + code_context + "\n",
+            ]
+            if self.config.inc:
+                requirement_doc = await self.repo.docs.get(filename=REQUIREMENT_FILENAME)
+                insert_ctx_list = [
+                    "## User New Requirements\n" + str(requirement_doc) + "\n",
+                    "## Code Plan And Change\n" + str(self.i_context.code_plan_and_change_doc) + "\n",
                 ]
-            )
+                ctx_list = insert_ctx_list + ctx_list
+
             context_prompt = PROMPT_TEMPLATE.format(
-                context=context,
+                context="\n".join(ctx_list),
                 code=iterative_code,
                 filename=self.i_context.code_doc.filename,
             )
@@ -161,7 +171,7 @@ class WriteCodeReview(Action):
                 format_example=format_example,
             )
             len1 = len(iterative_code) if iterative_code else 0
-            len2 = len(self.context.code_doc.content) if self.context.code_doc.content else 0
+            len2 = len(self.i_context.code_doc.content) if self.i_context.code_doc.content else 0
             logger.info(
                 f"Code review and rewrite {self.i_context.code_doc.filename}: {i + 1}/{k} | len(iterative_code)={len1}, "
                 f"len(self.i_context.code_doc.content)={len2}"
