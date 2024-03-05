@@ -79,6 +79,7 @@ class IdentifySystem(Action):
                 'a "references" key listing all evidence strings about your judgment basis from the "Original Requirement", ',
                 'a "reason" key explaining why.',
             ],
+            stream=False,
         )
         logger.info(rsp)
         json_blocks = parse_json_code_block(rsp)

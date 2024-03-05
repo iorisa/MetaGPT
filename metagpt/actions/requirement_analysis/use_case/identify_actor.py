@@ -51,16 +51,15 @@ class IdentifyActor(Action):
             predicate=concat_namespace(self.context.kwargs.ns.namespace, GraphKeyWords.Is_),
         )
         if not rows:
-            rows = await self._insert_requiremnt_to_db()
+            rows = await self._insert_requirement_to_db()
 
         rsp = ""
         for r in rows:
             rsp = await self._identify_one(r)
         await self.graph_db.save()
-        # rows = await self.graph_db.select()
         return Message(content=rsp, cause_by=self)
 
-    async def _insert_requiremnt_to_db(self):
+    async def _insert_requirement_to_db(self):
         doc = await self.context.repo.docs.get(filename=REQUIREMENT_FILENAME)
         await self.graph_db.insert(
             subject=concat_namespace(self.context.kwargs.ns.namespace, GraphKeyWords.OriginalRequirement),
@@ -97,6 +96,7 @@ class IdentifyActor(Action):
                 "the original text, "
                 'an "actor_named_reason" key explaining the actor name references what modifier from the original requirement and why was it named as such.',
             ],
+            stream=False,
         )
         logger.info(rsp)
         json_blocks = parse_json_code_block(rsp)

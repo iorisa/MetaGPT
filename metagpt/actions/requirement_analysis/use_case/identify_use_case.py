@@ -73,6 +73,7 @@ class IdentifyUseCase(Action):
                 'and a "reason" key to provide the basis for the translation, citing specific descriptions from '
                 "the original text.",
             ],
+            stream=False,
         )
         logger.info(rsp)
         json_blocks = parse_json_code_block(rsp)

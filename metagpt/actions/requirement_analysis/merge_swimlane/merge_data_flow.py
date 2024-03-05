@@ -247,6 +247,7 @@ class MergeDataFlow(Action):
                 'If a new class name conflicts with an existing class name under "Exists Class Names", rename the new class to avoid name conflict.',
                 'Return each class in a JSON object in Markdown format with a "name" key for the class name, a "description" key to describe the class functionality, a "goal" key to outline the goal the class aims to achieve, a "properties" key to list the property names of the class, and a "reason" key to provide explanations.',
             ],
+            stream=False,
         )
         logger.info(rsp)
         json_blocks = parse_json_code_block(rsp)
@@ -307,6 +308,7 @@ class MergeDataFlow(Action):
                 '- a "class_name" key with the class name obtained from "Class Definitions" if the class definition exists, otherwise an empty string; '
                 '- a "reason" key explaining why',
             ],
+            stream=False,
         )
         json_blocks = parse_json_code_block(rsp)
 
@@ -335,6 +337,7 @@ class MergeDataFlow(Action):
                 '- a "properties" key to list the names of possible properties;'
                 '- a "reason" key to provide explanations.',
             ],
+            stream=False,
         )
         logger.info(rsp)
         json_blocks = parse_json_code_block(rsp)
@@ -606,6 +609,7 @@ class MergeDataFlow(Action):
                 f'- an "idx" key containing the integer value of index of the name of the action in the "Action List" that will output the "{class_name}" class; '
                 '- a "reason" key explaining why.',
             ],
+            stream=False,
         )
         json_blocks = parse_json_code_block(rsp)
 
