@@ -6,14 +6,34 @@
 @File    : architect.py
 """
 
-from metagpt.actions import WriteDesign, WritePRD
-from metagpt.roles import Role
+from metagpt.actions import WritePRD
+from metagpt.actions.design_api import WriteDesign
+from metagpt.roles.role import Role
 
 
 class Architect(Role):
-    """Architect: Listen to PRD, responsible for designing API, designing code files"""
-    def __init__(self, name="Bob", profile="Architect", goal="Design a concise, usable, complete python system",
-                 constraints="Try to specify good open source tools as much as possible"):
-        super().__init__(name, profile, goal, constraints)
-        self._init_actions([WriteDesign])
+    """
+    Represents an Architect role in a software development process.
+
+    Attributes:
+        name (str): Name of the architect.
+        profile (str): Role profile, default is 'Architect'.
+        goal (str): Primary goal or responsibility of the architect.
+        constraints (str): Constraints or guidelines for the architect.
+    """
+
+    name: str = "Bob"
+    profile: str = "Architect"
+    goal: str = "design a concise, usable, complete software system"
+    constraints: str = (
+        "make sure the architecture is simple enough and use  appropriate open source "
+        "libraries. Use same language as user requirement"
+    )
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        # Initialize actions specific to the Architect role
+        self.set_actions([WriteDesign])
+
+        # Set events or actions the Architect should watch or be aware of
         self._watch({WritePRD})

@@ -7,14 +7,31 @@
 @Modified By: mashenquan, 2023-8-9, add more text formatting options
 @Modified By: mashenquan, 2023-8-17, move to `tools` folder.
 """
-import asyncio
+from pathlib import Path
 
-from metagpt.config import CONFIG
+import pytest
+from azure.cognitiveservices.speech import ResultReason, SpeechSynthesizer
+
+from metagpt.config2 import config
 from metagpt.tools.azure_tts import AzureTTS
 
 
-def test_azure_tts():
-    azure_tts = AzureTTS(subscription_key="", region="")
+@pytest.mark.asyncio
+async def test_azure_tts(mocker):
+    # mock
+    mock_result = mocker.Mock()
+    mock_result.audio_data = b"mock audio data"
+    mock_result.reason = ResultReason.SynthesizingAudioCompleted
+    mock_data = mocker.Mock()
+    mock_data.get.return_value = mock_result
+    mocker.patch.object(SpeechSynthesizer, "speak_ssml_async", return_value=mock_data)
+    mocker.patch.object(Path, "exists", return_value=True)
+
+    # Prerequisites
+    assert config.azure_tts_subscription_key and config.azure_tts_subscription_key != "YOUR_API_KEY"
+    assert config.azure_tts_region
+
+    azure_tts = AzureTTS(subscription_key=config.azure_tts_subscription_key, region=config.azure_tts_region)
     text = """
         女儿看见父亲走了进来，问道：
             <mstts:express-as role="YoungAdultFemale" style="calm">
@@ -25,20 +42,19 @@ def test_azure_tts():
                 “Writing a binary file in Python is similar to writing a regular text file, but you'll work with bytes instead of strings.”
             </mstts:express-as>
         """
-    path = CONFIG.workspace / "tts"
+    path = config.workspace.path / "tts"
     path.mkdir(exist_ok=True, parents=True)
     filename = path / "girl.wav"
-    loop = asyncio.new_event_loop()
-    v = loop.create_task(
-        azure_tts.synthesize_speech(lang="zh-CN", voice="zh-CN-XiaomoNeural", text=text, output_file=str(filename))
+    filename.unlink(missing_ok=True)
+    result = await azure_tts.synthesize_speech(
+        lang="zh-CN", voice="zh-CN-XiaomoNeural", text=text, output_file=str(filename)
     )
-    result = loop.run_until_complete(v)
-
     print(result)
-
-    # 运行需要先配置 SUBSCRIPTION_KEY
-    # TODO: 这里如果要检验，还要额外加上对应的asr，才能确保前后生成是接近一致的，但现在还没有
+    assert result
+    assert result.audio_data
+    assert result.reason == ResultReason.SynthesizingAudioCompleted
+    assert filename.exists()
 
 
 if __name__ == "__main__":
-    test_azure_tts()
+    pytest.main([__file__, "-s"])

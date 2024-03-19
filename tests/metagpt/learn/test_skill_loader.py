@@ -6,13 +6,16 @@
 @File    : test_skill_loader.py
 @Desc    : Unit tests.
 """
+from pathlib import Path
 
-from metagpt.config import CONFIG
-from metagpt.learn.skill_loader import SkillLoader
+import pytest
+
+from metagpt.learn.skill_loader import SkillsDeclaration
 
 
-def test_suite():
-    CONFIG.agent_skills = [
+@pytest.mark.asyncio
+async def test_suite(context):
+    context.kwargs.agent_skills = [
         {"id": 1, "name": "text_to_speech", "type": "builtin", "config": {}, "enabled": True},
         {"id": 2, "name": "text_to_image", "type": "builtin", "config": {}, "enabled": True},
         {"id": 3, "name": "ai_call", "type": "builtin", "config": {}, "enabled": True},
@@ -21,15 +24,16 @@ def test_suite():
         {"id": 6, "name": "knowledge", "type": "builtin", "config": {}, "enabled": True},
         {"id": 6, "name": "web_search", "type": "builtin", "config": {}, "enabled": True},
     ]
-    loader = SkillLoader()
-    skills = loader.get_skill_list()
+    pathname = Path(__file__).parent / "../../../docs/.well-known/skills.yaml"
+    loader = await SkillsDeclaration.load(skill_yaml_file_name=pathname)
+    skills = loader.get_skill_list(context=context)
     assert skills
     assert len(skills) >= 3
     for desc, name in skills.items():
         assert desc
         assert name
 
-    entity = loader.get_entity("Assistant")
+    entity = loader.entities.get("Assistant")
     assert entity
     assert entity.skills
     for sk in entity.skills:
@@ -38,4 +42,4 @@ def test_suite():
 
 
 if __name__ == "__main__":
-    test_suite()
+    pytest.main([__file__, "-s"])

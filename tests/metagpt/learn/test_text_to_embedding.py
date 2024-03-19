@@ -6,35 +6,35 @@
 @File    : test_text_to_embedding.py
 @Desc    : Unit tests.
 """
+import json
+from pathlib import Path
 
-import asyncio
+import pytest
 
-from pydantic import BaseModel
-
+from metagpt.config2 import Config
 from metagpt.learn.text_to_embedding import text_to_embedding
-from metagpt.tools.openai_text_to_embedding import ResultEmbedding
+from metagpt.utils.common import aread
 
 
-async def mock_text_to_embedding():
-    class Input(BaseModel):
-        input: str
+@pytest.mark.asyncio
+async def test_text_to_embedding(mocker):
+    # mock
+    config = Config.default()
+    mock_post = mocker.patch("aiohttp.ClientSession.post")
+    mock_response = mocker.AsyncMock()
+    mock_response.status = 200
+    data = await aread(Path(__file__).parent / "../../data/openai/embedding.json")
+    mock_response.json.return_value = json.loads(data)
+    mock_post.return_value.__aenter__.return_value = mock_response
+    config.get_openai_llm().proxy = mocker.PropertyMock(return_value="http://mock.proxy")
 
-    inputs = [
-        {"input": "Panda emoji"}
-    ]
+    # Prerequisites
+    assert config.get_openai_llm().api_key
+    assert config.get_openai_llm().proxy
 
-    for i in inputs:
-        seed = Input(**i)
-        data = await text_to_embedding(seed.input)
-        v = ResultEmbedding(**data)
-        assert len(v.data) > 0
+    v = await text_to_embedding(text="Panda emoji", config=config)
+    assert len(v.data) > 0
 
 
-def test_suite():
-    loop = asyncio.get_event_loop()
-    task = loop.create_task(mock_text_to_embedding())
-    loop.run_until_complete(task)
-
-
-if __name__ == '__main__':
-    test_suite()
+if __name__ == "__main__":
+    pytest.main([__file__, "-s"])

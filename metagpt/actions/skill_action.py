@@ -12,38 +12,49 @@ import ast
 import importlib
 import traceback
 from copy import deepcopy
+from typing import Dict, Optional
 
-from metagpt.actions import Action, ActionOutput
+from metagpt.actions import Action
 from metagpt.learn.skill_loader import Skill
 from metagpt.logs import logger
+from metagpt.schema import Message
 
 
+# TOTEST
 class ArgumentsParingAction(Action):
-    def __init__(self, last_talk: str, skill: Skill, context=None, llm=None, **kwargs):
-        super(ArgumentsParingAction, self).__init__(name="", context=context, llm=llm)
-        self.skill = skill
-        self.ask = last_talk
-        self.rsp = None
-        self.args = None
+    skill: Skill
+    ask: str
+    rsp: Optional[Message] = None
+    args: Optional[Dict] = None
 
     @property
     def prompt(self):
         prompt = f"{self.skill.name} function parameters description:\n"
         for k, v in self.skill.arguments.items():
             prompt += f"parameter `{k}`: {v}\n"
-        prompt += "\n"
+        prompt += "\n---\n"
         prompt += "Examples:\n"
         for e in self.skill.examples:
             prompt += f"If want you to do `{e.ask}`, return `{e.answer}` brief and clear.\n"
-        prompt += f"\nNow I want you to do `{self.ask}`, return in examples format above, brief and clear."
+        prompt += "\n---\n"
+        prompt += (
+            f"\nRefer to the `{self.skill.name}` function description, and fill in the function parameters according "
+            'to the example "I want you to do xx" in the Examples section.'
+            f"\nNow I want you to do `{self.ask}`, return function parameters in Examples format above, brief and "
+            "clear."
+        )
         return prompt
 
-    async def run(self, *args, **kwargs) -> ActionOutput:
+    async def run(self, with_message=None, **kwargs) -> Message:
         prompt = self.prompt
-        rsp = await self.llm.aask(msg=prompt, system_msgs=[])
+        rsp = await self.llm.aask(
+            msg=prompt,
+            system_msgs=["You are a function parser.", "You can convert spoken words into function parameters."],
+            stream=False,
+        )
         logger.debug(f"SKILL:{prompt}\n, RESULT:{rsp}")
         self.args = ArgumentsParingAction.parse_arguments(skill_name=self.skill.name, txt=rsp)
-        self.rsp = ActionOutput(content=rsp)
+        self.rsp = Message(content=rsp, role="assistant", instruct_content=self.args, cause_by=self)
         return self.rsp
 
     @staticmethod
@@ -70,40 +81,33 @@ class ArgumentsParingAction(Action):
 
 
 class SkillAction(Action):
-    def __init__(self, skill: Skill, args: dict, context=None, llm=None, **kwargs):
-        super(SkillAction, self).__init__(name="", context=context, llm=llm)
-        self._skill = skill
-        self._args = args
-        self.rsp = None
+    skill: Skill
+    args: Dict
+    rsp: Optional[Message] = None
 
-    async def run(self, *args, **kwargs) -> str | ActionOutput | None:
+    async def run(self, with_message=None, **kwargs) -> Message:
         """Run action"""
         options = deepcopy(kwargs)
-        if self._args:
-            for k in self._args.keys():
+        if self.args:
+            for k in self.args.keys():
                 if k in options:
                     options.pop(k)
         try:
-            self.rsp = await self.find_and_call_function(self._skill.name, args=self._args, **options)
+            rsp = await self.find_and_call_function(self.skill.name, args=self.args, **options)
+            self.rsp = Message(content=rsp, role="assistant", cause_by=self)
         except Exception as e:
             logger.exception(f"{e}, traceback:{traceback.format_exc()}")
-            self.rsp = f"Error: {e}"
-        return ActionOutput(content=self.rsp, instruct_content=self._skill.json())
+            self.rsp = Message(content=f"Error: {e}", role="assistant", cause_by=self)
+        return self.rsp
 
     @staticmethod
-    async def find_and_call_function(function_name, args, **kwargs):
+    async def find_and_call_function(function_name, args, **kwargs) -> str:
         try:
             module = importlib.import_module("metagpt.learn")
             function = getattr(module, function_name)
-            # 调用函数并返回结果
+            # Invoke function and return result
             result = await function(**args, **kwargs)
             return result
         except (ModuleNotFoundError, AttributeError):
             logger.error(f"{function_name} not found")
-            return None
-
-
-if __name__ == "__main__":
-    ArgumentsParingAction.parse_arguments(
-        skill_name="text_to_image", txt='`text_to_image(text="Draw an apple", size_type="512x512")`'
-    )
+            raise ValueError(f"{function_name} not found")

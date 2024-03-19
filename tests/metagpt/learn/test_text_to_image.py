@@ -6,43 +6,58 @@
 @File    : test_text_to_image.py
 @Desc    : Unit tests.
 """
-import asyncio
 import base64
 
+import openai
+import pytest
 from pydantic import BaseModel
 
+from metagpt.config2 import Config
 from metagpt.learn.text_to_image import text_to_image
+from metagpt.tools.metagpt_text_to_image import MetaGPTText2Image
+from metagpt.tools.openai_text_to_image import OpenAIText2Image
+from metagpt.utils.s3 import S3
 
 
-async def mock_text_to_image():
-    class Input(BaseModel):
-        input: str
-        size_type: str
+@pytest.mark.asyncio
+async def test_text_to_image(mocker):
+    # mock
+    mocker.patch.object(MetaGPTText2Image, "text_2_image", return_value=b"mock MetaGPTText2Image")
+    mocker.patch.object(OpenAIText2Image, "text_2_image", return_value=b"mock OpenAIText2Image")
+    mocker.patch.object(S3, "cache", return_value="http://mock/s3")
 
-    inputs = [
-        {"input": "Panda emoji", "size_type": "512x512"}
-    ]
+    config = Config.default()
+    assert config.metagpt_tti_url
 
-    for i in inputs:
-        seed = Input(**i)
-        base64_data = await text_to_image(seed.input)
-        assert base64_data != ""
-        print(f"{seed.input} -> {base64_data}")
-        flags = ";base64,"
-        assert flags in base64_data
-        ix = base64_data.find(flags) + len(flags)
-        declaration = base64_data[0: ix]
-        assert declaration
-        data = base64_data[ix:]
-        assert data
-        assert base64.b64decode(data, validate=True)
+    data = await text_to_image("Panda emoji", size_type="512x512", config=config)
+    assert "base64" in data or "http" in data
 
 
-def test_suite():
-    loop = asyncio.get_event_loop()
-    task = loop.create_task(mock_text_to_image())
-    loop.run_until_complete(task)
+@pytest.mark.asyncio
+async def test_openai_text_to_image(mocker):
+    # mocker
+    mock_url = mocker.Mock()
+    mock_url.url.return_value = "http://mock.com/0.png"
+
+    class _MockData(BaseModel):
+        data: list
+
+    mock_data = _MockData(data=[mock_url])
+    mocker.patch.object(openai.resources.images.AsyncImages, "generate", return_value=mock_data)
+    mock_post = mocker.patch("aiohttp.ClientSession.get")
+    mock_response = mocker.AsyncMock()
+    mock_response.status = 200
+    mock_response.read.return_value = base64.b64encode(b"success")
+    mock_post.return_value.__aenter__.return_value = mock_response
+    mocker.patch.object(S3, "cache", return_value="http://mock.s3.com/0.png")
+
+    config = Config.default()
+    config.metagpt_tti_url = None
+    assert config.get_openai_llm()
+
+    data = await text_to_image("Panda emoji", size_type="512x512", config=config)
+    assert "base64" in data or "http" in data
 
 
-if __name__ == '__main__':
-    test_suite()
+if __name__ == "__main__":
+    pytest.main([__file__, "-s"])

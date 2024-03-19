@@ -8,7 +8,7 @@ from typing import Optional
 import aioboto3
 import aiofiles
 
-from metagpt.config import CONFIG
+from metagpt.config2 import S3Config
 from metagpt.const import BASE64_FORMAT
 from metagpt.logs import logger
 
@@ -16,14 +16,14 @@ from metagpt.logs import logger
 class S3:
     """A class for interacting with Amazon S3 storage."""
 
-    def __init__(self):
+    def __init__(self, config: S3Config):
         self.session = aioboto3.Session()
-        self.s3_config = CONFIG.S3
+        self.config = config
         self.auth_config = {
             "service_name": "s3",
-            "aws_access_key_id": self.s3_config["access_key"],
-            "aws_secret_access_key": self.s3_config["secret_key"],
-            "endpoint_url": self.s3_config["endpoint_url"],
+            "aws_access_key_id": config.access_key,
+            "aws_secret_access_key": config.secret_key,
+            "endpoint_url": config.endpoint,
         }
 
     async def upload_file(
@@ -137,12 +137,11 @@ class S3:
         pathname = path / object_name
         try:
             async with aiofiles.open(str(pathname), mode="wb") as file:
-                if format == BASE64_FORMAT:
-                    data = base64.b64decode(data)
+                data = base64.b64decode(data) if format == BASE64_FORMAT else data.encode(encoding="utf-8")
                 await file.write(data)
 
-            bucket = CONFIG.S3.get("bucket")
-            object_pathname = CONFIG.S3.get("path") or "system"
+            bucket = self.config.bucket
+            object_pathname = self.config.bucket or "system"
             object_pathname += f"/{object_name}"
             object_pathname = os.path.normpath(object_pathname)
             await self.upload_file(bucket=bucket, local_path=str(pathname), object_name=object_pathname)

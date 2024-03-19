@@ -6,7 +6,6 @@
 @File    : iflytek_tts.py
 @Desc    : iFLYTEK TTS OAS3 api, which provides text-to-speech functionality
 """
-import asyncio
 import base64
 import hashlib
 import hmac
@@ -24,7 +23,6 @@ import aiofiles
 import websockets as websockets
 from pydantic import BaseModel
 
-from metagpt.config import CONFIG
 from metagpt.logs import logger
 
 
@@ -57,9 +55,9 @@ class IFlyTekTTS(object):
         :param api_key: WebAPI argument, see: `https://console.xfyun.cn/services/tts`
         :param api_secret: WebAPI argument, see: `https://console.xfyun.cn/services/tts`
         """
-        self.app_id = app_id or CONFIG.IFLYTEK_APP_ID
-        self.api_key = api_key or CONFIG.IFLYTEK_API_KEY
-        self.api_secret = api_secret or CONFIG.API_SECRET
+        self.app_id = app_id
+        self.api_key = api_key
+        self.api_secret = api_secret
 
     async def synthesize_speech(self, text, output_file: str, voice=DEFAULT_IFLYTEK_VOICE):
         url = self._create_url()
@@ -74,12 +72,13 @@ class IFlyTekTTS(object):
             await websocket.send(req)
 
             # receive frames
-            async with aiofiles.open(str(output_file), "w") as writer:
+            async with aiofiles.open(str(output_file), "wb") as writer:
                 while True:
                     v = await websocket.recv()
                     rsp = IFlyTekTTSResponse(**json.loads(v))
                     if rsp.data:
-                        await writer.write(rsp.data.audio)
+                        binary_data = base64.b64decode(rsp.data.audio)
+                        await writer.write(binary_data)
                         if rsp.data.status != IFlyTekTTSStatus.STATUS_LAST_FRAME.value:
                             continue
                     break
@@ -127,36 +126,18 @@ async def oas3_iflytek_tts(text: str, voice: str = "", app_id: str = "", api_key
     :return: Returns the Base64-encoded .mp3 file data if successful, otherwise an empty string.
 
     """
-    if not app_id:
-        app_id = CONFIG.IFLYTEK_APP_ID
-    if not api_key:
-        api_key = CONFIG.IFLYTEK_API_KEY
-    if not api_secret:
-        api_secret = CONFIG.IFLYTEK_API_SECRET
-    if not voice:
-        voice = CONFIG.IFLYTEK_VOICE or DEFAULT_IFLYTEK_VOICE
 
     filename = Path(__file__).parent / (uuid.uuid4().hex + ".mp3")
     try:
         tts = IFlyTekTTS(app_id=app_id, api_key=api_key, api_secret=api_secret)
         await tts.synthesize_speech(text=text, output_file=str(filename), voice=voice)
-        async with aiofiles.open(str(filename), mode="r") as reader:
-            base64_string = await reader.read()
+        async with aiofiles.open(str(filename), mode="rb") as reader:
+            data = await reader.read()
+            base64_string = base64.b64encode(data).decode("utf-8")
     except Exception as e:
         logger.error(f"text:{text}, error:{e}")
         base64_string = ""
     finally:
-        filename.unlink()
+        filename.unlink(missing_ok=True)
 
     return base64_string
-
-
-if __name__ == "__main__":
-    asyncio.get_event_loop().run_until_complete(
-        oas3_iflytek_tts(
-            text="你好，hello",
-            app_id="f7acef62",
-            api_key="fda72e3aa286042a492525816a5efa08",
-            api_secret="ZDk3NjdiMDBkODJlOWQ1NjRjMGI2NDY4",
-        )
-    )

@@ -4,41 +4,17 @@
 @Time    : 2023/5/11 14:45
 @Author  : alexanderwu
 @File    : llm.py
-@Modified By: mashenquan, 2023
 """
-from enum import Enum
+from typing import Optional
 
-import openai
-
-from metagpt.config import CONFIG
-
-
-class LLMType(Enum):
-    OPENAI = "OpenAI"
-    METAGPT = "MetaGPT"
-    CLAUDE = "Claude"
-    UNKNOWN = "UNKNOWN"
-
-    @classmethod
-    def get(cls, value):
-        for member in cls:
-            if member.value == value:
-                return member
-        return cls.UNKNOWN
+from metagpt.configs.llm_config import LLMConfig
+from metagpt.context import Context
+from metagpt.provider.base_llm import BaseLLM
 
 
-class LLMFactory:
-    @staticmethod
-    def new_llm() -> object:
-        from metagpt.provider.anthropic_api import Claude2 as Claude
-        from metagpt.provider.metagpt_llm_api import MetaGPTLLMAPI as MetaGPT_LLM
-        from metagpt.provider.openai_api import OpenAIGPTAPI as OpenAI_LLM
-
-        if CONFIG.LLM_TYPE == LLMType.OPENAI.value:
-            return OpenAI_LLM()
-        if CONFIG.LLM_TYPE == LLMType.METAGPT.value:
-            return MetaGPT_LLM()
-        if CONFIG.LLM_TYPE == LLMType.CLAUDE.value:
-            return Claude()
-
-        raise openai.InvalidRequestError(message=f"Unsupported LLM TYPE: {CONFIG.LLM_TYPE}", param=None)
+def LLM(llm_config: Optional[LLMConfig] = None, context: Context = None) -> BaseLLM:
+    """get the default llm provider if name is None"""
+    ctx = context or Context()
+    if llm_config is not None:
+        return ctx.llm_with_cost_manager_from_llm_config(llm_config)
+    return ctx.llm()
