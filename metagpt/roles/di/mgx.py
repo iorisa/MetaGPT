@@ -2,10 +2,9 @@
 # @Author  : stellahong (stellahong@fuzhi.ai)
 # @Desc    :
 import asyncio
-import json
 from typing import Dict, List
 
-from metagpt.actions.intent_detect import IntentDetect
+from metagpt.actions.intent_detect import LightIntentDetect
 from metagpt.logs import logger
 from metagpt.roles.di.data_interpreter import DataInterpreter
 from metagpt.schema import Message
@@ -16,21 +15,27 @@ class MGX(DataInterpreter):
     intents: Dict = {}
 
     async def _intent_detect(self, user_msgs: List[Message] = None, **kwargs):
-        todo = IntentDetect(context=self.context)
-        intent_desp = await todo.run(user_msgs)
-        intent_desp = json.loads(intent_desp.content)
-        logger.info(f"intent_desp is {intent_desp}")
+        todo = LightIntentDetect(context=self.context)
+        await todo.run(user_msgs)
+        logger.info(f"intent_desp is {todo.result.model_dump_json()}")
 
         # Extract intent and sop prompt
-        intents = intent_desp.get("intentions", [{}])[0]
-        # Optional: handle the case where intentions might be empty or malformatted
-        intention_ref = intents.get("intention", {}).get("refs", [None])[0]
-        sop = intents.get("sop", {}).get("sop", None)
-        self.intents.update({intention_ref: sop})
-
-        if sop is None:
-            return intention_ref
-        return intention_ref + "\n---" + "\n".join(intents["sop"]["sop"])
+        intention_ref = ""
+        for i in todo.result.intentions:
+            if not i.sop:
+                continue
+            intention_ref = "\n".join(i.intention.refs)
+            self.intents[intention_ref] = i.sop.sop
+            logger.debug(f"refs: {intention_ref}, sop: {i.sop.sop}")
+            sop_str = "\n".join([f"- {i}" for i in i.sop.sop])
+            markdown = (
+                f"### User Requirement Detail\n```text\n{intention_ref}\n````\n"
+                f"### Knowledge\nTo meet user requirements, the following standard operating procedure(SOP)"
+                f" must be used:\n"
+                f"{sop_str}"
+            )
+            return markdown
+        return intention_ref
 
     async def _plan_and_act(self) -> Message:
         """first plan, then execute an action sequence, i.e. _think (of a plan) -> _act -> _act -> ... Use llm to come up with the plan dynamically."""
