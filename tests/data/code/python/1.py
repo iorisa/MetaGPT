@@ -53,6 +53,15 @@ plt.show()
 
 
 class Game:
+    class _EmbeddedClass(BaseModel):
+        val_: str
+
+    class _EmbeddedClass(BaseModel):
+        val_: str
+
+    class _EmbeddedClass
+        val_: str
+
     def __init__(self):
         self.snake = Snake(400, 300, 5, 0)
         self.enemy = Enemy(100, 100, 3, 1)
@@ -77,7 +86,8 @@ class Game:
         self.snake.move()
         self.enemy.move()
 
-    def draw(self, screen):
+    def draw(self, screen: Screen = None):
         self.snake.draw(screen)
         self.enemy.draw(screen)
         self.power_up.draw(screen)
+        self.error = ""
