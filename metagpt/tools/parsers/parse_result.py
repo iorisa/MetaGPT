@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+import sys
 import uuid
 from enum import Enum
 from pathlib import Path
@@ -18,15 +19,17 @@ class CodeBlockType(Enum):
     IMPORT = "import"
     DOTTED_NAME = "dotted_name"
     IDENTIFIER = "identifier"
-
-
-def dummy_func(node: Node):
-    print(f"Unsupported node:{node.type}, text:{node.text.decode('utf-8')}, {pformat(node)}")
+    SCOPED_IDENTIFIER = "scoped_identifier"
+    IMPORT_CONTENT = "import_content"
+    MODIFIERS = "modifiers"
 
 
 class NodeChain(BaseModel):
     parent: Optional[Any] = Field(default=None, exclude=True)
     id: str = Field(default_factory=lambda: uuid.uuid4().hex, exclude=True)
+    imports: Optional[List["ImportStatement"]] = None
+    classes: Optional[List["ClassDeclaration"]] = None
+    expression_statements: Optional[List["ExpressionStatement"]] = None
 
 
 class CodeBlock(NodeChain):
@@ -52,87 +55,67 @@ class CodeBlock(NodeChain):
 
 class Module(NodeChain):
     code: CodeBlock
-    expression_statements: List = Field(default_factory=list)
-    imports: List = Field(default_factory=list)
 
     @classmethod
     def load(cls, node: Node, parent: Any = None):
         module = cls(parent=parent, code=CodeBlock.load(node=node))
-        for i in node.children:
-            add_func = getattr(module, f"_add_{i.type}", dummy_func)
-            add_func(i)
+        add_node(parent=module, children=node.children)
         return module
-
-    def _add_expression_statement(self, node: Node):
-        statement = ExpressionStatement.load(node, parent=self)
-        self.expression_statements.append(statement)
-
-    def _add_import_statement(self, node: Node):
-        statement = ImportStatement.load(node, parent=self)
-        self.imports.append(statement)
 
 
 class ExpressionStatement(NodeChain):
     code: CodeBlock
-    expression_statements: List = Field(default_factory=list)
 
     @classmethod
     def load(cls, node: Node, parent: Any = None) -> ExpressionStatement:
         obj = cls(parent=parent, code=CodeBlock.load(node))
-        for i in node.children:
-            add_func = getattr(obj, f"_add_{i.type}", dummy_func)
-            add_func(i)
+        add_node(parent=obj, children=node.children)
         return obj
 
-    def _add_string(self, node: Node):
-        statement = StringStatement.load(node=node, parent=self)
-        self.expression_statements.append(statement)
+    # def _add_string(self, node: Node):
+    #     statement = StringStatement.load(node=node, parent=self)
+    #     self.expression_statements.append(statement)
 
 
-class StringStatement(NodeChain):
-    start: CodeBlock = None
-    content: CodeBlock = None
-    end: CodeBlock = None
-
-    @classmethod
-    def load(cls, node: Node, parent: Any = None) -> StringStatement:
-        statement = cls(
-            parent=parent,
-            type_=CodeBlockType.STRING.value,
-            text=node.text.decode("utf-8"),
-        )
-        for i in node.children:
-            if i.type == "string_start":
-                statement.start = CodeBlock.load(node=i)
-            elif i.type == "string_content":
-                statement.content = CodeBlock.load(node=i)
-            elif i.type == "string_end":
-                statement.end = CodeBlock.load(node=i)
-            else:
-                raise ValueError(f"Unsupported node:{i.type}, text={i.text.decode('utf-8')}")
-
-        return statement
+# class StringStatement(NodeChain):
+#     start: CodeBlock = None
+#     content: CodeBlock = None
+#     end: CodeBlock = None
+#
+#     @classmethod
+#     def load(cls, node: Node, parent: Any = None) -> StringStatement:
+#         statement = cls(
+#             parent=parent,
+#             type_=CodeBlockType.STRING.value,
+#             text=node.text.decode("utf-8"),
+#         )
+#         for i in node.children:
+#             if i.type == "string_start":
+#                 statement.start = CodeBlock.load(node=i)
+#             elif i.type == "string_content":
+#                 statement.content = CodeBlock.load(node=i)
+#             elif i.type == "string_end":
+#                 statement.end = CodeBlock.load(node=i)
+#             else:
+#                 raise ValueError(f"Unsupported node:{i.type}, text={i.text.decode('utf-8')}")
+#
+#         return statement
 
 
 class ImportStatement(NodeChain):
     code: CodeBlock
-    dotted_name: Optional[List[str]] = None
-    identifier: Optional[str] = None
+    dotted_name: List[str] = Field(default_factory=list)
 
     @classmethod
     def load(cls, node: Node, parent: Any = None) -> ImportStatement:
         statement = cls(parent=parent, code=CodeBlock.load(node=node))
-        import_content_node = None
         for i in node.children:
-            if i.type == CodeBlockType.IMPORT.value:
-                continue
-            import_content_node = i
-            break
-        for i in import_content_node.children:
-            if i.type == CodeBlockType.DOTTED_NAME.value:
+            if i.type == CodeBlockType.SCOPED_IDENTIFIER.value:
+                statement.dotted_name = cls._parse_scoped_identifier(i)
+            elif i.type == CodeBlockType.IMPORT_CONTENT.value:
                 statement.dotted_name = cls._parse_dotted_name(i)
             elif i.type == CodeBlockType.IDENTIFIER.value:
-                statement.identifier = i.text.decode("utf=8")
+                statement.dotted_name.append(i.text.decode("utf-8"))
         return statement
 
     @classmethod
@@ -142,6 +125,40 @@ class ImportStatement(NodeChain):
             if i.type == CodeBlockType.IDENTIFIER.value:
                 names.append(i.text.decode("utf-8"))
         return names
+
+    @classmethod
+    def _parse_scoped_identifier(cls, node: Node) -> List[str]:
+        names = []
+        for i in node.children:
+            if i.type == CodeBlockType.SCOPED_IDENTIFIER.value:
+                names = cls._parse_scoped_identifier(i)
+            elif i.type == CodeBlockType.IDENTIFIER.value:
+                names.append(i.text.decode("utf-8"))
+        return names
+
+
+class ClassDeclaration(NodeChain):
+    code: CodeBlock
+    modifiers: Optional[List[str]] = None
+    name: Optional[str] = None
+
+    @classmethod
+    def load(cls, node: Node, parent: Any = None) -> ClassDeclaration:
+        statement = cls(parent=parent, code=CodeBlock.load(node=node))
+        for i in node.children:
+            if i.type == CodeBlockType.MODIFIERS.value:
+                statement._parse_modifiers(i)
+            elif i.type == CodeBlockType.IDENTIFIER.value:
+                statement.name = i.text.decode("utf-8")
+            elif i.type == CodeBlockType.ClassBody.value:
+                statement._parse_body(i)
+        return statement
+
+    def _parse_modifiers(self, node: Node):
+        pass
+
+    def _parse_body(self, node: Node):
+        pass
 
 
 class ParseResult(BaseModel):
@@ -192,3 +209,30 @@ class ParseResult(BaseModel):
             if v:
                 errs.extend(v)
         return errs
+
+
+def add_node(parent: Any, children: List[Node]):
+    for i in children:
+        module_ = sys.modules[__name__]
+        add_func = getattr(module_, f"_add_{i.type}", dummy_func)
+        add_func(parent=parent, node=i)
+
+
+def dummy_func(parent: Any, node: Node):
+    print(f"Unsupported node:{node.type}, text:{node.text.decode('utf-8')}, {pformat(node)}")
+
+
+def _add_import_declaration(parent: Any, node: Node):
+    statement = ImportStatement.load(node=node, parent=parent)
+    if parent.imports is None:
+        parent.imports = [statement]
+    else:
+        parent.imports.append(statement)
+
+
+def _add_class_declaration(parent: Any, node: Node):
+    statement = ClassDeclaration.load(node=node, parent=parent)
+    if parent.classes is None:
+        parent.classes = [statement]
+    else:
+        parent.classes.append(statement)

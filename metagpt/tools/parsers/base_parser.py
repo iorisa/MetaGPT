@@ -28,7 +28,7 @@ class BaseParser(BaseModel):
         pass
 
     @abstractmethod
-    @property
+    # @property
     def extensions(self) -> List[str]:
         pass
 
