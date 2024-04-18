@@ -255,7 +255,7 @@ class MergeDataFlow(Action):
 
     async def _merge_action_input(self, ns_use_case: str, action_name: str):
         action_detail = await self._get_action_detail(ns_use_case=ns_use_case, action_name=action_name)
-        if not action_detail.inputs:
+        if not action_detail or not action_detail.inputs:
             return
         for i in action_detail.inputs:
             class_list = await self._get_class_list(ns_use_case)
@@ -311,6 +311,8 @@ class MergeDataFlow(Action):
             stream=False,
         )
         json_blocks = parse_json_code_block(rsp)
+        if not json_blocks:
+            return ""
 
         class _Data(BaseModel):
             result: bool
@@ -539,7 +541,7 @@ class MergeDataFlow(Action):
         # 要么上游某个action的output缺失，要么当前if-condition时序错误
         class_usage = await self._get_use_case_class_usage(ns_use_case)
         action = class_usage.get_action(action_name)
-        if not action.if_condition_class_names:
+        if not action or not action.if_condition_class_names:
             return
 
         ix = dag_list.index(action_name)

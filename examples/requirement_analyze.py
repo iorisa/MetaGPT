@@ -12,7 +12,12 @@ import typer
 
 from metagpt.actions import UserRequirement
 from metagpt.actions.prepare_documents import PrepareDocuments
-from metagpt.actions.requirement_analysis import activity, merge_swimlane, use_case
+from metagpt.actions.requirement_analysis import (
+    activity,
+    merge_swimlane,
+    summarize,
+    use_case,
+)
 from metagpt.actions.requirement_analysis.namespaces import Namespaces
 from metagpt.context import Context
 from metagpt.roles import Role
@@ -44,6 +49,8 @@ class RequirementAnalyzer(Role):
                 activity.OrderActions,
                 merge_swimlane.ActionMergeSwimlane,
                 merge_swimlane.MergeActionDAG,
+                merge_swimlane.MergeDataFlow,
+                summarize.Summarize,
             }
         )
 
@@ -68,6 +75,7 @@ class RequirementAnalyzer(Role):
             any_to_str(activity.OrderActions): merge_swimlane.ActionMergeSwimlane(context=self.context),
             any_to_str(merge_swimlane.ActionMergeSwimlane): merge_swimlane.MergeActionDAG(context=self.context),
             any_to_str(merge_swimlane.MergeActionDAG): merge_swimlane.MergeDataFlow(context=self.context),
+            any_to_str(merge_swimlane.MergeDataFlow): summarize.Summarize(context=self.context),
         }
         self.rc.todo = handlers.get(self.rc.news[0].cause_by, None)
         return bool(self.rc.todo is not None)

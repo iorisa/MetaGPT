@@ -62,7 +62,12 @@ class IdentifyAction(Action):
             msg=prompt,
             system_msgs=[
                 "You are a tool that analyzes use case descriptions and lists all actions used to complete the use case.",
-                'Return a Markdown JSON object with all possible actions listed under the "actions" key, which contains a list of action objects. Each action object has a "name" key containing the title of the action, a "inputs" key to list the descriptions of all inputs used by the action, a "outputs" key to list the descriptions of all outputs produced by the action, a "if_condition" key containing the description of the prerequisites that need to be met for executing the action, and a "reason" key providing explanations.',
+                'Return a Markdown JSON object with all possible actions listed under the "actions" key, which contains a list of action objects. '
+                'Each action object has a "name" key containing the title of the action, '
+                'a "inputs" key of a string list to list the descriptions of all inputs used by the action, '
+                'a "outputs" key of a string list to list the descriptions of all outputs produced by the action, '
+                'a "if_condition" key of a string value containing the description of the prerequisites that need to be met for executing the action, '
+                'and a "reason" key of a string value providing explanations.',
             ],
             stream=False,
         )
