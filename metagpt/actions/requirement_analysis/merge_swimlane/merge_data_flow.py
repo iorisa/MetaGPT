@@ -739,5 +739,7 @@ class MergeDataFlow(Action):
                 self.context.kwargs.ns.activity_class_usage, GraphKeyWords.Has_ + GraphKeyWords.Detail
             ),
         )
+        if not rows:
+            return UseCaseClassReferenceTable()
         json_data = remove_affix(split_namespace(rows[0].object_)[-1])
         return UseCaseClassReferenceTable.model_validate_json(json_data)
