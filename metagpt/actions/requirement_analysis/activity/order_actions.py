@@ -127,7 +127,7 @@ class OrderActions(Action):
                 'a "pre_actions" key for actions this action depends on and should be performed before this action, '
                 'an "action_name" key for the name of the action, '
                 'a "post_actions" key for actions directly depend on this action be performed, '
-                'An "if_conditions" key lists all the condition descriptions based on the values of parameters that need to be satisfied for the execution of the current action if any, '
+                'An "if_conditions" key of a string list that lists all the condition descriptions based on the values of parameters that need to be satisfied for the execution of the current action if any, '
                 'a "reason" key explaining why.',
             ],
             stream=False,
