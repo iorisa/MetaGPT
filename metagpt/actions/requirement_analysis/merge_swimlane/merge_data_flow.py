@@ -636,6 +636,8 @@ class MergeDataFlow(Action):
         ix = dag_list.index(action_name)
         available_classes = class_usage.get_class_names(exclude=dag_list[ix:])
         action = class_usage.get_action(action_name)
+        if not action:
+            return
         available_classes.update(action.get_class_names(exclude=[GraphKeyWords.Output]))
         err_outputs = []
         for i in action.output_class_names:
