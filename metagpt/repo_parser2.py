@@ -11,9 +11,12 @@ from pydantic import BaseModel, Field
 from metagpt.tools.parsers import (
     BaseParser,
     BashParser,
+    CParser,
     GoParser,
     JavaParser,
     JavaScriptParser,
+    PythonParser,
+    RustParser,
 )
 
 
@@ -29,7 +32,7 @@ class RepoParser2(BaseModel):
 
     async def generate_symbols(self):
         results = []
-        parsers = [JavaParser(), JavaScriptParser(), BashParser(), GoParser(), GoParser(), GoParser(), GoParser()]
+        parsers = [BashParser(), CParser(), GoParser(), JavaParser(), JavaScriptParser(), PythonParser(), RustParser()]
         for p in parsers:
             r = await self._parse_symbols(parser=p)
             results.extend(r)

@@ -7,7 +7,7 @@ import uuid
 from enum import Enum
 from pathlib import Path
 from pprint import pformat
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 from tree_sitter import Node, Tree
@@ -22,6 +22,19 @@ class CodeBlockType(Enum):
     SCOPED_IDENTIFIER = "scoped_identifier"
     IMPORT_CONTENT = "import_content"
     MODIFIERS = "modifiers"
+    WORD = "word"
+    LEFT_PARENTHESIS = "("
+    RIGHT_PARENTHESIS = ")"
+    COMPOUND_STATEMENT = "compound_statement"
+    PRIMITIVE_TYPE = "primitive_type"
+    FUNCTION_DECLARATOR = "function_declarator"
+    PARAMETER_LIST = "parameter_list"
+    SYSTEM_LIB_STRING = "system_lib_string"
+    PARAMETER_DECLARATION = "parameter_declaration"
+    ASTERISK = "*"
+    POINTER_DECLARATOR = "pointer_declarator"
+    CLASS_BODY = "class_body"
+    PREPROC_ARG = "preproc_arg"
 
 
 class NodeChain(BaseModel):
@@ -30,6 +43,7 @@ class NodeChain(BaseModel):
     imports: Optional[List["ImportStatement"]] = None
     classes: Optional[List["ClassDeclaration"]] = None
     expression_statements: Optional[List["ExpressionStatement"]] = None
+    functions: Optional[List[Union["FunctionDefinition", "PreprocDef"]]] = None
 
 
 class CodeBlock(NodeChain):
@@ -71,35 +85,6 @@ class ExpressionStatement(NodeChain):
         obj = cls(parent=parent, code=CodeBlock.load(node))
         add_node(parent=obj, children=node.children)
         return obj
-
-    # def _add_string(self, node: Node):
-    #     statement = StringStatement.load(node=node, parent=self)
-    #     self.expression_statements.append(statement)
-
-
-# class StringStatement(NodeChain):
-#     start: CodeBlock = None
-#     content: CodeBlock = None
-#     end: CodeBlock = None
-#
-#     @classmethod
-#     def load(cls, node: Node, parent: Any = None) -> StringStatement:
-#         statement = cls(
-#             parent=parent,
-#             type_=CodeBlockType.STRING.value,
-#             text=node.text.decode("utf-8"),
-#         )
-#         for i in node.children:
-#             if i.type == "string_start":
-#                 statement.start = CodeBlock.load(node=i)
-#             elif i.type == "string_content":
-#                 statement.content = CodeBlock.load(node=i)
-#             elif i.type == "string_end":
-#                 statement.end = CodeBlock.load(node=i)
-#             else:
-#                 raise ValueError(f"Unsupported node:{i.type}, text={i.text.decode('utf-8')}")
-#
-#         return statement
 
 
 class ImportStatement(NodeChain):
@@ -150,7 +135,7 @@ class ClassDeclaration(NodeChain):
                 statement._parse_modifiers(i)
             elif i.type == CodeBlockType.IDENTIFIER.value:
                 statement.name = i.text.decode("utf-8")
-            elif i.type == CodeBlockType.ClassBody.value:
+            elif i.type == CodeBlockType.CLASS_BODY.value:
                 statement._parse_body(i)
         return statement
 
@@ -159,6 +144,101 @@ class ClassDeclaration(NodeChain):
 
     def _parse_body(self, node: Node):
         pass
+
+
+class ParameterDeclaration(NodeChain):
+    type_: Optional[str] = None
+    name: Optional[str] = None
+    pointer_declarator: Optional[str] = None
+
+    @classmethod
+    def load(cls, node: Node, parent: Any = None) -> ParameterDeclaration:
+        statement = cls(parent=parent, code=CodeBlock.load(node=node))
+        statement._parse(node)
+        return statement
+
+    def _parse(self, node: Node):
+        for i in node.children:
+            if i.type == CodeBlockType.PRIMITIVE_TYPE.value:
+                self.type_ = i.text.decode("utf-8")
+            elif i.type == CodeBlockType.POINTER_DECLARATOR.value:
+                self._parse_pointer_declarator(i)
+            elif i.type == CodeBlockType.IDENTIFIER.value:
+                self.name = i.text.decode("utf-8")
+
+    def _parse_pointer_declarator(self, node: Node):
+        for i in node.children:
+            if i.type == CodeBlockType.ASTERISK.value:
+                if self.pointer_declarator is None:
+                    self.pointer_declarator = CodeBlockType.ASTERISK.value
+                else:
+                    self.pointer_declarator += CodeBlockType.ASTERISK.value
+            elif i.type == CodeBlockType.IDENTIFIER.value:
+                self.name = i.text.decode("utf-8")
+
+
+class FunctionDefinition(NodeChain):
+    code: CodeBlock
+    name: Optional[str] = None
+    parameters: Optional[List[ParameterDeclaration]] = None
+    body: Optional[str] = None
+    return_type: Optional[str] = None
+
+    @classmethod
+    def load(cls, node: Node, parent: Any = None) -> FunctionDefinition:
+        statement = cls(parent=parent, code=CodeBlock.load(node=node))
+        statement._parse_declaration(node)
+        return statement
+
+    def _parse_declaration(self, node: Node):
+        for i in node.children:
+            if i.type == CodeBlockType.WORD.value:
+                self.name = i.text.decode("utf-8")
+            elif i.type == CodeBlockType.LEFT_PARENTHESIS.value:
+                pass
+            elif i.type == CodeBlockType.RIGHT_PARENTHESIS.value:
+                pass
+            elif i.type == CodeBlockType.COMPOUND_STATEMENT.value:
+                self.body = i.text.decode("utf-8")
+            elif i.type == CodeBlockType.PRIMITIVE_TYPE.value:
+                self.return_type = i.text.decode("utf-8")
+            elif i.type == CodeBlockType.FUNCTION_DECLARATOR.value:
+                self._parse_function_declarator(i)
+
+    def _parse_function_declarator(self, node: Node):
+        for i in node.children:
+            if i.type == CodeBlockType.IDENTIFIER.value:
+                self.name = i.text.decode("utf-8")
+            elif i.type == CodeBlockType.PARAMETER_LIST.value:
+                self._parse_parameter_list(i)
+
+    def _parse_parameter_list(self, node: Node):
+        for i in node.children:
+            if i.type == CodeBlockType.PARAMETER_DECLARATION.value:
+                v = ParameterDeclaration.load(node=i, parent=self)
+                if self.parameters is None:
+                    self.parameters = [v]
+                else:
+                    self.parameters.append(v)
+
+
+class PreprocDef(NodeChain):
+    code: CodeBlock
+    name: Optional[str] = None
+    body: Optional[str] = None
+
+    @classmethod
+    def load(cls, node: Node, parent: Any = None) -> PreprocDef:
+        statement = cls(parent=parent, code=CodeBlock.load(node=node))
+        statement._parse(node)
+        return statement
+
+    def _parse(self, node: Node):
+        for i in node.children:
+            if i.type == CodeBlockType.IDENTIFIER.value:
+                self.name = i.text.decode("utf-8")
+            elif i.type == CodeBlockType.PREPROC_ARG.value:
+                self.body = i.text.decode("utf-8")
 
 
 class ParseResult(BaseModel):
@@ -236,3 +316,41 @@ def _add_class_declaration(parent: Any, node: Node):
         parent.classes = [statement]
     else:
         parent.classes.append(statement)
+
+
+def _add_comment(parent: Any, node: Node):
+    pass
+
+
+def _add_preproc_include(parent: Any, node: Node):
+    for i in node.children:
+        if i.type == CodeBlockType.SYSTEM_LIB_STRING.value:
+            lib_string = i.text.decode("utf-8")
+            if parent.imports is None:
+                parent.imports = [lib_string]
+            else:
+                parent.imports.append(lib_string)
+
+
+def _add_type_definition(parent: Any, node: Node):
+    pass
+
+
+def _add_preproc_def(parent: Any, node: Node):
+    statement = PreprocDef.load(node=node, parent=parent)
+    if parent.functions is None:
+        parent.functions = [statement]
+    else:
+        parent.functions.append(statement)
+
+
+def _add_preproc_ifdef(parent: Any, node: Node):
+    pass
+
+
+def _add_function_definition(parent: Any, node: Node):
+    statement = FunctionDefinition.load(node=node, parent=parent)
+    if parent.functions is None:
+        parent.functions = [statement]
+    else:
+        parent.functions.append(statement)

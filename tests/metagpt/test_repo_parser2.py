@@ -14,13 +14,6 @@ async def test_repo_parser():
     symbols = await repo_parser.generate_symbols()
     assert symbols
 
-    # assert "tot_schema.py" in str(symbols)
-    #
-    # output_path = repo_parser.generate_structure(mode="json")
-    # assert output_path.exists()
-    # output_path = repo_parser.generate_structure(mode="csv")
-    # assert output_path.exists()
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-s"])
