@@ -76,10 +76,6 @@ class Namespaces(BaseModel):
             delimiter="_",
         )
 
-    # @property
-    # def activity_swimlane_input_class(self): # 使用中的input class
-    #     return concat_namespace(self.namespace, GraphKeyWords.Activity, GraphKeyWords.Swimlane, GraphKeyWords.Input, GraphKeyWords.Class, delimiter="_")
-
     @property
     def activity_output_class(self):  # output class 候选池
         return concat_namespace(self.activity_output, GraphKeyWords.Class, delimiter="_")
@@ -94,14 +90,6 @@ class Namespaces(BaseModel):
             GraphKeyWords.Class,
             delimiter="_",
         )
-
-    # @property
-    # def activity_swimlane_output_class(self):# 使用中的output class
-    #     return concat_namespace(self.namespace, GraphKeyWords.Activity, GraphKeyWords.Swimlane, GraphKeyWords.Output, GraphKeyWords.Class, delimiter="_")
-
-    # @property
-    # def activity_input_class_property(self):
-    #     return concat_namespace(self.activity_input_class, GraphKeyWords.Property, delimiter="_")
 
     @property
     def activity_output_class_property(self):
@@ -133,12 +121,6 @@ class Namespaces(BaseModel):
             self.activity_action, GraphKeyWords.If, GraphKeyWords.Argument, GraphKeyWords.Class, delimiter="_"
         )
 
-    # @property
-    # def activity_swimlane_action_if_argument_class(self): # if argument使用中的class
-    #     return concat_namespace(
-    #         self.namespace, GraphKeyWords.Activity, GraphKeyWords.Swimlane, GraphKeyWords.Action, GraphKeyWords.If, GraphKeyWords.Argument, GraphKeyWords.Class, delimiter="_"
-    #     )
-
     @property
     def activity_control_flow_action_if(self):
         return concat_namespace(self.activity_control_flow_action, GraphKeyWords.If, delimiter="_")
@@ -152,3 +134,11 @@ class Namespaces(BaseModel):
         return concat_namespace(
             self.namespace, GraphKeyWords.Activity, GraphKeyWords.Class, GraphKeyWords.Reference, delimiter="_"
         )
+
+    @property
+    def breakdown(self):
+        return concat_namespace(self.namespace, GraphKeyWords.Breakdown, delimiter="_")
+
+    @property
+    def breakdown_use_case(self):
+        return concat_namespace(self.breakdown, GraphKeyWords.UseCase, delimiter="_")

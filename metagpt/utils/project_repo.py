@@ -34,6 +34,8 @@ from metagpt.const import (
     TASK_PDF_FILE_REPO,
     TEST_CODES_FILE_REPO,
     TEST_OUTPUTS_FILE_REPO,
+    USE_CASE_FILE_REPO,
+    USE_CASE_PDF_FILE_REPO,
     VISUAL_GRAPH_REPO_FILE_REPO,
 )
 from metagpt.utils.file_repository import FileRepository
@@ -48,6 +50,7 @@ class DocFileRepositories(FileRepository):
     graph_repo: FileRepository
     class_view: FileRepository
     code_plan_and_change: FileRepository
+    use_case: FileRepository
 
     def __init__(self, git_repo):
         super().__init__(git_repo=git_repo, relative_path=DOCS_FILE_REPO)
@@ -59,6 +62,7 @@ class DocFileRepositories(FileRepository):
         self.graph_repo = git_repo.new_file_repository(relative_path=GRAPH_REPO_FILE_REPO)
         self.class_view = git_repo.new_file_repository(relative_path=CLASS_VIEW_FILE_REPO)
         self.code_plan_and_change = git_repo.new_file_repository(relative_path=CODE_PLAN_AND_CHANGE_FILE_REPO)
+        self.use_case = git_repo.new_file_repository(relative_path=USE_CASE_FILE_REPO)
 
 
 class ResourceFileRepositories(FileRepository):
@@ -73,6 +77,7 @@ class ResourceFileRepositories(FileRepository):
     code_plan_and_change: FileRepository
     graph_repo: FileRepository
     requirement_analysis: FileRepository
+    use_case: FileRepository
 
     def __init__(self, git_repo):
         super().__init__(git_repo=git_repo, relative_path=RESOURCES_FILE_REPO)
@@ -88,6 +93,7 @@ class ResourceFileRepositories(FileRepository):
         self.code_plan_and_change = git_repo.new_file_repository(relative_path=CODE_PLAN_AND_CHANGE_PDF_FILE_REPO)
         self.graph_repo = git_repo.new_file_repository(relative_path=VISUAL_GRAPH_REPO_FILE_REPO)
         self.requirement_analysis = git_repo.new_file_repository(relative_path=REQUIREMENT_ANALYSIS_FILE_REPO)
+        self.use_case = git_repo.new_file_repository(relative_path=USE_CASE_PDF_FILE_REPO)
 
 
 class ProjectRepo(FileRepository):

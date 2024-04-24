@@ -87,6 +87,7 @@ PACKAGE_REQUIREMENTS_FILENAME = "requirements.txt"
 
 DOCS_FILE_REPO = "docs"
 PRDS_FILE_REPO = "docs/prd"
+USE_CASE_FILE_REPO = "docs/use_case"
 SYSTEM_DESIGN_FILE_REPO = "docs/system_design"
 TASK_FILE_REPO = "docs/task"
 CODE_PLAN_AND_CHANGE_FILE_REPO = "docs/code_plan_and_change"
@@ -107,6 +108,7 @@ REQUIREMENT_ANALYSIS_FILE_REPO = "resources/requirement_analysis"
 GRAPH_REPO_FILE_REPO = "docs/graph_repo"
 VISUAL_GRAPH_REPO_FILE_REPO = "resources/graph_db"
 CLASS_VIEW_FILE_REPO = "docs/class_view"
+USE_CASE_PDF_FILE_REPO = "resources/use_case"
 
 YAPI_URL = "http://yapi.deepwisdomai.com/"
 

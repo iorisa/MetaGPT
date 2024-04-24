@@ -37,12 +37,18 @@ class GraphKeyWords:
     Is_ = "is"
 
     List = "List"
+    List_ = "list"
 
+    Missing = "missing"
     Missing_ = "missing_"
 
     Not_ = "not_"
 
     OriginalRequirement = "OriginalRequirement"
+
+    Breakdown = "Breakdown"
+    Breakdown_ = "breakdown"
+
     Output = "Output"
     Output_ = "output"
 
@@ -62,5 +68,3 @@ class GraphKeyWords:
 
     UseCase = "UseCase"
     UseCase_ = "useCase"
-
-    Missing_ = "missing"
