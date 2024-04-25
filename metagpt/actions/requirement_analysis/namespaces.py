@@ -142,3 +142,7 @@ class Namespaces(BaseModel):
     @property
     def breakdown_use_case(self):
         return concat_namespace(self.breakdown, GraphKeyWords.UseCase, delimiter="_")
+
+    @property
+    def breakdown_use_case_reference(self):
+        return concat_namespace(self.breakdown_use_case, GraphKeyWords.Reference, delimiter="_")

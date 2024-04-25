@@ -6,7 +6,7 @@
 @File    : breakdown_common.py
 @Desc    : Defines common structs that used in breakdown the requirement specifications. The implementation of RFC 225.
 """
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -42,3 +42,13 @@ class BreakdownUseCaseDetail(BaseModel):
 
 class BreakdownUseCaseList(BaseModel):
     use_cases: List[BreakdownUseCaseDetail] = Field(default_factory=list)
+
+
+class BreakdownReferenceType(BaseModel):
+    is_issue: bool = False
+    issue: Optional[str] = None
+    is_todo: bool = False
+    todo: Optional[str] = None
+    is_effect: bool = False
+    effect: Optional[str] = None
+    reason: Optional[str] = None

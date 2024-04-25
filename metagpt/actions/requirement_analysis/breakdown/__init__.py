@@ -7,7 +7,8 @@
 @Desc    : The implementation of Chapter 2.2.1 of RFC225. https://deepwisdom.feishu.cn/wiki/VRq8wumeKiPcvIk9wcacwoIHnzc
 """
 from metagpt.actions.requirement_analysis.breakdown.breakdown import BreakdownRequirementSpecifications
+from metagpt.actions.requirement_analysis.breakdown.classify_use_case import ClassifyUseCase
 from metagpt.actions.requirement_analysis.breakdown.identify_use_case import IdentifyUseCase
 
 
-__all__ = [BreakdownRequirementSpecifications, IdentifyUseCase]
+__all__ = [BreakdownRequirementSpecifications, IdentifyUseCase, ClassifyUseCase]
