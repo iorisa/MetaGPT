@@ -6,12 +6,10 @@
 @File    : identify_output.py
 @Desc    : The implementation of the Chapter 2.2.11 of RFC145.
 """
-from pathlib import Path
-from typing import Optional
 
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
-from metagpt.actions import Action
+from metagpt.actions.requirement_analysis import GraphDBAction
 from metagpt.actions.requirement_analysis.graph_key_words import GraphKeyWords
 from metagpt.actions.requirement_analysis.text_to_class import ParameterList
 from metagpt.logs import logger
@@ -25,16 +23,12 @@ from metagpt.utils.common import (
     remove_affix,
     split_namespace,
 )
-from metagpt.utils.di_graph_repository import DiGraphRepository
-from metagpt.utils.graph_repository import SPO, GraphRepository
+from metagpt.utils.graph_repository import SPO
 
 
-class IdentifyOutput(Action):
-    graph_db: Optional[GraphRepository] = None
-
+class IdentifyOutput(GraphDBAction):
     async def run(self, with_messages: Message = None):
-        filename = Path(self.context.repo.workdir.name).with_suffix(".json")
-        self.graph_db = await DiGraphRepository.load_from(self.context.repo.docs.graph_repo.workdir / filename)
+        await self.load_graph_db()
         rows = await self.graph_db.select(
             predicate=concat_namespace(
                 self.context.kwargs.ns.activity_use_case, GraphKeyWords.Has_ + GraphKeyWords.Detail

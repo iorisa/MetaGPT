@@ -31,12 +31,11 @@ User -- UC2 : extends
 @enduml
 ```
 """
-from pathlib import Path
 from typing import Dict, List, Optional
 
 from pydantic import Field
 
-from metagpt.actions import Action
+from metagpt.actions.requirement_analysis import GraphDBAction
 from metagpt.actions.requirement_analysis.activity_common import ActionOrders
 from metagpt.actions.requirement_analysis.graph_key_words import GraphKeyWords
 from metagpt.actions.requirement_analysis.merge_swimlane.merge_data_flow import (
@@ -46,20 +45,16 @@ from metagpt.actions.requirement_analysis.merge_swimlane.merge_data_flow import 
 from metagpt.actions.requirement_analysis.text_to_class import ClassCodeBlock
 from metagpt.schema import Message
 from metagpt.utils.common import concat_namespace, remove_affix, split_namespace
-from metagpt.utils.di_graph_repository import DiGraphRepository
-from metagpt.utils.graph_repository import GraphRepository
 
 
-class Summarize(Action):
-    graph_db: Optional[GraphRepository] = None
+class Summarize(GraphDBAction):
     actors: List[str] = Field(default_factory=list)
     systems: List[str] = Field(default_factory=list)
     use_cases: List[str] = Field(default_factory=list)
     error_infos: List = Field(default_factory=list)
 
     async def run(self, with_messages: Message = None):
-        filename = Path(self.context.repo.workdir.name).with_suffix(".json")
-        self.graph_db = await DiGraphRepository.load_from(self.context.repo.docs.graph_repo.workdir / filename)
+        await self.load_graph_db()
 
         await self._create_user_requirement()
         await self._create_use_case_view()

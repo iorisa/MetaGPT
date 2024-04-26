@@ -6,12 +6,11 @@
 @File    : merge_data_flow.py
 @Desc    : The implementation of the Chapter 2.2.17 of RFC145.
 """
-from pathlib import Path
 from typing import Dict, List, Optional, Set
 
 from pydantic import BaseModel, Field
 
-from metagpt.actions import Action
+from metagpt.actions.requirement_analysis import GraphDBAction
 from metagpt.actions.requirement_analysis.activity_common import (
     ActionDetail,
     ActionList,
@@ -32,8 +31,6 @@ from metagpt.utils.common import (
     remove_affix,
     split_namespace,
 )
-from metagpt.utils.di_graph_repository import DiGraphRepository
-from metagpt.utils.graph_repository import GraphRepository
 
 
 class _ClassNameList(BaseModel):
@@ -118,12 +115,9 @@ class UseCaseClassReferenceTable(BaseModel):
         return class_names
 
 
-class MergeDataFlow(Action):
-    graph_db: Optional[GraphRepository] = None
-
+class MergeDataFlow(GraphDBAction):
     async def run(self, with_messages: Message = None):
-        filename = Path(self.context.repo.workdir.name).with_suffix(".json")
-        self.graph_db = await DiGraphRepository.load_from(self.context.repo.docs.graph_repo.workdir / filename)
+        await self.load_graph_db()
         rows = await self.graph_db.select(
             predicate=concat_namespace(self.context.kwargs.ns.use_case, GraphKeyWords.Is_),
             object_=concat_namespace(self.context.kwargs.ns.use_case, GraphKeyWords.UseCase_),
