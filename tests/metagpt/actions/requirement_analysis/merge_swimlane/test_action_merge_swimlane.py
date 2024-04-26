@@ -1,21 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from pathlib import Path
 
 import pytest
 
 from metagpt.actions.requirement_analysis.graph_key_words import GraphKeyWords
 from metagpt.actions.requirement_analysis.merge_swimlane import ActionMergeSwimlane
-from metagpt.actions.requirement_analysis.namespaces import Namespaces
-from metagpt.utils.common import aread, concat_namespace, split_namespace
+from metagpt.utils.common import concat_namespace, split_namespace
+from tests.metagpt.actions.requirement_analysis import prepare_graph_db
 
 
 @pytest.mark.asyncio
 async def test_action_merge_swimlane(context):
-    context.kwargs.ns = Namespaces(namespace="RFC145")
-    graph_db_filename = Path(__file__).parent / "../../../../data/graph_db/requirement_analyze.json"
-    graph_db = await aread(filename=graph_db_filename, encoding="utf-8")
-    await context.repo.docs.graph_repo.save(filename=context.repo.workdir.name + ".json", content=graph_db)
+    await prepare_graph_db(context)
 
     action = ActionMergeSwimlane(context=context)
     await action.run()

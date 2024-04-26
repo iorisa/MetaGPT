@@ -77,6 +77,7 @@ class ClassifyUseCase(GraphDBAction):
         logger.info(rsp)
         json_blocks = parse_json_code_block(rsp)
         type_ = BreakdownReferenceType.model_validate_json(json_blocks[0])
+        type_.reference = reference
         await self.graph_db.insert(
             subject=concat_namespace(
                 self.context.kwargs.ns.breakdown_use_case_reference, add_affix(use_case.model_dump_json())

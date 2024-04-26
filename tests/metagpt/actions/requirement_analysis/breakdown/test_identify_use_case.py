@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import List
 
 import pytest
@@ -6,20 +5,14 @@ from pydantic import BaseModel
 
 from metagpt.actions.requirement_analysis.breakdown import IdentifyUseCase
 from metagpt.actions.requirement_analysis.graph_key_words import GraphKeyWords
-from metagpt.actions.requirement_analysis.namespaces import Namespaces
-from metagpt.utils.common import aread, concat_namespace
-from metagpt.utils.di_graph_repository import DiGraphRepository
+from metagpt.utils.common import concat_namespace
 from metagpt.utils.graph_repository import SPO
+from tests.metagpt.actions.requirement_analysis.breakdown import prepare_graph_db
 
 
 @pytest.mark.asyncio
 async def test_md(context):
-    context.kwargs.ns = Namespaces(namespace="RFC225")
-    data = await aread(filename=Path(__file__).parent / "../../../../data/graph_db/breakdown.json")
-    filename = context.repo.workdir.name + ".json"
-    await context.repo.docs.graph_repo.save(filename=filename, content=data)
-
-    graph_db = await DiGraphRepository.load_from(context.repo.docs.graph_repo.workdir / filename)
+    graph_db = await prepare_graph_db(context)
     action = IdentifyUseCase(graph_db=graph_db, context=context)
     await action._save_use_cases_pdf()
     doc = await context.repo.resources.use_case.get(filename="all.md")

@@ -45,6 +45,7 @@ class BreakdownUseCaseList(BaseModel):
 
 
 class BreakdownReferenceType(BaseModel):
+    reference: Optional[str] = None
     is_issue: bool = False
     issue: Optional[str] = None
     is_todo: bool = False
