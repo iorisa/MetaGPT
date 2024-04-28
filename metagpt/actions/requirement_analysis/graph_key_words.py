@@ -68,3 +68,5 @@ class GraphKeyWords:
 
     UseCase = "UseCase"
     UseCase_ = "useCase"
+
+    What = "What"

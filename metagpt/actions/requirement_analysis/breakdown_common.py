@@ -53,3 +53,27 @@ class BreakdownReferenceType(BaseModel):
     is_effect: bool = False
     effect: Optional[str] = None
     reason: Optional[str] = None
+
+
+class Issue5W1H(BaseModel):
+    who: str
+    why_who: str
+    what: str
+    why_what: str
+    when: str
+    why_when: str
+    why: str
+    why_why: str
+    how: str
+    why_how: str
+
+
+class IssueWhatPatch(BaseModel):
+    is_clear: bool
+    is_actionable: bool
+    data_for_checks: List[str]
+    measurement_tools_and_methods: List[str]
+    indicators: List[str]
+    avoiding_subjective_issues: List[str]
+    criteria: List[str]
+    quality_requirements: List[str]
