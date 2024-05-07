@@ -11,10 +11,12 @@ from metagpt.actions.requirement_analysis import GraphDBAction
 from metagpt.actions.requirement_analysis.breakdown_common import (
     BreakdownReferenceType,
     BreakdownUseCaseDetail,
+    EffectPatch,
     Issue5W1H,
     IssueWhatPatch,
     Section,
     Sections,
+    ToDoPatch,
 )
 from metagpt.actions.requirement_analysis.graph_key_words import GraphKeyWords
 from metagpt.logs import logger
@@ -86,7 +88,7 @@ class PatchUseCase(GraphDBAction):
                 '- a "why" key explaining why these scenario is considered as an issue. Leave it blank if it\'s not mentioned.\n'
                 '- a "why_why" key explaining why "why" is filled like this.\n'
                 '- a "how" key containing who to do. Leave it blank if it\'s not mentioned.\n'
-                '- a "why_how" key explaining why "how" is filled like this.\n'
+                '- a "why_how" key explaining why "how" is filled like this.',
                 f"- Answer in {language} language.",
             ],
         )
@@ -106,7 +108,6 @@ class PatchUseCase(GraphDBAction):
         await self._patch_issue_what(
             original_text=original_text, use_case_detail=use_case_detail, issue=issue, what=what
         )
-        pass
 
     async def _patch_issue_what(
         self, original_text: str, use_case_detail: BreakdownUseCaseDetail, issue: str, what: Issue5W1H
@@ -140,7 +141,7 @@ class PatchUseCase(GraphDBAction):
                 '- a "indicators" key containing a string list type object about which indicators are selected with sufficiently specific guidance   if "is_actionable" is filled with true;\n'
                 '- a "avoiding_subjective_issues" key containing a string list type object about how to avoid subjective issues in measurement results  with sufficiently specific guidance   if "is_actionable" is filled with true;\n',
                 '- a "criteria" key containing a string list type object about what the criteria are for solving the issue;\n'
-                '- a "quality_requirements" key containing a string list type object about what the quality requirements are when solving the issue;\n'
+                '- a "quality_requirements" key containing a string list type object about what the quality requirements are when solving the issue;',
                 f"- Answer in {language} language.",
             ],
         )
@@ -162,9 +163,91 @@ class PatchUseCase(GraphDBAction):
     async def _patch_todo(
         self, use_case_detail: BreakdownUseCaseDetail, type_: BreakdownReferenceType, section: Section
     ):
-        pass
+        original_text = section.content
+        todo = type_.todo
+        prompt = f"## Original Text\n{original_text}\n## Use Case\n{use_case_detail.use_case}\n## TODO\n{todo}\n"
+        language = self.context.kwargs.language or "Chinese"
+        rsp = await self.llm.aask(
+            prompt,
+            system_msgs=[
+                '- "Use Case" aims to implement the "how to do" outlined in the "TODO";',
+                '- "Original Text" provides the complete context information;',
+                '- What are the task objectives of the "Use Case"? What are the expected outcomes? What are the criteria for completing the task? What are the quality requirements when completing the task? Provide sufficiently specific guidance.',
+                '- What information, data, or resources inputs are needed to accomplish the tasks in the "Use Case," and where do they come from? These inputs include those needed for development, operation, as well as the inputs required by the functionality itself. Provide sufficiently specific guidance, including specific items or information to be provided.',
+                '- What external environmental factors are needed to complete the tasks in the "Use Case," and what are the potential constraints that may affect task implementation? Provide sufficiently specific guidance.',
+                '- What are the potential risks that may hinder the completion of tasks in the "Use Case"? How should each risk be addressed? Provide sufficiently specific guidance.',
+                '- What are the expected outputs of the "Use Case"? Provide sufficiently specific guidance, including specific items or information to be delivered.',
+                "Return a markdown JSON object with:\n"
+                '- a "objectives" key containing a string list type object about what the task objectives of the "Use Case" are;\n'
+                '- a "expected_outcomes" key containing a string list type object about what the expected outcomes are;\n'
+                '- a "criteria" key containing a string list type object about what the criteria are for completing the task;\n'
+                '- a "quality_requirements" key containing a string list type object about what the quality requirements are when completing the task;\n'
+                '- a "inputs_needs" key containing a string list type object about what information, data, or resources inputs are needed to accomplish the tasks in the "Use Case";\n'
+                '- a "external_environmental_factors" containing a string list type object about what external environmental factors are needed to complete the tasks in the "Use Case";\n'
+                '- a "potential_risks" key containing a string list type object about what the potential constraints are that may affect task implementation;\n'
+                '- a "risk_prevention" key containing a string list object about how to address these potential risks.\n'
+                '- a "expected_outputs" key containing a string list type object about what the expected outputs of the "Use Case" are;',
+                f"- Answer in {language} language.",
+            ],
+        )
+        logger.info(rsp)
+        json_blocks = parse_json_code_block(rsp)
+        todo = ToDoPatch.model_validate_json(json_blocks[0])
+        await self.graph_db.insert(
+            subject=concat_namespace(
+                self.context.kwargs.ns.breakdown_use_case_reference_todo, add_affix(use_case_detail.model_dump_json())
+            ),
+            predicate=concat_namespace(self.context.kwargs.ns.breakdown_use_case_reference_todo, GraphKeyWords.Is_),
+            object_=concat_namespace(
+                self.context.kwargs.ns.breakdown_use_case_reference_todo, add_affix(todo.model_dump_json())
+            ),
+        )
 
     async def _patch_effect(
         self, use_case_detail: BreakdownUseCaseDetail, type_: BreakdownReferenceType, section: Section
     ):
-        pass
+        original_text = section.content
+        effect = type_.effect
+        prompt = f"## Original Text\n{original_text}\n## Use Case\n{use_case_detail.use_case}\n## Effect\n{effect}\n"
+        language = self.context.kwargs.language or "Chinese"
+        rsp = await self.llm.aask(
+            prompt,
+            system_msgs=[
+                '- "Use Case" aims to achieve the effects described in the "Effect";',
+                '- "Original Text" provides the complete context information;',
+                '- What are the specific objectives and expected outputs to be achieved by "Effect", and why is it important to achieve this outcome? Provide sufficiently specific guidance.',
+                '- What are the criteria for achieving "Effect"? What are the quality requirements when achieving "Effect"? Provide sufficiently specific guidance.',
+                '- Are the objectives of "Effect" measurable, and by what means can the achievement of these objectives be evaluated?  Provide sufficiently specific guidance.',
+                '- What data, information, or resources are required as inputs to achieve "Effect"? Provide sufficiently specific guidance.',
+                '- What steps, methods, and technologies are necessary to achieve "Effect"?  Provide sufficiently specific guidance.',
+                '- What external environmental factors are needed to complete the tasks in the "Use Case," and what are the potential constraints that may affect task implementation? Provide sufficiently specific guidance.',
+                '- What challenges and risks might be encountered in achieving "Effect", and how should they be addressed?  Provide sufficiently specific guidance.',
+                "Return a markdown JSON object with:\n"
+                '- an "objectives" key containing a string list object about what the specific objectives are;\n'
+                '- an "expected_outputs" key containing a string list object about what the expected outputs to be achieved by "Effect" are;\n'
+                '- a "criteria" key containing a string list type object about what the criteria are for achieving "Effect";\n'
+                '- a "quality_requirements" key containing a string list type object about what the quality requirements are when achieving "Effect";\n'
+                '- an "is_measurable" key containing a boolean value about whether the objectives of "Effect"  are measurable;\n'
+                '- an "evaluations" key containing a string list object about what means can the achievement of these objectives be evaluated;\n'
+                '- an "inputs_needs" key containing a string list object about what data, information, or resources are required as inputs to achieve "Effect";\n'
+                '- a "steps" key containing a string list object about what steps are necessary to achieve "Effect";\n'
+                '- a "methods" key containing a string list object about what methods are necessary to achieve "Effect";\n'
+                '- a "technologies" key containing a string list object about what technologies are necessary to achieve "Effect";\n'
+                '- a "external_environmental_factors" containing a string list type object about what external environmental factors are needed to achieve "Effect";\n'
+                '- a "potential_risks" key containing a string list object about what challenges and risks might be encountered in achieving "Effect";\n'
+                '- a "risk_prevention" key containing a string list object about how to address these potential risks.',
+                f"- Answer in {language} language.",
+            ],
+        )
+        logger.info(rsp)
+        json_blocks = parse_json_code_block(rsp)
+        effect = EffectPatch.model_validate_json(json_blocks[0])
+        await self.graph_db.insert(
+            subject=concat_namespace(
+                self.context.kwargs.ns.breakdown_use_case_reference_effect, add_affix(use_case_detail.model_dump_json())
+            ),
+            predicate=concat_namespace(self.context.kwargs.ns.breakdown_use_case_reference_effect, GraphKeyWords.Is_),
+            object_=concat_namespace(
+                self.context.kwargs.ns.breakdown_use_case_reference_effect, add_affix(effect.model_dump_json())
+            ),
+        )

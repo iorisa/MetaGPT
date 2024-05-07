@@ -61,6 +61,8 @@ class GraphKeyWords:
 
     Reason = "Reason"
     Reference = "Reference"
+    ToDo = "ToDo"
+    Effect = "Effect"
 
     Swimlane = "Swimlane"
     Swimlane_ = "swimlane"

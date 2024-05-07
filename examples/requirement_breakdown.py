@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+@Time    : 2024/1/6
+@Author  : mashenquan
+@File    : requirement_breakdown.py
+@Desc    : The implementation of RFC225. https://deepwisdom.feishu.cn/wiki/VRq8wumeKiPcvIk9wcacwoIHnzc
+"""
 import asyncio
 
 import typer

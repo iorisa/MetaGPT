@@ -77,3 +77,31 @@ class IssueWhatPatch(BaseModel):
     avoiding_subjective_issues: List[str]
     criteria: List[str]
     quality_requirements: List[str]
+
+
+class ToDoPatch(BaseModel):
+    objectives: List[str]
+    expected_outcomes: List[str]
+    criteria: List[str]
+    quality_requirements: List[str]
+    inputs_needs: List[str]
+    external_environmental_factors: List[str]
+    potential_risks: List[str]
+    risk_prevention: List[str]
+    expected_outputs: List[str]
+
+
+class EffectPatch(BaseModel):
+    objectives: List[str]
+    expected_outputs: List[str]
+    criteria: List[str]
+    quality_requirements: List[str]
+    is_measurable: bool
+    evaluations: List[str]
+    inputs_needs: List[str]
+    steps: List[str]
+    methods: List[str]
+    technologies: List[str]
+    external_environmental_factors: List[str]
+    potential_risks: List[str]
+    risk_prevention: List[str]
