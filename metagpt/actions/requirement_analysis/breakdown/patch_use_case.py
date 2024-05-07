@@ -6,6 +6,7 @@
 @File    : patch_use_case.py
 @Desc    : The implementation of the Chapter 2.2.3 of RFC225.
 """
+from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 from metagpt.actions.requirement_analysis import GraphDBAction
 from metagpt.actions.requirement_analysis.breakdown_common import (
@@ -24,6 +25,7 @@ from metagpt.schema import Message
 from metagpt.utils.common import (
     add_affix,
     concat_namespace,
+    general_after_log,
     parse_json_code_block,
     remove_affix,
     split_namespace,
@@ -65,6 +67,11 @@ class PatchUseCase(GraphDBAction):
         if type_.is_effect:
             await self._patch_effect(use_case_detail, type_, section)
 
+    @retry(
+        wait=wait_random_exponential(min=1, max=20),
+        stop=stop_after_attempt(6),
+        after=general_after_log(logger),
+    )
     async def _patch_issue(
         self, use_case_detail: BreakdownUseCaseDetail, type_: BreakdownReferenceType, section: Section
     ):
@@ -109,6 +116,11 @@ class PatchUseCase(GraphDBAction):
             original_text=original_text, use_case_detail=use_case_detail, issue=issue, what=what
         )
 
+    @retry(
+        wait=wait_random_exponential(min=1, max=20),
+        stop=stop_after_attempt(6),
+        after=general_after_log(logger),
+    )
     async def _patch_issue_what(
         self, original_text: str, use_case_detail: BreakdownUseCaseDetail, issue: str, what: Issue5W1H
     ):
@@ -160,6 +172,11 @@ class PatchUseCase(GraphDBAction):
             ),
         )
 
+    @retry(
+        wait=wait_random_exponential(min=1, max=20),
+        stop=stop_after_attempt(6),
+        after=general_after_log(logger),
+    )
     async def _patch_todo(
         self, use_case_detail: BreakdownUseCaseDetail, type_: BreakdownReferenceType, section: Section
     ):
@@ -203,6 +220,11 @@ class PatchUseCase(GraphDBAction):
             ),
         )
 
+    @retry(
+        wait=wait_random_exponential(min=1, max=20),
+        stop=stop_after_attempt(6),
+        after=general_after_log(logger),
+    )
     async def _patch_effect(
         self, use_case_detail: BreakdownUseCaseDetail, type_: BreakdownReferenceType, section: Section
     ):
