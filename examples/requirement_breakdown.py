@@ -12,6 +12,7 @@ import typer
 
 from metagpt.actions import UserRequirement
 from metagpt.actions.prepare_documents import PrepareDocuments
+from metagpt.actions.requirement_analysis.analysis_report import WriteReport
 from metagpt.actions.requirement_analysis.breakdown import (
     BreakdownRequirementSpecifications,
     ClassifyUseCase,
@@ -32,7 +33,14 @@ class RequirementBreakdowner(Role):
         super().__init__(**kwargs)
         # Set events or actions the Architect should watch or be aware of
         self._watch(
-            {UserRequirement, PrepareDocuments, BreakdownRequirementSpecifications, IdentifyUseCase, ClassifyUseCase},
+            {
+                UserRequirement,
+                PrepareDocuments,
+                BreakdownRequirementSpecifications,
+                IdentifyUseCase,
+                ClassifyUseCase,
+                PatchUseCase,
+            },
         )
 
     async def _observe(self, ignore_memory=False) -> int:
@@ -45,6 +53,7 @@ class RequirementBreakdowner(Role):
             any_to_str(BreakdownRequirementSpecifications): IdentifyUseCase(context=self.context),
             any_to_str(IdentifyUseCase): ClassifyUseCase(context=self.context),
             any_to_str(ClassifyUseCase): PatchUseCase(context=self.context),
+            any_to_str(PatchUseCase): WriteReport(context=self.context),
         }
         self.rc.todo = handlers.get(self.rc.news[0].cause_by, None)
         return bool(self.rc.todo is not None)

@@ -52,6 +52,8 @@ class BreakdownReferenceType(BaseModel):
     todo: Optional[str] = None
     is_effect: bool = False
     effect: Optional[str] = None
+    is_constraint: bool = False
+    constraint: Optional[str] = None
     reason: Optional[str] = None
 
 
@@ -327,3 +329,7 @@ class AnalysisReport(BaseModel):
     @property
     def reference(self) -> str:
         return self.reference_type.reference
+
+    @property
+    def is_constraint(self) -> bool:
+        return self.reference_type.is_constraint

@@ -38,6 +38,8 @@ class WriteReport(GraphDBAction):
     raw_unready: List[str] = Field(default_factory=list)
     ready: List[str] = Field(default_factory=list)
     raw_ready: List[str] = Field(default_factory=list)
+    constraint: List[str] = Field(default_factory=list)
+    raw_constraint: List[str] = Field(default_factory=list)
 
     async def run(self, with_messages: Message = None):
         await self.load_graph_db()
@@ -51,19 +53,29 @@ class WriteReport(GraphDBAction):
             type_ = BreakdownReferenceType.model_validate_json(remove_affix(split_namespace(i.object_)[-1]))
             report = await self._report(use_case_detail=use_case_detail, type_=type_)
 
-            no = len(self.unready) + 1 if report.has_risk else len(self.ready) + 1
+            if report.has_risk:
+                no = len(self.unready) + 1
+            elif report.is_constraint:
+                no = len(self.constraint) + 1
+            else:
+                no = len(self.ready) + 1
             content = f"## {no}. {report.use_case}\n"
             content += f"### {no}.1. Paragraph\n" + "\n".join([f"- {i}" for i in report.tags]) + "\n"
             content += f"### {no}.2. Reference\n{report.reference}\n"
-            content += f"### {no}.3. Summary\n{report.markdown_table if report.table else ''}\n"
+            if not report.is_constraint:
+                content += f"### {no}.3. Summary\n{report.markdown_table}\n"
 
             rsp = await self._translate(content)
             if report.has_risk:
                 self.unready.append(rsp)
                 self.raw_unready.append(content)
-            else:
-                self.ready.append(rsp)
-                self.raw_ready.append(content)
+                continue
+            if report.is_constraint:
+                self.constraint.append(rsp)
+                self.raw_constraint.append(content)
+                continue
+            self.ready.append(rsp)
+            self.raw_ready.append(content)
 
         await self.context.repo.resources.requirement_analysis.save(
             filename="unready.md", content="\n---\n".join(self.unready)
@@ -72,10 +84,17 @@ class WriteReport(GraphDBAction):
             filename="ready.md", content="\n---\n".join(self.ready)
         )
         await self.context.repo.resources.requirement_analysis.save(
+            filename="constraint.md", content="\n---\n".join(self.constraint)
+        )
+
+        await self.context.repo.resources.requirement_analysis.save(
             filename="raw-unready.md", content="\n---\n".join(self.raw_unready)
         )
         await self.context.repo.resources.requirement_analysis.save(
             filename="raw-ready.md", content="\n---\n".join(self.raw_ready)
+        )
+        await self.context.repo.resources.requirement_analysis.save(
+            filename="raw-constraint.md", content="\n---\n".join(self.raw_constraint)
         )
 
         await self.graph_db.save()

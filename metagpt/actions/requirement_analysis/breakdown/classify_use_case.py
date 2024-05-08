@@ -71,6 +71,8 @@ class ClassifyUseCase(GraphDBAction):
                 '- a "todo" key containing the original text of "Use Case" related to how this requirement should be done if "is_todo" is true;\n'
                 '- an "is_effect" key with a boolean value;\n'
                 '- an "effect" key containing the original text of "Use Case" related to what effect this requirement requires;\n'
+                '- an "is_constraint" key with a boolean value;\n'
+                '- a "constraint" key containing the original text of "Use Case" related to what constraint this requirement requires;\n'
                 '- a "reason" key explaining why.\n',
             ],
         )
