@@ -63,7 +63,7 @@ class ClassifyUseCase(GraphDBAction):
                 'Does the "Use Case" explicitly address the issue of this requirement?',
                 'Does the "Use Case" explicitly specify how this requirement should be done?',
                 'Does the "Use Case" explicitly state what effect this requirement requires?',
-                'Does the "Use Case" claim what constraints need to necessitate?',
+                'Does the "Use Case" declare what constraints need to necessitate?',
                 "Why?",
                 "Return a markdown JSON object with:\n"
                 '- an "is_issue" key with a boolean value;\n'
