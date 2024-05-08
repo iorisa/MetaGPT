@@ -63,6 +63,7 @@ class ClassifyUseCase(GraphDBAction):
                 'Does the "Use Case" explicitly address the issue of this requirement?',
                 'Does the "Use Case" explicitly specify how this requirement should be done?',
                 'Does the "Use Case" explicitly state what effect this requirement requires?',
+                'Does the "Use Case" claim what constraints need to necessitate?',
                 "Why?",
                 "Return a markdown JSON object with:\n"
                 '- an "is_issue" key with a boolean value;\n'
@@ -72,7 +73,7 @@ class ClassifyUseCase(GraphDBAction):
                 '- an "is_effect" key with a boolean value;\n'
                 '- an "effect" key containing the original text of "Use Case" related to what effect this requirement requires;\n'
                 '- an "is_constraint" key with a boolean value;\n'
-                '- a "constraint" key containing the original text of "Use Case" related to what constraint this requirement requires;\n'
+                '- a "constraint" key containing the original text of "Use Case" related to what constraints need to necessitate;\n'
                 '- a "reason" key explaining why.\n',
             ],
         )
