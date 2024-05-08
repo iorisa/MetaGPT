@@ -53,6 +53,7 @@ class PatchUseCase(GraphDBAction):
             await self._patch(use_case_detail, type_, sections)
 
         await self.graph_db.save()
+        return Message(content="", cause_by=self)
 
     async def _patch(self, use_case_detail: BreakdownUseCaseDetail, type_: BreakdownReferenceType, sections: Sections):
         section = None
@@ -78,7 +79,6 @@ class PatchUseCase(GraphDBAction):
         original_text = section.content
         issue = type_.reference
         prompt = f"## Original Text\n{original_text}\n## Use Case\n{use_case_detail.use_case}\n## Issue\n{issue}\n"
-        language = self.context.kwargs.language or "Chinese"
         rsp = await self.llm.aask(
             prompt,
             system_msgs=[
@@ -96,7 +96,6 @@ class PatchUseCase(GraphDBAction):
                 '- a "why_why" key explaining why "why" is filled like this.\n'
                 '- a "how" key containing who to do. Leave it blank if it\'s not mentioned.\n'
                 '- a "why_how" key explaining why "how" is filled like this.',
-                f"- Answer in {language} language.",
             ],
         )
         logger.info(rsp)
@@ -131,7 +130,6 @@ class PatchUseCase(GraphDBAction):
             f"### What\n{what.what}\n"
             f"### Why\n{what.why}\n"
         )
-        language = self.context.kwargs.language or "Chinese"
         rsp = await self.llm.aask(
             prompt,
             system_msgs=[
@@ -154,7 +152,6 @@ class PatchUseCase(GraphDBAction):
                 '- a "avoiding_subjective_issues" key containing a string list type object about how to avoid subjective issues in measurement results  with sufficiently specific guidance   if "is_actionable" is filled with true;\n',
                 '- a "criteria" key containing a string list type object about what the criteria are for solving the issue;\n'
                 '- a "quality_requirements" key containing a string list type object about what the quality requirements are when solving the issue;',
-                f"- Answer in {language} language.",
             ],
         )
         logger.info(rsp)
@@ -183,7 +180,6 @@ class PatchUseCase(GraphDBAction):
         original_text = section.content
         todo = type_.todo
         prompt = f"## Original Text\n{original_text}\n## Use Case\n{use_case_detail.use_case}\n## TODO\n{todo}\n"
-        language = self.context.kwargs.language or "Chinese"
         rsp = await self.llm.aask(
             prompt,
             system_msgs=[
@@ -204,7 +200,6 @@ class PatchUseCase(GraphDBAction):
                 '- a "potential_risks" key containing a string list type object about what the potential constraints are that may affect task implementation;\n'
                 '- a "risk_prevention" key containing a string list object about how to address these potential risks.\n'
                 '- a "expected_outputs" key containing a string list type object about what the expected outputs of the "Use Case" are;',
-                f"- Answer in {language} language.",
             ],
         )
         logger.info(rsp)
@@ -231,7 +226,6 @@ class PatchUseCase(GraphDBAction):
         original_text = section.content
         effect = type_.effect
         prompt = f"## Original Text\n{original_text}\n## Use Case\n{use_case_detail.use_case}\n## Effect\n{effect}\n"
-        language = self.context.kwargs.language or "Chinese"
         rsp = await self.llm.aask(
             prompt,
             system_msgs=[
@@ -258,7 +252,6 @@ class PatchUseCase(GraphDBAction):
                 '- a "external_environmental_factors" containing a string list type object about what external environmental factors are needed to achieve "Effect";\n'
                 '- a "potential_risks" key containing a string list object about what challenges and risks might be encountered in achieving "Effect";\n'
                 '- a "risk_prevention" key containing a string list object about how to address these potential risks.',
-                f"- Answer in {language} language.",
             ],
         )
         logger.info(rsp)
