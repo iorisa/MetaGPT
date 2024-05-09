@@ -332,4 +332,4 @@ class AnalysisReport(BaseModel):
 
     @property
     def is_constraint(self) -> bool:
-        return self.reference_type.is_constraint or len(self.table) == 0
+        return self.reference_type.is_constraint
