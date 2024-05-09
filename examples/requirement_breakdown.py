@@ -72,9 +72,13 @@ async def breakdown(ctx: Context, requirement_filename: str):
 def startup(
     filename: str = typer.Argument(..., help="The filename of original text requirements."),
     namespace: str = typer.Argument("RFC225", help="Namespace of this project."),
+    language: str = typer.Argument(
+        "Chinese", help="Which language should be used to write the report. The default language is Chinese."
+    ),
 ):
     ctx = Context()
     ctx.kwargs.ns = Namespaces(namespace=namespace)
+    ctx.kwargs.language = language
     asyncio.run(breakdown(ctx, filename))
 
 
