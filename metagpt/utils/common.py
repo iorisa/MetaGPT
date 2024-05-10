@@ -18,6 +18,7 @@ import csv
 import importlib
 import inspect
 import json
+import mimetypes
 import os
 import platform
 import re
@@ -29,6 +30,7 @@ from typing import Any, Callable, Dict, List, Literal, Tuple, Union
 from urllib.parse import quote, unquote
 
 import aiofiles
+import chardet
 import loguru
 import requests
 from PIL import Image
@@ -361,16 +363,6 @@ def parse_recipient(text):
     return ""
 
 
-def create_func_call_config(func_schema: dict) -> dict:
-    """Create new function call config"""
-    tools = [{"type": "function", "function": func_schema}]
-    tool_choice = {"type": "function", "function": {"name": func_schema["name"]}}
-    return {
-        "tools": tools,
-        "tool_choice": tool_choice,
-    }
-
-
 def remove_comments(code_str: str) -> str:
     """Remove comments from code."""
     pattern = r"(\".*?\"|\'.*?\')|(\#.*?$)"
@@ -673,14 +665,21 @@ def role_raise_decorator(func):
 
 
 @handle_exception
-async def aread(filename: str | Path, encoding=None) -> str:
+async def aread(filename: str | Path, encoding="utf-8") -> str:
     """Read file asynchronously."""
-    async with aiofiles.open(str(filename), mode="r", encoding=encoding) as reader:
-        content = await reader.read()
+    try:
+        async with aiofiles.open(str(filename), mode="r", encoding=encoding) as reader:
+            content = await reader.read()
+    except UnicodeDecodeError:
+        async with aiofiles.open(str(filename), mode="rb") as reader:
+            raw = await reader.read()
+            result = chardet.detect(raw)
+            detected_encoding = result["encoding"]
+            content = raw.decode(detected_encoding)
     return content
 
 
-async def awrite(filename: str | Path, data: str, encoding=None):
+async def awrite(filename: str | Path, data: str, encoding="utf-8"):
     """Write file asynchronously."""
     pathname = Path(filename)
     pathname.parent.mkdir(parents=True, exist_ok=True)
@@ -746,7 +745,10 @@ def json_to_markdown_prompt(
 
 
 def parse_json_code_block(markdown_text: str) -> List[str]:
-    json_blocks = re.findall(r"```json(.*?)```", markdown_text, re.DOTALL)
+    json_blocks = (
+        re.findall(r"```json(.*?)```", markdown_text, re.DOTALL) if "```json" in markdown_text else [markdown_text]
+    )
+
     return [v.strip() for v in json_blocks]
 
 
@@ -798,7 +800,7 @@ def is_coroutine_func(func: Callable) -> bool:
 
 
 def load_mc_skills_code(skill_names: list[str] = None, skills_dir: Path = None) -> list[str]:
-    """load mincraft skill from js files"""
+    """load minecraft skill from js files"""
     if not skills_dir:
         skills_dir = Path(__file__).parent.absolute()
     if skill_names is None:
@@ -844,3 +846,21 @@ See FAQ 5.8
 """
     )
     raise retry_state.outcome.exception()
+
+
+def get_markdown_codeblock_type(filename: str) -> str:
+    """Return the markdown code-block type corresponding to the file extension."""
+    mime_type, _ = mimetypes.guess_type(filename)
+    mappings = {
+        "text/x-shellscript": "bash",
+        "text/x-c++src": "cpp",
+        "text/css": "css",
+        "text/html": "html",
+        "text/x-java": "java",
+        "application/javascript": "javascript",
+        "application/json": "json",
+        "text/x-python": "python",
+        "text/x-ruby": "ruby",
+        "application/sql": "sql",
+    }
+    return mappings.get(mime_type, "text")
