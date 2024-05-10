@@ -21,6 +21,7 @@ from metagpt.actions.requirement_analysis.breakdown import (
 from metagpt.actions.requirement_analysis.breakdown.patch_use_case import PatchUseCase
 from metagpt.actions.requirement_analysis.namespaces import Namespaces
 from metagpt.context import Context
+from metagpt.logs import logger
 from metagpt.roles import Role
 from metagpt.schema import Message
 from metagpt.utils.common import any_to_str, aread
@@ -76,6 +77,7 @@ def startup(
         "Chinese", help="Which language should be used to write the report. The default language is Chinese."
     ),
 ):
+    logger.info("GPT 3.5 turbo is recommended to save money")
     ctx = Context()
     ctx.kwargs.ns = Namespaces(namespace=namespace)
     ctx.kwargs.language = language

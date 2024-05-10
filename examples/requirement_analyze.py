@@ -20,6 +20,7 @@ from metagpt.actions.requirement_analysis import (
 )
 from metagpt.actions.requirement_analysis.namespaces import Namespaces
 from metagpt.context import Context
+from metagpt.logs import logger
 from metagpt.roles import Role
 from metagpt.schema import Message
 from metagpt.utils.common import any_to_str, aread
@@ -95,6 +96,7 @@ def startup(
     filename: str = typer.Argument(..., help="The filename of original text requirements."),
     namespace: str = typer.Argument("RFC145", help="Namespace of this project."),
 ):
+    logger.info("GPT 3.5 turbo is recommended to save money")
     ctx = Context()
     ctx.kwargs.ns = Namespaces(namespace=namespace)
     asyncio.run(analyze(ctx, filename))
