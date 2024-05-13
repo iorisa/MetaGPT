@@ -22,7 +22,6 @@ from metagpt.actions.requirement_analysis.breakdown import (
 from metagpt.actions.requirement_analysis.breakdown.patch_use_case import PatchUseCase
 from metagpt.actions.requirement_analysis.namespaces import Namespaces
 from metagpt.config2 import Config
-from metagpt.configs.llm_config import LLMConfig
 from metagpt.context import Context
 from metagpt.logs import logger
 from metagpt.roles import Role
@@ -82,8 +81,7 @@ def startup(
     llm_config: str = typer.Option(default="", help="Low-cost LLM config"),
 ):
     if llm_config and Path(llm_config).exists():
-        llm = LLMConfig.load_yaml_file(llm_config)
-        config = Config(llm=llm)
+        config = Config.from_yaml_file(Path(llm_config))
     else:
         logger.info("GPT 3.5 turbo is recommended to save money")
         config = Config.default()

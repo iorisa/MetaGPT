@@ -7,7 +7,7 @@
 """
 from enum import Enum
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 import yaml
 from pydantic import field_validator
@@ -99,10 +99,10 @@ class LLMConfig(YamlModel):
         return v or LLM_API_TIMEOUT
 
     @classmethod
-    def load_yaml_file(cls, filename: Union[str, Path]) -> "LLMConfig":
-        if not filename or not Path(filename).exists():
-            raise ValueError(f"Invalid yaml: {filename}")
-        with open(str(filename), "r", encoding="utf-8") as file:
+    def from_yaml_file(cls, file_path: Path) -> "LLMConfig":
+        if not file_path.exists():
+            raise ValueError(f"Invalid yaml: {file_path}")
+        with open(str(file_path), "r", encoding="utf-8") as file:
             m = yaml.safe_load(file)
             # To keep the standalone LLM configuration compatible with the `config/config2.yaml`
             m.update(m.get("llm", {}))

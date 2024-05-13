@@ -119,6 +119,20 @@ class Config(CLIParams, YamlModel):
         final = merge_dict(dicts)
         return Config(**final)
 
+    @classmethod
+    def from_yaml_file(cls, llm_config_filename: Path):
+        """
+        Creates an instance of the class from a YAML configuration file.
+
+        Args:
+            llm_config_filename (Path): The path to the YAML file containing the configuration.
+
+        Returns:
+            An instance of `Config` initialized with parameters from the YAML file.
+        """
+        llm_config = LLMConfig.from_yaml_file(llm_config_filename)
+        return cls.from_llm_config(llm_config.model_dump())
+
     def update_via_cli(self, project_path, project_name, inc, reqa_file, max_auto_summarize_code):
         """update config via cli"""
 
