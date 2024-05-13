@@ -7,6 +7,7 @@
 @Desc    : The implementation of RFC225. https://deepwisdom.feishu.cn/wiki/VRq8wumeKiPcvIk9wcacwoIHnzc
 """
 import asyncio
+from pathlib import Path
 
 import typer
 
@@ -20,6 +21,8 @@ from metagpt.actions.requirement_analysis.breakdown import (
 )
 from metagpt.actions.requirement_analysis.breakdown.patch_use_case import PatchUseCase
 from metagpt.actions.requirement_analysis.namespaces import Namespaces
+from metagpt.config2 import Config
+from metagpt.configs.llm_config import LLMConfig
 from metagpt.context import Context
 from metagpt.logs import logger
 from metagpt.roles import Role
@@ -72,13 +75,19 @@ async def breakdown(ctx: Context, requirement_filename: str):
 @app.command()
 def startup(
     filename: str = typer.Argument(..., help="The filename of original text requirements."),
-    namespace: str = typer.Argument("RFC225", help="Namespace of this project."),
-    language: str = typer.Argument(
-        "Chinese", help="Which language should be used to write the report. The default language is Chinese."
+    namespace: str = typer.Option(default="RFC225", help="Namespace of this project."),
+    language: str = typer.Option(
+        default="Chinese", help="Which language should be used to write the report. The default language is Chinese."
     ),
+    llm_config: str = typer.Option(default="", help="Low-cost LLM config"),
 ):
-    logger.info("GPT 3.5 turbo is recommended to save money")
-    ctx = Context()
+    if llm_config and Path(llm_config).exists():
+        llm = LLMConfig.load_yaml_file(llm_config)
+        config = Config(llm=llm)
+    else:
+        logger.info("GPT 3.5 turbo is recommended to save money")
+        config = Config.default()
+    ctx = Context(config=config)
     ctx.kwargs.ns = Namespaces(namespace=namespace)
     ctx.kwargs.language = language
     asyncio.run(breakdown(ctx, filename))

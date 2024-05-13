@@ -6,8 +6,10 @@
 @File    : llm_config.py
 """
 from enum import Enum
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Union
 
+import yaml
 from pydantic import field_validator
 
 from metagpt.const import LLM_API_TIMEOUT
@@ -95,3 +97,13 @@ class LLMConfig(YamlModel):
     @classmethod
     def check_timeout(cls, v):
         return v or LLM_API_TIMEOUT
+
+    @classmethod
+    def load_yaml_file(cls, filename: Union[str, Path]) -> "LLMConfig":
+        if not filename or not Path(filename).exists():
+            raise ValueError(f"Invalid yaml: {filename}")
+        with open(str(filename), "r", encoding="utf-8") as file:
+            m = yaml.safe_load(file)
+            # To keep the standalone LLM configuration compatible with the `config/config2.yaml`
+            m.update(m.get("llm", {}))
+        return LLMConfig.model_validate(m)

@@ -7,6 +7,7 @@
 @Desc    : The implementation of RFC145. https://deepwisdom.feishu.cn/docx/VhRCdcfQQoIlaJxWvyLcMDP9nbg
 """
 import asyncio
+from pathlib import Path
 
 import typer
 
@@ -19,6 +20,8 @@ from metagpt.actions.requirement_analysis import (
     use_case,
 )
 from metagpt.actions.requirement_analysis.namespaces import Namespaces
+from metagpt.config2 import Config
+from metagpt.configs.llm_config import LLMConfig
 from metagpt.context import Context
 from metagpt.logs import logger
 from metagpt.roles import Role
@@ -94,10 +97,16 @@ async def analyze(ctx: Context, requirement_filename: str):
 @app.command()
 def startup(
     filename: str = typer.Argument(..., help="The filename of original text requirements."),
-    namespace: str = typer.Argument("RFC145", help="Namespace of this project."),
+    namespace: str = typer.Option("RFC145", help="Namespace of this project."),
+    llm_config: str = typer.Option(default="", help="Low-cost LLM config"),
 ):
-    logger.info("GPT 3.5 turbo is recommended to save money")
-    ctx = Context()
+    if llm_config and Path(llm_config).exists():
+        llm = LLMConfig.load_yaml_file(llm_config)
+        config = Config(llm=llm)
+    else:
+        logger.info("GPT 3.5 turbo is recommended to save money")
+        config = Config.default()
+    ctx = Context(config=config)
     ctx.kwargs.ns = Namespaces(namespace=namespace)
     asyncio.run(analyze(ctx, filename))
 
