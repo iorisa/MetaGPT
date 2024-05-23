@@ -9,6 +9,9 @@
 import re
 from typing import List
 
+import html2text as html2text
+import markdown
+
 from metagpt.actions.requirement_analysis import GraphDBAction
 from metagpt.actions.requirement_analysis.breakdown_common import (
     Section,
@@ -46,6 +49,7 @@ class BreakdownRequirementSpecifications(GraphDBAction):
             for j in lvl3_parts:
                 j.tags.extend(i.tags)
             parts.extend(lvl3_parts)
+        parts = self._soap(parts)
         parts = self._merge_shorts(parts)
         sections = Sections(sections=parts)
         await self.graph_db.insert(
@@ -105,3 +109,20 @@ class BreakdownRequirementSpecifications(GraphDBAction):
             result[-1].content += merged.content
             result[-1].tags.extend(merged.tags)
         return result
+
+    @staticmethod
+    def _soap(parts):
+        text_maker = html2text.HTML2Text()
+        text_maker.ignore_links = True
+        text_maker.ignore_images = True
+        text_maker.ignore_emphasis = True
+
+        for i in parts:
+            for t in i.tags:
+                html = markdown.markdown(t.tag)
+                text = text_maker.handle(html)
+                t.tag = text.strip()
+            html = markdown.markdown(i.content)
+            text = text_maker.handle(html)
+            i.content = text.strip()
+        return parts

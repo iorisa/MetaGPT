@@ -57,7 +57,7 @@ class ClassifyUseCase(GraphDBAction):
         after=general_after_log(logger),
     )
     async def _classify_reference(self, reference: str, use_case: BreakdownUseCaseDetail):
-        prompt = "## Use Case\n" + reference
+        prompt = "## Use Case\n```\n{reference}\n```\n"
         rsp = await self.llm.aask(
             prompt,
             system_msgs=[
