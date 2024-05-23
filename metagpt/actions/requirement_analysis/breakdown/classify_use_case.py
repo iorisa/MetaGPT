@@ -6,6 +6,7 @@
 @File    : classify_use_case.py
 @Desc    : The implementation of the Chapter 2.2.2 of RFC225.
 """
+import json
 
 from tenacity import retry, stop_after_attempt, wait_random_exponential
 
@@ -19,10 +20,10 @@ from metagpt.actions.requirement_analysis.graph_key_words import GraphKeyWords
 from metagpt.logs import logger
 from metagpt.schema import Message
 from metagpt.utils.common import (
+    CodeParser,
     add_affix,
     concat_namespace,
     general_after_log,
-    parse_json_code_block,
     remove_affix,
     split_namespace,
 )
@@ -78,8 +79,12 @@ class ClassifyUseCase(GraphDBAction):
             ],
         )
         logger.info(rsp)
-        json_blocks = parse_json_code_block(rsp)
-        type_ = BreakdownReferenceType.model_validate_json(json_blocks[0])
+        json_block = CodeParser.parse_code(text=rsp, lang="json", block="")
+        if json_block == rsp:  # Not a markdown json code block
+            logger.warning(f"Invalid Use Case. `{reference}`:{rsp}")
+            m = {"reason": rsp.replace('"', '\\"')}
+            json_block = json.dumps(m)
+        type_ = BreakdownReferenceType.model_validate_json(json_block)
         type_.reference = reference
         await self.graph_db.insert(
             subject=concat_namespace(
