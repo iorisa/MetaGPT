@@ -162,4 +162,6 @@ class IdentifySystem(GraphDBAction):
                 self.context.kwargs.ns.activity_actor, GraphKeyWords.Has_ + GraphKeyWords.Detail
             ),
         )
+        if not rows:
+            return name
         return remove_affix(split_namespace(rows[0].object_)[-1])

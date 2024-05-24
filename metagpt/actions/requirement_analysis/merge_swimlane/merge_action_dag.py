@@ -14,11 +14,12 @@ from pydantic import BaseModel
 from metagpt.actions.requirement_analysis import GraphDBAction
 from metagpt.actions.requirement_analysis.activity_common import ActionOrders
 from metagpt.actions.requirement_analysis.graph_key_words import GraphKeyWords
+from metagpt.logs import logger
 from metagpt.schema import Message
 from metagpt.utils.common import (
+    CodeParser,
     add_affix,
     concat_namespace,
-    parse_json_code_block,
     remove_affix,
     split_namespace,
 )
@@ -100,8 +101,11 @@ class MergeActionDAG(GraphDBAction):
             ],
             stream=False,
         )
-        json_blocks = parse_json_code_block(rsp)
-        vv = [IfStatementArgument.model_validate(i) for i in json.loads(json_blocks[0])]
+        json_block = CodeParser.parse_code(text=rsp, lang="json", block="")
+        if json_block == rsp:
+            logger.warning(f"if condition `{if_condition}`: {rsp}")
+            return
+        vv = [IfStatementArgument.model_validate(i) for i in json.loads(json_block)]
         for i in vv:
             await self.graph_db.insert(
                 subject=concat_namespace(self.context.kwargs.ns.activity_control_flow_action, add_affix(action_name)),
