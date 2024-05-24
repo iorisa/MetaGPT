@@ -345,7 +345,9 @@ class MergeDataFlow(GraphDBAction):
             return
         for i in action_detail.outputs:
             class_list = await self._get_class_list(ns_use_case)
-            class_name = self._is_enrolled_in_op(class_list=class_list, action_name=action_detail.name, input_name=i)
+            class_name = await self._is_enrolled_in_op(
+                class_list=class_list, action_name=action_detail.name, input_name=i
+            )
             class_detail = None if not class_name else class_list.get(class_name)
             if not class_detail:
                 class_detail = await self._new_class_op(
