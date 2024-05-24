@@ -9,5 +9,6 @@
 
 
 from metagpt.actions.requirement_analysis.summarize.summarize import Summarize
+from metagpt.actions.requirement_analysis.summarize.write_system_design import WriteSystemDesign
 
-__all__ = [Summarize]
+__all__ = [Summarize, WriteSystemDesign]

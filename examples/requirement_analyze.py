@@ -79,6 +79,7 @@ class RequirementAnalyzer(Role):
             any_to_str(merge_swimlane.ActionMergeSwimlane): merge_swimlane.MergeActionDAG(context=self.context),
             any_to_str(merge_swimlane.MergeActionDAG): merge_swimlane.MergeDataFlow(context=self.context),
             any_to_str(merge_swimlane.MergeDataFlow): summarize.Summarize(context=self.context),
+            any_to_str(summarize.Summarize): summarize.WriteSystemDesign(context=self.context),
         }
         self.rc.todo = handlers.get(self.rc.news[0].cause_by, None)
         return bool(self.rc.todo is not None)
