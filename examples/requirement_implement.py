@@ -34,7 +34,7 @@ class EnvBuilder(BaseModel):
     context: Context
     filename: str
     language: str
-    platform: str
+    constraint: str
 
     async def _load_system_design(self) -> str:
         design = await aread(filename=self.filename)
@@ -44,8 +44,8 @@ class EnvBuilder(BaseModel):
             raise ValueError("Invalid system design file, `File list` does not exists.")
         if m["Language"].lower() != self.language.lower():
             m = await self._switch_language(design=m)
-        if self.platform:
-            m["Runtime Platform Constraints"] = self.platform
+        if self.constraint:
+            m["Dependency Constraint"] = self.constraint
         design = json.dumps(m)
         return design
 
@@ -83,9 +83,9 @@ class EnvBuilder(BaseModel):
         return design
 
 
-async def develop(context: Context, system_design_filename: str, language: str, platform: str):
+async def develop(context: Context, system_design_filename: str, language: str, constraint: str):
     env = await EnvBuilder(
-        context=context, filename=system_design_filename, language=language, platform=platform
+        context=context, filename=system_design_filename, language=language, constraint=constraint
     ).build()
     env.add_roles([ProjectManager(), Engineer(n_borg=5, use_code_review=True)])
     env.publish_message(Message(content="", cause_by=WriteDesign, send_to="Eve"))
@@ -101,7 +101,7 @@ def startup(
         default="python", help="Which language should be used to write the code. The default language is python."
     ),
     llm_config: str = typer.Option(default="", help="Low-cost LLM config"),
-    platform: str = typer.Option(default="Ding Talk Android App", help="What platform these codes will run on."),
+    constraint: str = typer.Option(default="DingTalk Android App", help="What dependency constraints are."),
 ):
     if llm_config and Path(llm_config).exists():
         config = Config.from_yaml_file(Path(llm_config))
@@ -109,7 +109,7 @@ def startup(
         logger.info("GPT 4 turbo is recommended")
         config = Config.default()
     ctx = Context(config=config)
-    asyncio.run(develop(ctx, filename, language, platform))
+    asyncio.run(develop(ctx, filename, language, constraint))
 
 
 if __name__ == "__main__":
