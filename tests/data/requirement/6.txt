@@ -1,0 +1,63 @@
+2、各国法律意见在法务小超人的钉钉端可进行多维度检索和查看。——pc和手机【待定】。
+用户在法务小超人通过 HTTP 接口向法务中台查询国家/区域列表、 以及通过国家 code 查询法律意见详情。其检索和查看方式包括：
+a. 按国家名维度搜索：用户在法务小超人搜索框中进行检索时采用 typeahead，只能下拉选择法务中台中有的国家名称。检索结果可根据UI滚筒切换业务线
+法务中台需要验证用户的合法身份才能正常处理。
+
+其中：
+- 法务小超人: 产品形态包含钉钉小程序&钉钉PC端。
+- 法务中台: 法务中台是已存在的外部系统，在本次需求中负责数据源:国家列表、法律意见详情的数 据存储与维护。
+- 法务中台HTTP接口说明：
+  - 功能：用户登录
+    - 请求方法：GET
+    - 请求uri： /sup/login.json
+    - 请求参数：
+      - authCode： String(64). 用户临时免登授权码.
+      - loginTypeEnum: String(20). 登录类型
+      - authCorpId: String(64). 用户所在企业/组织id,微应用免登时传递|
+      - app: String(3). 应用标识
+    - 返回结果:
+      - success: boolean. 业务处理成功与否，成功true，否则false. 只判断这个属性即可
+      - message: string. 错误信息，可以用来提示
+      - code： string。 返回状态码
+      - data: string. 用户的sessionId
+  - 功能：根据国家code查询国家情况描述
+    - 请求方法：GET
+    - 请求uri： /sup/country/detail.json
+    - 请求参数：
+      - countryCode： string. 国家code
+    - 返回结果：
+      - success： boolean。 业务处理成功与否，成功true，否则false。只判断这个属性即可
+      - message: string. 错误信息，可以用来提示
+      - code： string。 返回状态码
+      - data: string. 用户的sessionId
+      - id：integer。 ID
+      - countryName： string。国家名称
+      - countryCode： string。 国家code
+      - detail: string. 产品法规分析
+  - 功能：根据国家和业务线查询产品法规分析（法律意见详情）
+    - 请求方法：GET
+    - 请求uri： /sup/legal/detail.json
+    - 请求参数:
+      - countryCode: string. 国家code
+      - businessCode: string. 业务线code
+    - 返回结果：
+      - success： boolean。 业务处理成功与否，成功true，否则false。只判断这个属性即可
+      - message: string. 错误信息，可以用来提示
+      - code： string。 返回状态码
+      - data: string. 用户的sessionId
+      - id： string。ID
+      - countryName： string。 国家名称
+      - countryCode： string。 国家code
+      - businessLine： string. 业务线
+      - businessCode: string. 业务线code
+      - detail: string. 产品法规分析.
+      - signEntity: string. 签约主体.
+  - 功能：查询所有国家和业务线信息列表
+    - 请求方法：GET
+    - 请求uri： /sup/legal/country/list.json
+    - 请求参数：
+    - 返回结果：
+      - success： boolean。 业务处理成功与否，成功true，否则false。只判断这个属性即可
+      - message: string. 错误信息，可以用来提示
+      - code： string。 返回状态码
+      - data: string. 用户的sessionId

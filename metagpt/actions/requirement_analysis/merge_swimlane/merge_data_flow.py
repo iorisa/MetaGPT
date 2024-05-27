@@ -25,6 +25,7 @@ from metagpt.actions.requirement_analysis.use_case_common import UseCaseDetail
 from metagpt.logs import logger
 from metagpt.schema import Message
 from metagpt.utils.common import (
+    CodeParser,
     add_affix,
     concat_namespace,
     parse_json_code_block,
@@ -304,8 +305,8 @@ class MergeDataFlow(GraphDBAction):
             ],
             stream=False,
         )
-        json_blocks = parse_json_code_block(rsp)
-        if not json_blocks:
+        json_block = CodeParser.parse_code(text=rsp, lang="json", block="")
+        if not json_block or json_block == rsp:
             return ""
 
         class _Data(BaseModel):
@@ -313,7 +314,7 @@ class MergeDataFlow(GraphDBAction):
             class_name: str
             reason: str
 
-        ret = _Data.model_validate_json(json_blocks[0])
+        ret = _Data.model_validate_json(json_block)
         return ret.class_name
 
     async def _new_class_op(self, action_name: str, input_name: str, exists_names: List[str]) -> ClassCodeBlock:
@@ -341,11 +342,13 @@ class MergeDataFlow(GraphDBAction):
 
     async def _merge_action_output(self, ns_use_case: str, action_name: str):
         action_detail = await self._get_action_detail(ns_use_case=ns_use_case, action_name=action_name)
-        if not action_detail.outputs:
+        if not action_detail or not action_detail.outputs:
             return
         for i in action_detail.outputs:
             class_list = await self._get_class_list(ns_use_case)
-            class_name = self._is_enrolled_in_op(class_list=class_list, action_name=action_detail.name, input_name=i)
+            class_name = await self._is_enrolled_in_op(
+                class_list=class_list, action_name=action_detail.name, input_name=i
+            )
             class_detail = None if not class_name else class_list.get(class_name)
             if not class_detail:
                 class_detail = await self._new_class_op(

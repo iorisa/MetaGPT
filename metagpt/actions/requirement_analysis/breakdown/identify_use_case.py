@@ -67,8 +67,9 @@ class IdentifyUseCase(GraphDBAction):
         after=general_after_log(logger),
     )
     async def _extract(self, section: Section) -> List[BreakdownUseCaseDetail]:
+        prompt = f"## Original Text\n```markdown\n{section.content}\n```\n"
         rsp = await self.llm.aask(
-            section.content,
+            prompt,
             system_msgs=[
                 "You are a tool capable of converting original text into a list of use cases.",
                 'Generate use cases based on the content in "Original Text".',

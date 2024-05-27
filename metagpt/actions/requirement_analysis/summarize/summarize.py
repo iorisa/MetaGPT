@@ -43,6 +43,7 @@ from metagpt.actions.requirement_analysis.merge_swimlane.merge_data_flow import 
     UseCaseClassReferenceTable,
 )
 from metagpt.actions.requirement_analysis.text_to_class import ClassCodeBlock
+from metagpt.logs import logger
 from metagpt.schema import Message
 from metagpt.utils.common import concat_namespace, remove_affix, split_namespace
 
@@ -131,6 +132,10 @@ class Summarize(GraphDBAction):
                 if i == 0:
                     md += "start\n"
                 action_detail = class_reference_list.get(action_name)
+                if not action_detail:
+                    logger.warning(f"{action_name} dose not exists")
+                    md += f':"{action_name}"();\n'
+                    continue
                 operation = (
                     f'"{action_detail.action_name}"('
                     + ",".join([f'"{i}"' for i in action_detail.input_class_names])
@@ -197,6 +202,8 @@ class Summarize(GraphDBAction):
             dag = aol.get_dag_list()
             for action_name in dag:
                 action_detail = class_reference_list.get(action_name)
+                if not action_detail:
+                    continue
                 for i in action_detail.if_condition_class_names:
                     if i not in valid:
                         invalid.add(i)
