@@ -78,23 +78,23 @@ class WriteReport(GraphDBAction):
             self.raw_ready.append(content)
 
         await self.context.repo.resources.requirement_analysis.save(
-            filename="unready.md", content="\n---\n".join(self.unready)
+            filename="unready.md", content="\n\n---\n\n".join(self.unready)
         )
         await self.context.repo.resources.requirement_analysis.save(
-            filename="ready.md", content="\n---\n".join(self.ready)
+            filename="ready.md", content="\n\n---\n\n".join(self.ready)
         )
         await self.context.repo.resources.requirement_analysis.save(
-            filename="constraint.md", content="\n---\n".join(self.constraint)
+            filename="constraint.md", content="\n\n---\n\n".join(self.constraint)
         )
 
         await self.context.repo.resources.requirement_analysis.save(
-            filename="raw-unready.md", content="\n---\n".join(self.raw_unready)
+            filename="raw-unready.md", content="\n\n---\n\n".join(self.raw_unready)
         )
         await self.context.repo.resources.requirement_analysis.save(
-            filename="raw-ready.md", content="\n---\n".join(self.raw_ready)
+            filename="raw-ready.md", content="\n\n---\n\n".join(self.raw_ready)
         )
         await self.context.repo.resources.requirement_analysis.save(
-            filename="raw-constraint.md", content="\n---\n".join(self.raw_constraint)
+            filename="raw-constraint.md", content="\n\n---\n\n".join(self.raw_constraint)
         )
 
         await self.graph_db.save()
