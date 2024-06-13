@@ -82,28 +82,12 @@ class DiGraphRepository(GraphRepository):
             deleted_count = await my_di_graph_repo.delete(subject="Node1", predicate="connects_to")
             # Deletes directed relationships where Node1 is the subject and the predicate is 'connects_to'.
         """
-        rows = []
-        for s, o, p in self._repo.edges(data="predicate"):
-            if subject and subject != s:
-                continue
-            if object_ and object_ != o:
-                continue
-            rows.append(SPO(subject=s, object_=o, predicate=p))
+        rows = await self.select(subject=subject, predicate=predicate, object_=object_)
         if not rows:
             return 0
-
-        affected = []
-        unaffected = []
         for r in rows:
             self._repo.remove_edge(r.subject, r.object_)
-            if predicate and predicate == r.predicate:
-                affected.append(r)
-            else:
-                unaffected.append(r)
-
-        for r in unaffected:
-            self._repo.add_edge(r.subject, r.object_, predicate=r.predicate)
-        return len(affected)
+        return len(rows)
 
     def json(self) -> str:
         """Convert the directed graph repository to a JSON-formatted string."""
@@ -148,9 +132,7 @@ class DiGraphRepository(GraphRepository):
             GraphRepository: A new instance of the graph repository loaded from the specified JSON file.
         """
         pathname = Path(pathname)
-        name = pathname.with_suffix("").name
-        root = pathname.parent
-        graph = DiGraphRepository(name=name, root=root)
+        graph = DiGraphRepository(name=pathname.stem, root=pathname.parent)
         if pathname.exists():
             await graph.load(pathname=pathname)
         return graph
