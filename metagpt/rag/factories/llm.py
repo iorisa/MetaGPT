@@ -1,5 +1,5 @@
 """RAG LLM."""
-
+import asyncio
 from typing import Any
 
 from llama_index.core.constants import DEFAULT_CONTEXT_WINDOW
@@ -15,7 +15,7 @@ from pydantic import Field
 from metagpt.config2 import config
 from metagpt.llm import LLM
 from metagpt.provider.base_llm import BaseLLM
-from metagpt.utils.async_helper import run_coroutine_in_new_loop
+from metagpt.utils.async_helper import NestAsyncio
 from metagpt.utils.token_counter import TOKEN_MAX
 
 
@@ -33,11 +33,14 @@ class RAGLLM(CustomLLM):
     @property
     def metadata(self) -> LLMMetadata:
         """Get LLM metadata."""
-        return LLMMetadata(context_window=self.context_window, num_output=self.num_output, model_name=self.model_name)
+        return LLMMetadata(
+            context_window=self.context_window, num_output=self.num_output, model_name=self.model_name or "unknown"
+        )
 
     @llm_completion_callback()
     def complete(self, prompt: str, **kwargs: Any) -> CompletionResponse:
-        return run_coroutine_in_new_loop(self.acomplete(prompt, **kwargs))
+        NestAsyncio.apply_once()
+        return asyncio.get_event_loop().run_until_complete(self.acomplete(prompt, **kwargs))
 
     @llm_completion_callback()
     async def acomplete(self, prompt: str, formatted: bool = False, **kwargs: Any) -> CompletionResponse:

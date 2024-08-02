@@ -1,14 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
-@Time    : 2023/5/1 11:59
-@Author  : alexanderwu
-@File    : const.py
-@Modified By: mashenquan, 2023-11-1. According to Section 2.2.1 and 2.2.2 of RFC 116, added key definitions for
-        common properties in the Message.
-@Modified By: mashenquan, 2023-11-27. Defines file repository paths according to Section 2.2.3.4 of RFC 135.
-@Modified By: mashenquan, 2023/12/5. Add directories for code summarization..
-"""
+
 import os
 from pathlib import Path
 
@@ -51,6 +43,7 @@ DEFAULT_WORKSPACE_ROOT = METAGPT_ROOT / "workspace"
 EXAMPLE_PATH = METAGPT_ROOT / "examples"
 EXAMPLE_DATA_PATH = EXAMPLE_PATH / "data"
 DATA_PATH = METAGPT_ROOT / "data"
+EXAMPLE_BENCHMARK_PATH = EXAMPLE_PATH / "data/rag_bm"
 TEST_DATA_PATH = METAGPT_ROOT / "tests/data"
 RESEARCH_PATH = DATA_PATH / "research"
 TUTORIAL_PATH = DATA_PATH / "tutorial_docx"
@@ -123,7 +116,6 @@ BASE64_FORMAT = "base64"
 
 # REDIS
 REDIS_KEY = "REDIS_KEY"
-LLM_API_TIMEOUT = 300
 
 # Message id
 IGNORED_MESSAGE_ID = "0"
@@ -132,3 +124,7 @@ IGNORED_MESSAGE_ID = "0"
 GENERALIZATION = "Generalize"
 COMPOSITION = "Composite"
 AGGREGATION = "Aggregate"
+
+# Timeout
+USE_CONFIG_TIMEOUT = 0  # Using llm.timeout configuration.
+LLM_API_TIMEOUT = 300

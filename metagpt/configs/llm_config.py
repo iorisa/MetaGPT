@@ -10,6 +10,7 @@ from typing import Optional
 
 from pydantic import field_validator
 
+from metagpt.const import CONFIG_ROOT, LLM_API_TIMEOUT, METAGPT_ROOT
 from metagpt.utils.yaml_model import YamlModel
 
 
@@ -30,6 +31,9 @@ class LLMType(Enum):
     MOONSHOT = "moonshot"
     MISTRAL = "mistral"
     YI = "yi"  # lingyiwanwu
+    OPENROUTER = "openrouter"
+    BEDROCK = "bedrock"
+    ARK = "ark"
 
     def __missing__(self, key):
         return self.OPENAI
@@ -71,10 +75,14 @@ class LLMConfig(YamlModel):
     frequency_penalty: float = 0.0
     best_of: Optional[int] = None
     n: Optional[int] = None
-    stream: bool = False
-    logprobs: Optional[bool] = None  # https://cookbook.openai.com/examples/using_logprobs
+    stream: bool = True
+    # https://cookbook.openai.com/examples/using_logprobs
+    logprobs: Optional[bool] = None
     top_logprobs: Optional[int] = None
-    timeout: int = 60
+    timeout: int = 600
+
+    # For Amazon Bedrock
+    region_name: str = None
 
     # For Network
     proxy: Optional[str] = None
@@ -86,5 +94,19 @@ class LLMConfig(YamlModel):
     @classmethod
     def check_llm_key(cls, v):
         if v in ["", None, "YOUR_API_KEY"]:
-            raise ValueError("Please set your API key in config2.yaml")
+            repo_config_path = METAGPT_ROOT / "config/config2.yaml"
+            root_config_path = CONFIG_ROOT / "config2.yaml"
+            if root_config_path.exists():
+                raise ValueError(
+                    f"Please set your API key in {root_config_path}. If you also set your config in {repo_config_path}, \nthe former will overwrite the latter. This may cause unexpected result.\n"
+                )
+            elif repo_config_path.exists():
+                raise ValueError(f"Please set your API key in {repo_config_path}")
+            else:
+                raise ValueError("Please set your API key in config2.yaml")
         return v
+
+    @field_validator("timeout")
+    @classmethod
+    def check_timeout(cls, v):
+        return v or LLM_API_TIMEOUT
