@@ -1,5 +1,4 @@
 """RAG LLM."""
-import asyncio
 from typing import Any
 
 from llama_index.core.constants import DEFAULT_CONTEXT_WINDOW
@@ -14,7 +13,7 @@ from pydantic import Field
 
 from metagpt.config2 import Config
 from metagpt.provider.base_llm import BaseLLM
-from metagpt.utils.async_helper import NestAsyncio
+from metagpt.utils.async_helper import run_coroutine_sync
 from metagpt.utils.token_counter import TOKEN_MAX
 
 
@@ -63,8 +62,7 @@ class RAGLLM(CustomLLM):
 
     @llm_completion_callback()
     def complete(self, prompt: str, **kwargs: Any) -> CompletionResponse:
-        NestAsyncio.apply_once()
-        return asyncio.get_event_loop().run_until_complete(self.acomplete(prompt, **kwargs))
+        return run_coroutine_sync(self.acomplete(prompt, **kwargs))
 
     @llm_completion_callback()
     async def acomplete(self, prompt: str, formatted: bool = False, **kwargs: Any) -> CompletionResponse:
