@@ -83,7 +83,8 @@ WRITE_CODE_PROMPT = """
 Your task is to write the files listed in Files to Write. You must ensure the code is complete, correct, and bug-free.
 
 # Output
-While some concise thoughts are helpful, code is absolutely required. DO NOT leave any TODO or placeholder. Make sure the code block has the same order as the files listed in Files to Write.
+While some concise thoughts are helpful, code is absolutely required. DO NOT leave any TODO or placeholder.
+Make sure there are the same number of code blocks as the number of files listed in Files to Write and they are in the same order. No extra code blocks or bash commands are allowed.
 Output code in the format below:
 ```jsx
 import React

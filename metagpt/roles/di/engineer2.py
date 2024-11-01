@@ -131,7 +131,7 @@ class Engineer2(RoleZero):
         context = self.llm.format_msg(memory + [UserMessage(content=prompt)])
 
         async with EditorReporter(enable_llm_stream=True) as reporter:
-            # await reporter.async_report({"type": "code", "filename": Path(path).name, "src_path": path}, "meta")
+            await reporter.async_report({"type": "files", "filename": paths, "src_path": ""}, "meta")
             rsp = await self.llm.aask(context, system_msgs=[self.instruction])
             code_by_files = CodeParser.parse_multiple_code(text=rsp)
 
@@ -143,7 +143,6 @@ class Engineer2(RoleZero):
                 await awrite(self._fix_path(path), code)
                 file_block = FileBlock(path=str(path), content=code)
                 output_msg += f"File created successfully with \n{file_block}\n"
-                await reporter.async_report(path, "path")
 
         return output_msg
 
