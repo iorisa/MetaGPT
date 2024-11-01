@@ -13,15 +13,6 @@ Note:
 5. Avoid repeating tasks you have already completed. And end loop when all requirements are met.
 """
 
-########################## ignore guidance
-
-# Latest Observation
-# {latest_observation}
-
-# {thought_guidance}
-# Finally, combine your thoughts, describe what you want to do conscisely in 20 words, including which process you will taked and whether you will end, then follow your thoughts to list the commands, adhering closely to the instructions provided.
-
-###########################
 SYSTEM_PROMPT = """
 # Basic Info
 {role_info}
@@ -92,16 +83,6 @@ Output should adhere to the following format.
 Notice: your output JSON data section must start with **```json [**
 """
 )
-THOUGHT_GUIDANCE = """
-First, describe the actions you have taken recently.
-Second, describe the messages you have received recently, with a particular emphasis on messages from users. If necessary, develop a plan to address the new user requirements.
-Third, describe the plan status and the current task. Review the histroy, if `Current Task` has been undertaken and completed by you or anyone, you MUST use the **Plan.finish_current_task** command to finish it first before taking any action, the command will automatically move you to the next task.
-Fourth, describe any necessary human interaction. Use **RoleZero.reply_to_human** to report your progress if you complete a task or the overall requirement, pay attention to the history, DON'T repeat reporting. Use **RoleZero.ask_human** if you failed the current task, unsure of the situation encountered, need any help from human, or executing repetitive commands but receiving repetitive feedbacks without making progress.
-Fifth, describe if you should terminate, you should use **end** command to terminate if any of the following is met:
- - You have completed the overall user requirement
- - All tasks are finished and current task is empty
- - You are repetitively replying to human
-""".strip()
 
 REGENERATE_PROMPT = """
 Review and reflect on the history carefully, provide a different response.
@@ -238,7 +219,7 @@ REPORT_TO_HUMAN_PROMPT = """
 ## Examlpe
 example 1: 
 User requirement: create a 2048 game
-Reply: The development of the 2048 game has been completed. All files (index.html, style.css, and script.js) have been created and reviewed.
+Reply: The development of the 2048 game has been completed. All files (/absolute/path/to/index.html, /absolute/path/to/style.css, and /absolute/path/to/script.js) have been created and reviewed.
 
 example 2: 
 User requirement: Crawl and extract all the herb names from the website, Tell me the number of herbs.
@@ -246,9 +227,9 @@ Reply : The herb names have been successfully extracted. A total of 8 herb names
 
 ------------
 
-Carefully review the history and respond to the user in the expected language to meet their requirements.
-If you have any deliverables that are helpful in explaining the results (such as deployment URL, files, metrics, quantitative results, etc.), provide brief descriptions of them.
-Your reply must be concise.
+If you have any deliverables such as deployment URL, files, metrics, quantitative results, etc., provide brief descriptions of them.
+Indicate absolute paths for files considering you are at {working_dir}
+Your reply must be concise, no more than 30 words.
 You must respond in {respond_language}
 Directly output your reply content. Do not add any output format.
 """

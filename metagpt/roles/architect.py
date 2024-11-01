@@ -9,7 +9,7 @@ from pydantic import Field
 
 from metagpt.actions.design_api import WriteDesign
 from metagpt.actions.write_prd import WritePRD
-from metagpt.prompts.di.architect import ARCHITECT_EXAMPLE, ARCHITECT_INSTRUCTION
+from metagpt.prompts.di.architect import ARCHITECT_INSTRUCTION
 from metagpt.roles.di.role_zero import RoleZero
 from metagpt.tools.libs.terminal import Terminal
 
@@ -27,17 +27,13 @@ class Architect(RoleZero):
 
     name: str = "Bob"
     profile: str = "Architect"
-    goal: str = "design a concise, usable, complete software system. output the system design."
-    constraints: str = (
-        "make sure the architecture is simple enough and use  appropriate open source "
-        "libraries. Use same language as user requirement"
-    )
+    goal: str = "Design a concise, usable, complete software system. Output the system design."
+    constraints: str = "Make sure the architecture is simple enough and use appropriate open source libraries. Use same language as user requirement"
     terminal: Terminal = Field(default_factory=Terminal, exclude=True)
     instruction: str = ARCHITECT_INSTRUCTION
     tools: list[str] = [
         "Editor:write,read,similarity_search",
         "RoleZero",
-        "Terminal:run_command",
     ]
 
     def __init__(self, **kwargs) -> None:
@@ -50,9 +46,3 @@ class Architect(RoleZero):
 
         # Set events or actions the Architect should watch or be aware of
         self._watch({WritePRD})
-
-    def _retrieve_experience(self) -> str:
-        return ARCHITECT_EXAMPLE
-
-    def _update_tool_execution(self):
-        self.tool_execution_map.update({"Terminal.run_command": self.terminal.run_command})

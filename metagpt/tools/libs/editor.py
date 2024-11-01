@@ -4,14 +4,13 @@ You can find the original repository here:
 https://github.com/All-Hands-AI/OpenHands/blob/main/openhands/runtime/plugins/agent_skills/file_ops/file_ops.py
 """
 import os
-import re
 import shutil
 import tempfile
 from pathlib import Path
 from typing import List, Optional, Union
 
 import tiktoken
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from metagpt.const import DEFAULT_WORKSPACE_ROOT
 from metagpt.tools.libs.index_repo import DEFAULT_MIN_TOKEN_COUNT, IndexRepo
@@ -74,8 +73,16 @@ SUCCESS_EDIT_INFO = """
 class FileBlock(BaseModel):
     """A block of content in a file"""
 
-    file_path: str
-    block_content: str
+    path: str
+    content: str
+
+    @field_validator("content", mode="before")
+    @classmethod
+    def check_block_content(cls, content: str) -> str:
+        """add row number for convient editing"""
+        lines = content.splitlines(keepends=True)
+        lines_with_num = [f"{i + 1:03}|{line}" for i, line in enumerate(lines)]
+        return "".join(lines_with_num)
 
 
 class LineNumberError(Exception):
@@ -137,24 +144,22 @@ class Editor(BaseModel):
         path = self._try_fix_path(path)
 
         error = FileBlock(
-            file_path=str(path),
-            block_content="The file is too large to read. Use `Editor.similarity_search` to read the file instead.",
+            path=str(path),
+            content="The file is too large to read. Use `Editor.similarity_search` to read the file instead.",
         )
         path = Path(path)
         if path.stat().st_size > 5 * DEFAULT_MIN_TOKEN_COUNT:
             return error
         content = await File.read_text_file(path)
         if not content:
-            return FileBlock(file_path=str(path), block_content="")
+            return FileBlock(path=str(path), content="")
         if self.is_large_file(content=content):
             return error
         self.resource.report(str(path), "path")
 
-        lines = content.splitlines(keepends=True)
-        lines_with_num = [f"{i + 1:03}|{line}" for i, line in enumerate(lines)]
         result = FileBlock(
-            file_path=str(path),
-            block_content="".join(lines_with_num),
+            path=str(path),
+            content=content,
         )
         return result
 
@@ -696,12 +701,12 @@ class Editor(BaseModel):
         success_edit_info = SUCCESS_EDIT_INFO.format(
             file_name=file_name.resolve(),
             n_total_lines=n_total_lines,
-            window_after_applied=self._print_window(file_name, self.current_line, self.window),
+            window_after_applied=self._print_window(file_name, self.current_line, 30),
             line_number=self.current_line,
         ).strip()
         return success_edit_info
 
-    def edit_file_by_replace(
+    def edit_file_by_replace_line(
         self,
         file_name: str,
         first_replaced_line_number: int,
@@ -711,6 +716,8 @@ class Editor(BaseModel):
         new_content: str,
     ) -> str:
         """
+        DISCARDED. Consider removal.
+
         Line numbers start from 1. Replace lines from start_line to end_line (inclusive) with the new_content in the open file.
         All of the new_content will be entered, so makesure your indentation is formatted properly.
         The new_content must be a complete block of code.
@@ -822,12 +829,15 @@ class Editor(BaseModel):
         self.resource.report(file_name, "path")
         return ret_str
 
-    def _edit_file_by_replace(self, file_name: str, to_replace: str, new_content: str) -> str:
+    def edit_file_by_replace(self, file_name: str, to_replace: str, new_content: str) -> str:
         """Edit a file. This will search for `to_replace` in the given file and replace it with `new_content`.
 
         Every *to_replace* must *EXACTLY MATCH* the existing source code, character for character, including all comments, docstrings, etc.
 
-        Include enough lines to make code in `to_replace` unique. `to_replace` should NOT be empty.
+        * The `to_replace` parameter should match EXACTLY one or more consecutive lines from the original file. Be mindful of whitespaces!
+        * If the `to_replace` parameter is not unique in the file, the replacement will not be performed. Make sure to include enough context in `to_replace` to make it unique
+        * The `new_content` parameter should contain the edited lines that should replace the `to_replace`
+
 
         For example, given a file "/workspace/example.txt" with the following content:
         ```
@@ -867,14 +877,13 @@ class Editor(BaseModel):
             file_name: (str): The name of the file to edit.
             to_replace: (str): The content to search for and replace.
             new_content: (str): The new content to replace the old content with.
-        NOTE:
-            This tool is exclusive. If you use this tool, you cannot use any other commands in the current response.
-            If you need to use it multiple times, wait for the next turn.
         """
         # FIXME: support replacing *all* occurrences
 
         if to_replace == new_content:
-            raise ValueError("`to_replace` and `new_content` must be different.")
+            raise ValueError(
+                "`to_replace` and `new_content` must be different. Read the file carefully to give the right content to replace."
+            )
 
         # search for `to_replace` in the file
         # if found, replace it with `new_content`
@@ -890,41 +899,66 @@ class Editor(BaseModel):
 
         if file_content.count(to_replace) > 1:
             raise ValueError(
-                "`to_replace` appears more than once, please include enough lines to make code in `to_replace` unique."
+                f"`to_replace` {to_replace} appears more than once, please include enough lines to make code in `to_replace` unique."
             )
-        start = file_content.find(to_replace)
-        if start != -1:
-            # Convert start from index to line number
-            start_line_number = file_content[:start].count("\n") + 1
-            end_line_number = start_line_number + len(to_replace.splitlines()) - 1
-        else:
+        elif file_content.count(to_replace) == 0:
+            raise ValueError(
+                f"`to_replace` {to_replace} not found in {file_name}. Read the file carefully and make sure you give the right content to replace."
+            )
 
-            def _fuzzy_transform(s: str) -> str:
-                # remove all space except newline
-                return re.sub(r"[^\S\n]+", "", s)
+        ### Take a easy way to replace the content with direct string operation. Also disable linting for now ###
+        ### TODO: unittest to cover this part ###
+        new_content = file_content.replace(to_replace, new_content)
+        with file_name.open("w") as file:
+            file.write(new_content)
 
-            # perform a fuzzy search (remove all spaces except newlines)
-            to_replace_fuzzy = _fuzzy_transform(to_replace)
-            file_content_fuzzy = _fuzzy_transform(file_content)
-            # find the closest match
-            start = file_content_fuzzy.find(to_replace_fuzzy)
-            if start == -1:
-                return f"[No exact match found in {file_name} for\n```\n{to_replace}\n```\n]"
-            # Convert start from index to line number for fuzzy match
-            start_line_number = file_content_fuzzy[:start].count("\n") + 1
-            end_line_number = start_line_number + len(to_replace.splitlines()) - 1
-
-        ret_str = self._edit_file_impl(
-            file_name,
-            start=start_line_number,
-            end=end_line_number,
-            content=new_content,
-            is_insert=False,
-        )
-        # lint_error = bool(LINTER_ERROR_MSG in ret_str)
-        # TODO: automatically tries to fix linter error (maybe involve some static analysis tools on the location near the edit to figure out indentation)
+        start = file_content.find(to_replace) + 1  # index of starting char
+        start_line_number = file_content[:start].count("\n") + 1
+        window_after_applied = self._print_window(file_name, start_line_number, 30)
+        success_edit_info = SUCCESS_EDIT_INFO.format(
+            file_name=file_name.resolve(),
+            n_total_lines="",
+            window_after_applied=window_after_applied,
+            line_number=start_line_number,
+        ).strip()
         self.resource.report(file_name, "path")
-        return ret_str
+        return success_edit_info
+
+        ### original edit implementation, too complex, commented out for now ###
+        # if start != -1:
+        #     # Convert start from index to line number
+        #     start_line_number = file_content[:start].count("\n") + 1
+        #     end_line_number = start_line_number + len(to_replace.splitlines()) - 1
+        # else:
+
+        #     def _fuzzy_transform(s: str) -> str:
+        #         # remove all space except newline
+        #         return re.sub(r"[^\S\n]+", "", s)
+
+        #     # perform a fuzzy search (remove all spaces except newlines)
+        #     to_replace_fuzzy = _fuzzy_transform(to_replace)
+        #     file_content_fuzzy = _fuzzy_transform(file_content)
+        #     # find the closest match
+        #     start = file_content_fuzzy.find(to_replace_fuzzy)
+        #     if start == -1:
+        #         return f"[No exact match found in {file_name} for\n```\n{to_replace}\n```\n]"
+        #     # Convert start from index to line number for fuzzy match
+        #     start_line_number = file_content_fuzzy[:start].count("\n") + 1
+        #     end_line_number = start_line_number + len(to_replace.splitlines()) - 1
+
+        # ret_str = self._edit_file_impl(
+        #     file_name,
+        #     start=start_line_number,
+        #     end=end_line_number,
+        #     content=new_content,
+        #     is_insert=False,
+        # )
+
+        # # lint_error = bool(LINTER_ERROR_MSG in ret_str)
+        # # TODO: automatically tries to fix linter error (maybe involve some static analysis tools on the location near the edit to figure out indentation)
+        # self.resource.report(file_name, "path")
+        # return ret_str
+        ### original implementation end ###
 
     def insert_content_at_line(self, file_name: str, line_number: int, insert_content: str) -> str:
         """Insert a complete block of code before the given line number in a file. That is, the new content will start at the beginning of the specified line, and the existing content of that line will be moved down.

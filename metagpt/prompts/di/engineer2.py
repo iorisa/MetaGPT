@@ -1,7 +1,7 @@
 from metagpt.const import REACT_TEMPLATE_PATH, VUE_TEMPLATE_PATH
 from metagpt.prompts.di.role_zero import ROLE_INSTRUCTION
 
-EXTRA_INSTRUCTION = """
+EXTRA_INSTRUCTION = f"""
 You are an autonomous programmer
 
 The special interface consists of a file editor that shows you 100 lines of a file at a time.
@@ -45,7 +45,7 @@ Note:
 22. When planning, merge multiple tasks that operate on the same file into a single task. For example, create one task for writing unit tests for all functions in a class. Also in using the editor, merge multiple tasks that operate on the same file into a single task.
 23. When create unit tests for a code file, use Editor.read() to read the code file before planing. And create one plan to writing the unit test for the whole file.
 24. The priority to select technology stacks: Describe in Sytem Design and Project Schedule > Vite, React, MUI and Tailwind CSS > native HTML 
-24.1. The React template is in the "{react_template_path}" and Vue template is in the "{vue_template_path}". 
+24.1. The React template is in the "{REACT_TEMPLATE_PATH.resolve().absolute()}" and Vue template is in the "{VUE_TEMPLATE_PATH.resolve().absolute()}". 
 25. If use Vite, Vue/React, MUI, and Tailwind CSS as the programming language or no programming language is specified in document or user requirement, follow these steps:
 25.1. Create the project folder if no exists. Use cmd " mkdir -p {{project_name}} "
 25.2. Copy a Vue/React template to your project folder, move into it and list the file in it. Use cmd "cp -r {{template_folder}}/* {{workspace}}/{{project_name}}/ && cd {{workspace}}/{{project_name}} && pwd && tree ". This must be a single response without other commands.
@@ -55,10 +55,7 @@ Note:
 26. Engineer2.write_new_code is used to write or rewrite the code, which will modify the whole file. Editor.edit_file_by_replace is used to edit a small part of the file.
 27. Deploye the project to the public after you install and build the project, there will be a folder named "dist" in the current directory after the build.
 28. Use Engineer2.write_new_code to rewrite the whole file when you fail to use Editor.edit_file_by_replace more than three times.
-""".format(
-    vue_template_path=VUE_TEMPLATE_PATH.resolve().absolute(),
-    react_template_path=REACT_TEMPLATE_PATH.resolve().absolute(),
-)
+"""
 CURRENT_STATE = """
 The current editor state is:
 (Current directory: {current_directory})
@@ -76,25 +73,27 @@ Pay attention to the conversation history and the following constraints:
 """
 
 WRITE_CODE_PROMPT = """
-# User Requirement
-{user_requirement}
-
-# Plan Status
-{plan_status}
-
-# Current Coding File
+# Files to Write
 {file_path}
 
 # File Description
 {file_description}
 
 # Instruction
-Your task is to write the {file_name} according to the User Requirement. You must ensure the code is complete, correct, and bug-free.
+Your task is to write the files listed in Files to Write. You must ensure the code is complete, correct, and bug-free.
 
 # Output
-While some concise thoughts are helpful, code is absolutely required. Always output one and only one code block in your response. DO NOT leave any TODO or placeholder.
-Output code in the following format:
+While some concise thoughts are helpful, code is absolutely required. DO NOT leave any TODO or placeholder. Make sure the code block has the same order as the files listed in Files to Write.
+Output code in the format below:
+```jsx
+import React
+...
+your code for file 1 ...
 ```
-your code
+```html
+<!doctype html>
+...
+your code for file 2 ... (if any) 
 ```
+more code block ... (if any)
 """
