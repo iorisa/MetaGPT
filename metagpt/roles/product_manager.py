@@ -13,7 +13,6 @@ from metagpt.prompts.product_manager import PRODUCT_MANAGER_INSTRUCTION
 from metagpt.roles.di.role_zero import RoleZero
 from metagpt.roles.role import RoleReactMode
 from metagpt.tools.libs.browser import Browser
-from metagpt.tools.libs.editor import Editor
 from metagpt.utils.common import any_to_name, any_to_str, tool2name
 from metagpt.utils.git_repository import GitRepository
 
@@ -31,10 +30,17 @@ class ProductManager(RoleZero):
 
     name: str = "Alice"
     profile: str = "Product Manager"
-    goal: str = "Create a Product Requirement Document or market research/competitive product research."
+    goal: str = (
+        "Analyze user needs, create a PRD or market research report after collecting information and data online."
+    )
     constraints: str = "utilize the same language as the user requirements for seamless communication"
     instruction: str = PRODUCT_MANAGER_INSTRUCTION
-    tools: list[str] = ["RoleZero", Browser.__name__, Editor.__name__, SearchEnhancedQA.__name__]
+    tools: list[str] = [
+        Browser.__name__,
+        "Editor:read,write,edit_file_by_replace,insert_content_at_line,append_file",
+        RoleZero.__name__,
+        SearchEnhancedQA.__name__,
+    ]
 
     todo_action: str = any_to_name(WritePRD)
 
@@ -51,7 +57,6 @@ class ProductManager(RoleZero):
         self.tool_execution_map.update(tool2name(WritePRD, ["run"], wp.run))
 
     async def _think(self) -> bool:
-        """Decide what to do"""
         if not self.use_fixed_sop:
             return await super()._think()
 
