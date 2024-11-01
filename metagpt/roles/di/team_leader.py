@@ -11,7 +11,6 @@ from metagpt.prompts.di.team_leader import (
     FINISH_CURRENT_TASK_CMD,
     TL_INFO,
     TL_INSTRUCTION,
-    TL_THOUGHT_GUIDANCE,
 )
 from metagpt.roles.di.role_zero import RoleZero
 from metagpt.schema import AIMessage, Message, UserMessage
@@ -24,7 +23,6 @@ class TeamLeader(RoleZero):
     name: str = TEAMLEADER_NAME
     profile: str = "Team Leader"
     goal: str = "Manage a team to assist users"
-    thought_guidance: str = TL_THOUGHT_GUIDANCE
     # TeamLeader only reacts once each time, but may encounter errors or need to ask human, thus allowing 2 more turns
     max_react_loop: int = 3
 

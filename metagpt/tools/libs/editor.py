@@ -878,13 +878,6 @@ class Editor(BaseModel):
             to_replace: (str): The content to search for and replace.
             new_content: (str): The new content to replace the old content with.
         """
-        # FIXME: support replacing *all* occurrences
-
-        if to_replace == new_content:
-            raise ValueError(
-                "`to_replace` and `new_content` must be different. Read the file carefully to give the right content to replace."
-            )
-
         # search for `to_replace` in the file
         # if found, replace it with `new_content`
         # if not found, perform a fuzzy search to find the closest match and replace it with `new_content`
@@ -903,7 +896,12 @@ class Editor(BaseModel):
             )
         elif file_content.count(to_replace) == 0:
             raise ValueError(
-                f"`to_replace` {to_replace} not found in {file_name}. Read the file carefully and make sure you give the right content to replace."
+                f"`to_replace` {to_replace} not found in {file_name}. Read the file carefully with Editor.read and make sure you give the right content to replace. If you want to insert new content, use Editor.insert_content_at_line instead."
+            )
+
+        if to_replace == new_content:
+            raise ValueError(
+                "`to_replace` and `new_content` must be different. Use Editor.read to read the file again, then rethink about the content you want to replace and the new content."
             )
 
         ### Take a easy way to replace the content with direct string operation. Also disable linting for now ###
