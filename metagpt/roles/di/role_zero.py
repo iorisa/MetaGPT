@@ -89,7 +89,7 @@ class RoleZero(Role):
     # Equipped with three basic tools by default for optional use
     editor: Editor = Editor(enable_auto_lint=True)
     browser: Browser = Browser()
-    working_dir: str = Field(default_factory=DEFAULT_WORKSPACE_ROOT.resolve)
+    working_dir: str = Field(default_factory=lambda: str(DEFAULT_WORKSPACE_ROOT.resolve()))
 
     # Experience
     experience_retriever: Annotated[ExpRetriever, Field(exclude=True)] = DummyExpRetriever()
