@@ -11,6 +11,7 @@ ref4: https://github.com/hwchase17/langchain/blob/master/langchain/chat_models/o
 ref5: https://ai.google.dev/models/gemini
 """
 import tiktoken
+from loguru import logger
 
 TOKEN_COSTS = {
     "anthropic/claude-3.5-sonnet": {"prompt": 0.003, "completion": 0.015},
@@ -224,7 +225,7 @@ def count_message_tokens(messages, model="gpt-3.5-turbo-0125"):
     try:
         encoding = tiktoken.encoding_for_model(model)
     except KeyError:
-        print("Warning: model not found. Using cl100k_base encoding.")
+        logger.warning("model not found. Using cl100k_base encoding.")
         encoding = tiktoken.get_encoding("cl100k_base")
     if model in {
         "gpt-3.5-turbo-0613",
@@ -254,10 +255,10 @@ def count_message_tokens(messages, model="gpt-3.5-turbo-0125"):
         tokens_per_message = 4  # every message follows <|start|>{role/name}\n{content}<|end|>\n
         tokens_per_name = -1  # if there's a name, the role is omitted
     elif "gpt-3.5-turbo" == model:
-        print("Warning: gpt-3.5-turbo may update over time. Returning num tokens assuming gpt-3.5-turbo-0125.")
+        logger.warning("gpt-3.5-turbo may update over time. Returning num tokens assuming gpt-3.5-turbo-0125.")
         return count_message_tokens(messages, model="gpt-3.5-turbo-0125")
     elif "gpt-4" == model:
-        print("Warning: gpt-4 may update over time. Returning num tokens assuming gpt-4-0613.")
+        logger.warning("gpt-4 may update over time. Returning num tokens assuming gpt-4-0613.")
         return count_message_tokens(messages, model="gpt-4-0613")
     elif "open-llm-model" == model:
         """
@@ -303,7 +304,7 @@ def count_string_tokens(string: str, model_name: str) -> int:
     try:
         encoding = tiktoken.encoding_for_model(model_name)
     except KeyError:
-        print("Warning: model not found. Using cl100k_base encoding.")
+        logger.warning("model not found. Using cl100k_base encoding.")
         encoding = tiktoken.get_encoding("cl100k_base")
     return len(encoding.encode(string))
 
