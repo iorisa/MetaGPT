@@ -295,6 +295,12 @@ class CodeParser:
         return code
 
     @classmethod
+    def parse_multiple_code(cls, text: str, lang: str = "") -> list[str]:
+        pattern = rf"```{lang}.*?\s+(.*?)\n```"
+        matches = re.findall(pattern, text, re.DOTALL)
+        return [match for match in matches]
+
+    @classmethod
     def parse_str(cls, block: str, text: str, lang: str = ""):
         code = cls.parse_code(block=block, text=text, lang=lang)
         code = code.split("=")[-1]

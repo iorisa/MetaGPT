@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from pydantic import Field
@@ -12,13 +11,13 @@ from metagpt.prompts.di.engineer2 import (
     CURRENT_STATE,
     ENGINEER2_INSTRUCTION,
     WRITE_CODE_PROMPT,
-    WRITE_CODE_SYSTEM_PROMPT,
 )
 from metagpt.roles.di.role_zero import RoleZero
 from metagpt.schema import UserMessage
 from metagpt.strategy.experience_retriever import ENGINEER_EXAMPLE
 from metagpt.tools.libs.cr import CodeReview
 from metagpt.tools.libs.deployer import Deployer
+from metagpt.tools.libs.editor import FileBlock
 from metagpt.tools.libs.git import git_create_pull
 from metagpt.tools.libs.image_getter import ImageGetter
 from metagpt.tools.libs.terminal import Terminal
@@ -63,11 +62,11 @@ class Engineer2(RoleZero):
         Display the current terminal and editor state.
         This information will be dynamically added to the command prompt.
         """
-        current_directory = (await self.terminal.run_command("pwd")).strip()
-        self.editor._set_workdir(current_directory)
+        self.working_dir = (await self.terminal.run_command("pwd")).strip()
+        self.editor._set_workdir(self.working_dir)
         state = {
             "editor_open_file": self.editor.current_file,
-            "current_directory": current_directory,
+            "current_directory": self.working_dir,
         }
         self.cmd_prompt_current_state = CURRENT_STATE.format(**state).strip()
 
@@ -75,7 +74,6 @@ class Engineer2(RoleZero):
         # validate = ValidateAndRewriteCode()
         cr = CodeReview()
         image_getter = ImageGetter()
-        self.exclusive_tool_commands.append("Engineer2.write_new_code")
         if self.run_eval is True:
             # Evalute tool map
             self.tool_execution_map.update(
@@ -108,22 +106,24 @@ class Engineer2(RoleZero):
     def _retrieve_experience(self) -> str:
         return ENGINEER_EXAMPLE
 
-    async def write_new_code(self, path: str, file_description: str = "") -> str:
-        """Write a new code file.
+    def _fix_path(self, path: str) -> Path:
+        """Tries to fix the path if it is not absolute."""
+        if not isinstance(path, Path):
+            path = Path(path)
+        if not path.is_absolute():
+            path = self.working_dir / path
+        return path
+
+    async def write_new_code(self, description: str, paths: list[str]) -> str:
+        """Write one or more new code files.
 
         Args:
-            path (str): The absolute path of the file to be created.
-            file_description (optional, str): "Brief description and important notes of the file content, must be very concise and can be empty. Defaults to "".
+            description (str): "Brief description and important notes of what and how to implement the files, including how they interact with each other if there will be multiple files.
+            path (list[str]): The paths of the files to be created.
         """
-        # If the path is not absolute, try to fix it with the editor's working directory.
-        path = self.editor._try_fix_path(path)
-        plan_status, _ = self._get_plan_status()
         prompt = WRITE_CODE_PROMPT.format(
-            user_requirement=self.planner.plan.goal,
-            plan_status=plan_status,
-            file_path=path,
-            file_description=file_description,
-            file_name=os.path.basename(path),
+            file_path=paths,
+            file_description=description,
         )
         # Sometimes the Engineer repeats the last command to respond.
         # Replace the last command with a manual prompt to guide the Engineer to write new code.
@@ -131,14 +131,20 @@ class Engineer2(RoleZero):
         context = self.llm.format_msg(memory + [UserMessage(content=prompt)])
 
         async with EditorReporter(enable_llm_stream=True) as reporter:
-            await reporter.async_report({"type": "code", "filename": Path(path).name, "src_path": path}, "meta")
-            rsp = await self.llm.aask(context, system_msgs=[WRITE_CODE_SYSTEM_PROMPT])
-            code = CodeParser.parse_code(text=rsp)
-            await awrite(path, code)
-            await reporter.async_report(path, "path")
+            await reporter.async_report({"type": "files", "paths": [str(self._fix_path(i)) for i in paths]}, "meta")
+            rsp = await self.llm.aask(context, system_msgs=[self.instruction])
+            code_by_files = CodeParser.parse_multiple_code(text=rsp)
 
-        # TODO: Consider adding line no to be ready for editing.
-        return f"The file {path} has been successfully created, with content:\n{code}"
+            output_msg = ""
+            if len(paths) != len(code_by_files):
+                logger.warning("The number of paths and code blocks do not match.")
+                output_msg += f"The number of paths and code blocks do not match. Only {paths} will be saved. If you want to save more code blocks, please call the function again with the remaining paths.\n"
+            for path, code in zip(paths, code_by_files):
+                await awrite(self._fix_path(path), code)
+                file_block = FileBlock(path=str(path), content=code)
+                output_msg += f"File created successfully with \n{file_block}\n"
+
+        return output_msg
 
     async def _deploy_to_public(self, dist_dir):
         """fix the dist_dir path to absolute path before deploying
@@ -147,7 +153,7 @@ class Engineer2(RoleZero):
         """
         # Try to fix the path with the editor's working directory.
         if not Path(dist_dir).is_absolute():
-            default_dir = self.editor._try_fix_path(dist_dir)
+            default_dir = self._fix_path(dist_dir)
             if not default_dir.exists():
                 raise ValueError("dist_dir must be an absolute path.")
             dist_dir = default_dir

@@ -12,7 +12,7 @@ from pydantic import Field, model_validator
 from metagpt.actions import Action, UserRequirement
 from metagpt.actions.di.run_command import RunCommand
 from metagpt.actions.search_enhanced_qa import SearchEnhancedQA
-from metagpt.const import IMAGES
+from metagpt.const import DEFAULT_WORKSPACE_ROOT, IMAGES
 from metagpt.exp_pool import exp_cache
 from metagpt.exp_pool.context_builders import RoleZeroContextBuilder
 from metagpt.exp_pool.serializers import RoleZeroSerializer
@@ -81,14 +81,15 @@ class RoleZero(Role):
     # List of exclusive tool commands.
     # If multiple instances of these commands appear, only the first occurrence will be retained.
     exclusive_tool_commands: list[str] = [
-        "Editor.edit_file_by_replace",
-        "Editor.insert_content_at_line",
-        "Editor.append_file",
-        "Editor.open_file",
+        # "Editor.edit_file_by_replace",
+        # "Editor.insert_content_at_line",
+        # "Editor.append_file",
+        # "Editor.open_file",
     ]
     # Equipped with three basic tools by default for optional use
     editor: Editor = Editor(enable_auto_lint=True)
     browser: Browser = Browser()
+    working_dir: str = Field(default_factory=DEFAULT_WORKSPACE_ROOT.resolve)
 
     # Experience
     experience_retriever: Annotated[ExpRetriever, Field(exclude=True)] = DummyExpRetriever()
@@ -246,6 +247,7 @@ class RoleZero(Role):
         memory = self.parse_images(memory)
 
         req = self.llm.format_msg(memory + [UserMessage(content=prompt)])
+
         state_data = dict(
             plan_status=plan_status,
             current_task=current_task,
@@ -557,6 +559,8 @@ class RoleZero(Role):
                 )
             else:
                 command_output += f"\n[command]: {cmd['args']['cmd']} \n[command output] : {tool_output}"
+            self.working_dir = (await self.terminal.run_command("pwd")).strip()
+            self.editor._set_workdir(self.working_dir)
 
         return command_output
 
@@ -612,7 +616,9 @@ class RoleZero(Role):
         # Ensure reply to the human before the "end" command is executed. Hard code k=5 for checking.
         if not any(["reply_to_human" in memory.content for memory in self.get_memories(k=5)]):
             logger.info("manually reply to human")
-            reply_to_human_prompt = REPORT_TO_HUMAN_PROMPT.format(respond_language=self.respond_language)
+            reply_to_human_prompt = REPORT_TO_HUMAN_PROMPT.format(
+                respond_language=self.respond_language, working_dir=self.working_dir
+            )
             async with ThoughtReporter(enable_llm_stream=True) as reporter:
                 await reporter.async_report({"type": "quick"})
                 reply_content = await self.llm.aask(self.llm.format_msg(memory + [UserMessage(reply_to_human_prompt)]))

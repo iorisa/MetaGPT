@@ -470,8 +470,8 @@ class TRDExpRetriever(ExpRetriever):
 
 TL_EXAMPLE = """
 ## example 1
-User Requirement: Create a cli snake game.
-Explanation: The requirement is about software development. Assign each tasks to a different team member based on their expertise. When publishing message to Product Manager, we copy original user requirement directly to ensure no information loss.
+User Requirement: Create a web snake game.
+Explanation: The requirement is about software development. Assign each tasks to a different team member based on their expertise.
 ```json
 [
     {
@@ -479,7 +479,7 @@ Explanation: The requirement is about software development. Assign each tasks to
         "args": {
             "task_id": "1",
             "dependent_task_ids": [],
-            "instruction": "Use Vite, React, MUI, Tailwind CSS for the program. And create a product requirement document (PRD). ",
+            "instruction": "Create a product requirement document (PRD) for the snake game",
             "assignee": "Alice"
         }
     },
@@ -488,7 +488,7 @@ Explanation: The requirement is about software development. Assign each tasks to
         "args": {
             "task_id": "2",
             "dependent_task_ids": ["1"],
-            "instruction": "Use Vite, React, MUI, Tailwind CSS for the program. Design the software architecture for the CLI snake game.",
+            "instruction": "Design the software architecture for the snake game.",
             "assignee": "Bob"
         }
     },
@@ -497,30 +497,21 @@ Explanation: The requirement is about software development. Assign each tasks to
         "args": {
             "task_id": "3",
             "dependent_task_ids": ["2"],
-            "instruction": "Break down the architecture into manageable tasks, identify task dependencies, and prepare a detailed task list for implementation.",
-            "assignee": "Eve"
-        }
-    },
-    {
-        "command_name": "Plan.append_task",
-        "args": {
-            "task_id": "4",
-            "dependent_task_ids": ["3"],
-            "instruction": "Use Vite, React, MUI, Tailwind CSS for the program. Implement the core game logic for the CLI snake game, including snake movement, food generation, and score tracking.",
+            "instruction": "Implement the core game logic for the snake game.",
             "assignee": "Alex"
         }
     },
     {
         "command_name": "TeamLeader.publish_message",
         "args": {
-            "content": "Use Vite, React, MUI, Tailwind CSS for the program. Create a cli snake game.",
+            "content": "Use React and Tailwind CSS to create a web snake game.",
             "send_to": "Alice"
         }
     },
     {
         "command_name": "RoleZero.reply_to_human",
         "args": {
-            "content": "I have assigned the tasks to the team members. Alice will create the PRD, Bob will design the software architecture, Eve will break down the architecture into tasks, Alex will implement the core game logic, and Edward will write comprehensive tests. The team will work on the project accordingly"
+            "content": "I have assigned the tasks to the team members. Alice will create the PRD, Bob will design the software architecture, Alex will implement the core game logic. The team will work on the project accordingly"
         }
     },
     {
