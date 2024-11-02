@@ -131,7 +131,7 @@ class Engineer2(RoleZero):
         context = self.llm.format_msg(memory + [UserMessage(content=prompt)])
 
         async with EditorReporter(enable_llm_stream=True) as reporter:
-            await reporter.async_report({"type": "files", "filename": paths, "src_path": ""}, "meta")
+            await reporter.async_report({"type": "files", "paths": [str(self._fix_path(i)) for i in paths]}, "meta")
             rsp = await self.llm.aask(context, system_msgs=[self.instruction])
             code_by_files = CodeParser.parse_multiple_code(text=rsp)
 
