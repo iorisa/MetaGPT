@@ -872,11 +872,6 @@ class Editor(BaseModel):
             to_replace='line 2\nline 3',
             new_content='',
         )
-
-        Args:
-            file_name: (str): The name of the file to edit.
-            to_replace: (str): The content to search for and replace.
-            new_content: (str): The new content to replace the old content with.
         """
         # search for `to_replace` in the file
         # if found, replace it with `new_content`
@@ -892,11 +887,19 @@ class Editor(BaseModel):
 
         if file_content.count(to_replace) > 1:
             raise ValueError(
-                f"`to_replace` {to_replace} appears more than once, please include enough lines to make code in `to_replace` unique."
+                f"`to_replace` ```{to_replace}``` appears more than once, please include enough lines to make code in `to_replace` unique."
             )
         elif file_content.count(to_replace) == 0:
+            # If no exact match, try to find close matches using LCS
+            if len(to_replace) > 20:
+                # white spaces are usually missing in multi-line content, thus hard coding a threshold of 20
+                _, similarity, s2_match = self.lcs(to_replace, file_content)
+                if similarity > 0.9:  # High similarity suggests missing whitespace
+                    raise ValueError(
+                        f"`to_replace` ```{to_replace}``` not found in {file_name}. Pay attention to spaces and line breaks! Did you actually mean ```{s2_match}```"
+                    )
             raise ValueError(
-                f"`to_replace` {to_replace} not found in {file_name}. Read the file carefully with Editor.read and make sure you give the right content to replace. If you want to insert new content, use Editor.insert_content_at_line instead."
+                f"`to_replace` ```{to_replace}``` not found in {file_name}. Read the file carefully with Editor.read and make sure you give the right content to replace. If you want to insert new content, use Editor.insert_content_at_line instead."
             )
 
         if to_replace == new_content:
@@ -1165,3 +1168,60 @@ class Editor(BaseModel):
         token_count = len(encoding.encode(content))
         mix_token_count = mix_token_count or DEFAULT_MIN_TOKEN_COUNT
         return token_count >= mix_token_count
+
+    @staticmethod
+    def lcs(s1: str, s2: str) -> tuple[str, float, str]:
+        """Find the longest common subsequence between two strings and the matching section from s2. Assuming s1 is always a subsequence of s2.
+
+        Args:
+            s1: First string (typically the to_replace content)
+            s2: Second string (typically the file content)
+
+        Returns:
+            tuple[str, float, str]: The LCS string, its similarity score (0-1), and the matching section from s2
+        """
+        # Create DP table
+        m, n = len(s1), len(s2)
+        dp = [[0] * (n + 1) for _ in range(m + 1)]
+
+        # Fill DP table
+        for i in range(1, m + 1):
+            for j in range(1, n + 1):
+                if s1[i - 1] == s2[j - 1]:
+                    dp[i][j] = dp[i - 1][j - 1] + 1
+                else:
+                    dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
+
+        # Reconstruct LCS and track positions in s2
+        lcs = []
+        i, j = m, n
+        positions = []  # Store positions of matches in s2
+        while i > 0 and j > 0:
+            if s1[i - 1] == s2[j - 1]:
+                lcs.append(s1[i - 1])
+                positions.append(j - 1)
+                i -= 1
+                j -= 1
+            elif dp[i - 1][j] > dp[i][j - 1]:
+                i -= 1
+            else:
+                j -= 1
+
+        lcs = "".join(reversed(lcs))
+        positions = list(reversed(positions))
+
+        # Calculate similarity score
+        score = len(lcs) / len(s1)
+
+        # Extract the matching section from s2
+        if positions:
+            start = min(positions)
+            end = max(positions) + 1
+            matching_section = s2[start:end]
+        else:
+            matching_section = ""
+        matching_section = matching_section[
+            : int(1.2 * len(s1))
+        ]  # hard truncate to avoid greedily match too long string
+
+        return lcs, score, matching_section
