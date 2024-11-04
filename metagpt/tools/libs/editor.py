@@ -893,10 +893,10 @@ class Editor(BaseModel):
             # If no exact match, try to find close matches using LCS
             if len(to_replace) > 20:
                 # white spaces are usually missing in multi-line content, thus hard coding a threshold of 20
-                _, similarity, s2_match = self.lcs(to_replace, file_content)
+                _, similarity, file_content_match = self.lcs(to_replace, file_content)
                 if similarity > 0.9:  # High similarity suggests missing whitespace
                     raise ValueError(
-                        f"`to_replace` ```{to_replace}``` not found in {file_name}. Pay attention to spaces and line breaks! Did you actually mean ```{s2_match}```"
+                        f"`to_replace` ```{to_replace}``` not found in {file_name}. Pay attention to spaces and line breaks! Did you actually mean ```{file_content_match}```"
                     )
             raise ValueError(
                 f"`to_replace` ```{to_replace}``` not found in {file_name}. Read the file carefully with Editor.read and make sure you give the right content to replace. If you want to insert new content, use Editor.insert_content_at_line instead."
