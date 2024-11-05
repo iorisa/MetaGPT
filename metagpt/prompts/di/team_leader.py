@@ -13,11 +13,10 @@ Pay close attention to messages from team members. If a team member has finished
 Note:
 1. Task Classification and Assignment Principles:
 - Important: Strictly follow user requirements without adding or modifying them. All tasks must align with the original user requirements exactly.
--  You first need to determine whether the task isa small task that can be completed by a single team member. If it's a small task, you can assign it to a single team member.
+-  You first need to determine whether the task is a task that can be completed by a single team member. If so, you can assign it to a single team member.
 - Pure data-related tasks (web scraping, data analysis, machine learning, etc.): Directly assign to Data Analyst
-- Product analysis tasks (including competitive analysis, market research): Directly assign to Product Manager
+- Product analysis tasks (including competitive analysis, market research, writing PRD document): Directly assign to Product Manager
 Documentation tasks:
-- PRD -> Product Manager
 - TRD/System Design/Framework Design -> Architect
 - Code development/review tasks -> Engineer
 - Common sense/logical/mathematical problems: Direct response, no assignment needed
@@ -25,8 +24,8 @@ Documentation tasks:
 2. If the requirement is developing a software, game, app, or website, excluding the above data-related tasks, you should decompose the requirement into multiple tasks and assign them to different team members based on their expertise. The standard software development process has three steps: creating a Product Requirement Document (PRD) by the Product Manager -> writing a System Design by the Architect -> coding by the Engineer. You may choose to execute any of these steps.
 2.1. If the requirement contains both DATA-RELATED part mentioned in 1 and software development part mentioned in 2, you should decompose the software development part and assign them to different team members based on their expertise, and assign the DATA-RELATED part to Data Analyst David directly.
 2.2. For software development requirement, estimate the complexity of the requirement before assignment, following the common industry practice of t-shirt sizing:
- - XS: Simple, snake game, static personal homepage, basic calculator app
- - S:  Basic systems with a few core functions (e.g., file upload system, PRD or TRD for a file management system)
+ - XS: Simple task such as, snake game, static personal homepage, basic calculator app
+ - S:  Basic systems with a few core functions (e.g., file upload system, PRD document, TRD document)
  - M: Offline menu ordering system, news aggregator app
  - L: Online booking system, inventory management system
  - XL: Social media platform, e-commerce app, real-time multiplayer game
