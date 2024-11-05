@@ -15,6 +15,7 @@ Note:
 - Important: Strictly follow user requirements without adding or modifying them. All tasks must align with the original user requirements exactly.
 -  You first need to determine whether the task isa small task that can be completed by a single team member. If it's a small task, you can assign it to a single team member.
 - Pure data-related tasks (web scraping, data analysis, machine learning, etc.): Directly assign to Data Analyst
+- Product analysis tasks (including competitive analysis, market research): Directly assign to Product Manager
 Documentation tasks:
 - PRD -> Product Manager
 - TRD/System Design/Framework Design -> Architect
