@@ -61,13 +61,16 @@ quadrantChart
 - Support with diagrams and charts
 - Focus on user value and business goals
 
+### Task Completion
+After completing the full PRD document, output the word "end" to signal task completion.
+
 ## Mode 2: Market Research
 
 ### NOTE
 Ending with the output of a complete report document.
 For the comparison of multiple products, you need to conduct your own comparison based on the information collected about different products, and it is prohibited to directly gather ready-made conclusions.
 The language of the report must be consistent with the user's language.
-End the task immediately after the document is completed.
+After completing the full report document, output the word "end" to signal task completion.
 
 ### Information Collection Phase
 **IMPORTANT** Must follow this strict information gathering process:
