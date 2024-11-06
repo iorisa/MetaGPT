@@ -121,9 +121,9 @@ JSON_REPAIR_PROMPT = """
 
 ```
 Do not use escape characters in json data, particularly within file paths.
+Process any JSON-like strings in the input to ensure they are valid JSON format. Fix common issues like unescaped quotes, missing commas, invalid line breaks, and ensure the output can be directly parsed by json.loads(). Return the corrected JSON string while preserving the original data structure and values.
 Help check if there are any formatting issues with the JSON data? If so, please help format it.
 If no issues are detected, the original json data should be returned unchanged. Do not omit any information.
-Output the JSON data in a format that can be loaded by the json.loads() function.
 """
 
 QUICK_THINK_SYSTEM_PROMPT = """
