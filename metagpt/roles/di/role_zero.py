@@ -3,8 +3,10 @@ from __future__ import annotations
 import inspect
 import json
 import re
+import copy
 import traceback
 from datetime import datetime
+import pytz
 from typing import Annotated, Callable, Dict, List, Literal, Optional, Tuple
 
 from pydantic import Field, model_validator
@@ -45,6 +47,7 @@ from metagpt.tools.libs.browser import Browser
 from metagpt.tools.libs.editor import Editor
 from metagpt.tools.tool_recommend import BM25ToolRecommender, ToolRecommender
 from metagpt.tools.tool_registry import register_tool
+from metagpt.tools.current_info import DateTimeTool
 from metagpt.utils.common import CodeParser, any_to_str, extract_and_encode_images
 from metagpt.utils.repair_llm_raw_output import (
     RepairType,
@@ -307,8 +310,13 @@ class RoleZero(Role):
         return memory
 
     def _get_prefix(self) -> str:
-        time_info = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        return super()._get_prefix() + f" The current time is {time_info}."
+        # time_info = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        beijing_tz = pytz.timezone('America/Los_Angeles')
+        current_time = datetime.now(beijing_tz)
+        
+        # 格式化输出
+        formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S %A")
+        return f" The current time in Los Angeles is {formatted_time}." + super()._get_prefix()
 
     async def _act(self) -> Message:
         if self.use_fixed_sop:
@@ -369,6 +377,21 @@ class RoleZero(Role):
     def format_quick_system_prompt(self) -> str:
         """Format the system prompt for quick thinking."""
         return QUICK_THINK_SYSTEM_PROMPT.format(examples=QUICK_THINK_EXAMPLES, role_info=self._get_prefix())
+    
+    def _clean_memory(self) -> list:
+        cleaned_memory = []
+        memory = self.get_memories(k=self.memory_k)
+        
+        for element in memory:
+            # deep copy all element
+            copied_element = copy.deepcopy(element)
+
+            # If the answer contains the substring '[Message] from A to B:', remove it.
+            pattern = r"\[Message\] from .+? to .+?:\s*"
+            copied_element.content = re.sub(pattern, "", copied_element.content, count=1)
+            cleaned_memory.append(copied_element)
+        
+        return cleaned_memory
 
     async def _quick_think(self) -> Tuple[Message, str]:
         answer = ""
@@ -385,10 +408,11 @@ class RoleZero(Role):
             intent_result = await self.llm.aask(context, system_msgs=[self.format_quick_system_prompt()])
 
         if "QUICK" in intent_result or "AMBIGUOUS" in intent_result:  # llm call with the original context
+            cleaned_memory = self._clean_memory() # deep copy and 
             async with ThoughtReporter(enable_llm_stream=True) as reporter:
                 await reporter.async_report({"type": "quick"})
                 answer = await self.llm.aask(
-                    self.llm.format_msg(memory),
+                    self.llm.format_msg(cleaned_memory),
                     system_msgs=[QUICK_RESPONSE_SYSTEM_PROMPT.format(role_info=self._get_prefix())],
                 )
             # If the answer contains the substring '[Message] from A to B:', remove it.
