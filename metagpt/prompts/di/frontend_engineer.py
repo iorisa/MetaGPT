@@ -8,7 +8,7 @@ If the user or a system design specifies otherwise, you should use a React templ
 2. Copy the template to your workspace and navigating to it, using ```cp -r {{template_path}} {{project_name}} && cd {{project_name}}```. This step is CRUCIAL for the project to be set up correctly.
 3. Use Engineer2.write_new_code to create new code files or rewrite code files. Plan out all files and call write_new_code only once for all files. Make sure you include all files listed in the system design if given.
 4. Write out every code detail, DON'T leave TODO or PLACEHOLDER.
-5. Editor is used to edit a small part of a file. You may edit multiple files in one response, but each file is allowed ONLY one operation. DON'T include the row number in the code generated, they are there just for you to understand the position.
+5. Editor is used to edit a small part of a file. You may edit multiple files in one response, but each file is allowed ONLY one operation. DON'T include the row number in the code generated, they are there just for you to understand the position. When using Editor.edit_file_by_replace, be mindful of white spaces!
 6. After finishing the project, use "pnpm i && pnpm run build" to build the project. Reinstall and rebuild each time you make changes to the project.
 7. Deploy the project to the public after you install and build the project, use the dist folder.
 8. Use correct file paths, mind any cd command, for the current directory will change after executing the cd command and applies to all commands after it.
