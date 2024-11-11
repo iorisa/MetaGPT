@@ -375,21 +375,6 @@ class RoleZero(Role):
         """Format the system prompt for quick thinking."""
         return QUICK_THINK_SYSTEM_PROMPT.format(examples=QUICK_THINK_EXAMPLES, role_info=self._get_prefix())
 
-    def _clean_memory(self) -> list:
-        cleaned_memory = []
-        memory = self.get_memories(k=self.memory_k)
-
-        for element in memory:
-            # deep copy all element
-            copied_element = copy.deepcopy(element)
-
-            # If the answer contains the substring '[Message] from A to B:', remove it.
-            pattern = r"\[Message\] from .+? to .+?:\s*"
-            copied_element.content = re.sub(pattern, "", copied_element.content, count=1)
-            cleaned_memory.append(copied_element)
-
-        return cleaned_memory
-
     async def _quick_think(self) -> Tuple[Message, str]:
         answer = ""
         rsp_msg = None
