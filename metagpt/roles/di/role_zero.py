@@ -1,14 +1,14 @@
 from __future__ import annotations
 
+import copy
 import inspect
 import json
 import re
-import copy
 import traceback
 from datetime import datetime
-import pytz
 from typing import Annotated, Callable, Dict, List, Literal, Optional, Tuple
 
+import pytz
 from pydantic import Field, model_validator
 
 from metagpt.actions import Action, UserRequirement
@@ -47,7 +47,6 @@ from metagpt.tools.libs.browser import Browser
 from metagpt.tools.libs.editor import Editor
 from metagpt.tools.tool_recommend import BM25ToolRecommender, ToolRecommender
 from metagpt.tools.tool_registry import register_tool
-from metagpt.tools.current_info import DateTimeTool
 from metagpt.utils.common import CodeParser, any_to_str, extract_and_encode_images
 from metagpt.utils.repair_llm_raw_output import (
     RepairType,
@@ -310,11 +309,9 @@ class RoleZero(Role):
         return memory
 
     def _get_prefix(self) -> str:
-        # time_info = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        beijing_tz = pytz.timezone('America/Los_Angeles')
-        current_time = datetime.now(beijing_tz)
-        
-        # 格式化输出
+        time_zone = pytz.timezone("America/Los_Angeles")
+        current_time = datetime.now(time_zone)
+        # format time in Los Angeles
         formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S %A")
         return f" The current time in Los Angeles is {formatted_time}." + super()._get_prefix()
 
@@ -377,11 +374,11 @@ class RoleZero(Role):
     def format_quick_system_prompt(self) -> str:
         """Format the system prompt for quick thinking."""
         return QUICK_THINK_SYSTEM_PROMPT.format(examples=QUICK_THINK_EXAMPLES, role_info=self._get_prefix())
-    
+
     def _clean_memory(self) -> list:
         cleaned_memory = []
         memory = self.get_memories(k=self.memory_k)
-        
+
         for element in memory:
             # deep copy all element
             copied_element = copy.deepcopy(element)
@@ -390,7 +387,7 @@ class RoleZero(Role):
             pattern = r"\[Message\] from .+? to .+?:\s*"
             copied_element.content = re.sub(pattern, "", copied_element.content, count=1)
             cleaned_memory.append(copied_element)
-        
+
         return cleaned_memory
 
     async def _quick_think(self) -> Tuple[Message, str]:
@@ -408,7 +405,19 @@ class RoleZero(Role):
             intent_result = await self.llm.aask(context, system_msgs=[self.format_quick_system_prompt()])
 
         if "QUICK" in intent_result or "AMBIGUOUS" in intent_result:  # llm call with the original context
-            cleaned_memory = self._clean_memory() # deep copy and 
+            cleaned_memory = []
+            memory = self.get_memories(k=self.memory_k)
+
+            for element in memory:
+                # deep copy all element
+                copied_element = copy.deepcopy(element)
+
+                # If the answer contains the substring '[Message] from A to B:', remove it.
+                pattern = r"\[Message\] from .+? to .+?:\s*"
+                copied_element.content = re.sub(pattern, "", copied_element.content, count=1)
+                cleaned_memory.append(copied_element)
+
+            # cleaned_memory = self._clean_memory() # deep copy and
             async with ThoughtReporter(enable_llm_stream=True) as reporter:
                 await reporter.async_report({"type": "quick"})
                 answer = await self.llm.aask(
@@ -482,19 +491,25 @@ class RoleZero(Role):
 
             # add a rule to deal with invalid character when editor write code
             # replace the \n and \r in the json_string
-            try: 
-                commands = json.loads(repair_llm_raw_output(output=commands, req_keys=[None], repair_type=RepairType.JSON))
+            try:
+                commands = json.loads(
+                    repair_llm_raw_output(output=commands, req_keys=[None], repair_type=RepairType.JSON)
+                )
             except:
                 if "Editor.write" in commands:
                     pattern = r'"content": "(.*?)"\s*}\n'
-                    replaced_commands = re.sub(pattern, 
-                                    lambda m: '"content":"' + m.group(1).replace('"', '\\"').replace('\n', '\\n') + '"}', 
-                                    commands, 
-                                    flags=re.DOTALL)
+                    replaced_commands = re.sub(
+                        pattern,
+                        lambda m: '"content":"' + m.group(1).replace('"', '\\"').replace("\n", "\\n") + '"}',
+                        commands,
+                        flags=re.DOTALL,
+                    )
                     # replace the \n and \r in the json_string
-                    replaced_commands = replaced_commands.replace('\n', '').replace('\r', '')
+                    # replaced_commands = replaced_commands.replace('\n', '').replace('\r', '')
                     commands = replaced_commands
-                    commands = json.loads(repair_llm_raw_output(output=commands, req_keys=[None], repair_type=RepairType.JSON))
+                    commands = json.loads(
+                        repair_llm_raw_output(output=commands, req_keys=[None], repair_type=RepairType.JSON)
+                    )
         except json.JSONDecodeError as e:
             logger.warning(f"Failed to parse JSON for: {command_rsp}. Trying to repair...")
             commands = await self.llm.aask(
