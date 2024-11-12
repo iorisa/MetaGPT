@@ -2,7 +2,7 @@
 
 import asyncio
 import functools
-from typing import Any, Callable, Optional, TypeVar
+from typing import Any, Callable, Coroutine, Optional, TypeVar
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
@@ -20,7 +20,7 @@ from metagpt.exp_pool.schema import (
 from metagpt.exp_pool.scorers import BaseScorer, SimpleScorer
 from metagpt.exp_pool.serializers import BaseSerializer, SimpleSerializer
 from metagpt.logs import logger
-from metagpt.utils.async_helper import NestAsyncio
+from metagpt.utils.async_helper import run_coroutine_sync
 from metagpt.utils.exceptions import handle_exception
 
 ReturnType = TypeVar("ReturnType")
@@ -182,15 +182,14 @@ class ExpCacheHandler(BaseModel):
         self._log_exp(exp)
 
     @staticmethod
-    def choose_wrapper(func, wrapped_func):
+    def choose_wrapper(func, wrapped_func: Coroutine):
         """Choose how to run wrapped_func based on whether the function is asynchronous."""
 
         async def async_wrapper(*args, **kwargs):
             return await wrapped_func(args, kwargs)
 
         def sync_wrapper(*args, **kwargs):
-            NestAsyncio.apply_once()
-            return asyncio.get_event_loop().run_until_complete(wrapped_func(args, kwargs))
+            return run_coroutine_sync(wrapped_func(args, kwargs))
 
         return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
 
