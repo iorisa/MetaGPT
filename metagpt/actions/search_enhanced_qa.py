@@ -73,7 +73,7 @@ class SearchEnhancedQA(Action):
         description="Action to explore the web and provide summaries of articles and webpages.",
     )
     per_page_timeout: float = Field(
-        default=20, description="The maximum time for fetching a single page is in seconds. Defaults to 20s."
+        default=15, description="The maximum time for fetching a single page is in seconds. Defaults to 15s."
     )
     java_script_enabled: bool = Field(
         default=False, description="Whether or not to enable JavaScript in the web browser context. Defaults to False."

@@ -180,7 +180,7 @@ class CollectLinks(Action):
         results = [results[i] for i in indices]
         if self.rank_func:
             results = self.rank_func(results)
-        return [i["link"] for i in results[:num_results]]
+        return [i["link"] for i in results[:max_results]]
 
     async def _search_urls(self, query: str, max_results: int) -> list[dict[str, str]]:
         """Use search_engine to get urls.
