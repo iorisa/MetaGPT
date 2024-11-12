@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import inspect
 import json
 import re
@@ -7,6 +8,7 @@ import traceback
 from datetime import datetime
 from typing import Annotated, Callable, Dict, List, Literal, Optional, Tuple
 
+import pytz
 from pydantic import Field, model_validator
 
 from metagpt.actions import Action, UserRequirement
@@ -307,8 +309,11 @@ class RoleZero(Role):
         return memory
 
     def _get_prefix(self) -> str:
-        time_info = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        return super()._get_prefix() + f" The current time is {time_info}."
+        time_zone = pytz.timezone("America/Los_Angeles")
+        current_time = datetime.now(time_zone)
+        # format time in Los Angeles
+        formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S %A")
+        return f" The current time in Los Angeles is {formatted_time}." + super()._get_prefix()
 
     async def _act(self) -> Message:
         if self.use_fixed_sop:
@@ -385,10 +390,23 @@ class RoleZero(Role):
             intent_result = await self.llm.aask(context, system_msgs=[self.format_quick_system_prompt()])
 
         if "QUICK" in intent_result or "AMBIGUOUS" in intent_result:  # llm call with the original context
+            cleaned_memory = []
+            memory = self.get_memories(k=self.memory_k)
+
+            for element in memory:
+                # deep copy all element
+                copied_element = copy.deepcopy(element)
+
+                # If the answer contains the substring '[Message] from A to B:', remove it.
+                pattern = r"\[Message\] from .+? to .+?:\s*"
+                copied_element.content = re.sub(pattern, "", copied_element.content, count=1)
+                cleaned_memory.append(copied_element)
+
+            # cleaned_memory = self._clean_memory() # deep copy and
             async with ThoughtReporter(enable_llm_stream=True) as reporter:
                 await reporter.async_report({"type": "quick"})
                 answer = await self.llm.aask(
-                    self.llm.format_msg(memory),
+                    self.llm.format_msg(cleaned_memory),
                     system_msgs=[QUICK_RESPONSE_SYSTEM_PROMPT.format(role_info=self._get_prefix())],
                 )
             # If the answer contains the substring '[Message] from A to B:', remove it.
@@ -455,6 +473,17 @@ class RoleZero(Role):
             commands = CodeParser.parse_code(block=None, lang="json", text=command_rsp)
             if commands.endswith("]") and not commands.startswith("["):
                 commands = "[" + commands
+            # add a rule to deal with invalid character when editor write code
+            if "Editor.write" in commands:
+                pattern = r'"content": "(.*?)"\s*}\n'
+                commands = re.sub(
+                    pattern,
+                    lambda m: '"content":"'
+                    + re.sub(r'(?<!\\)"', '\\"', m.group(1))
+                    + '"}',  # " -> \\"; \\" -> no effect
+                    commands,
+                    flags=re.DOTALL,
+                )  # maybe we need to use this to replace the \n to \\n： replace("\n", "\\n")
             commands = json.loads(repair_llm_raw_output(output=commands, req_keys=[None], repair_type=RepairType.JSON))
         except json.JSONDecodeError as e:
             logger.warning(f"Failed to parse JSON for: {command_rsp}. Trying to repair...")
