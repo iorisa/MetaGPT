@@ -90,7 +90,7 @@ class SearchEnhancedQA(Action):
         default=4000, description="Maximum summary length for each web page content."
     )
     max_search_results: int = Field(
-        default=10,
+        default=15,
         description="Maximum number of search results (links) to collect using the collect_links_action. This controls the number of potential sources for answering the question.",
     )
 
