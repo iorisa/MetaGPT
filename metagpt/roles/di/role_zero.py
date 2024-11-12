@@ -657,5 +657,7 @@ class RoleZero(Role):
         # Summary of the Completed Task and Deliverables
         if self.use_summary:
             logger.info("end current run and summarize")
-            outputs = await self.llm.aask(self.llm.format_msg(memory + [UserMessage(SUMMARY_PROMPT)]))
+            async with ThoughtReporter() as reporter:
+                await reporter.async_report({"type": "summary"})
+                outputs = await self.llm.aask(self.llm.format_msg(memory + [UserMessage(SUMMARY_PROMPT)]))
         return outputs
