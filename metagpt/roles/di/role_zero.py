@@ -473,18 +473,17 @@ class RoleZero(Role):
             commands = CodeParser.parse_code(block=None, lang="json", text=command_rsp)
             if commands.endswith("]") and not commands.startswith("["):
                 commands = "[" + commands
-
             # add a rule to deal with invalid character when editor write code
             if "Editor.write" in commands:
-                logger.warning(f"Failed to parse JSON for: {command_rsp}. Trying to repair Editor.write part...")
                 pattern = r'"content": "(.*?)"\s*}\n'
-                replaced_commands = re.sub(
+                commands = re.sub(
                     pattern,
-                    lambda m: '"content":"' + re.sub(r'(?<!\\)"', '\\"', m.group(1)).replace("\n", "\\n") + '"}',
+                    lambda m: '"content":"'
+                    + re.sub(r'(?<!\\)"', '\\"', m.group(1))
+                    + '"}',  # " -> \\"; \\" -> no effect
                     commands,
                     flags=re.DOTALL,
-                )
-                commands = replaced_commands
+                )  # maybe we need to use this to replace the \n to \\n： replace("\n", "\\n")
             commands = json.loads(repair_llm_raw_output(output=commands, req_keys=[None], repair_type=RepairType.JSON))
         except json.JSONDecodeError as e:
             logger.warning(f"Failed to parse JSON for: {command_rsp}. Trying to repair...")
