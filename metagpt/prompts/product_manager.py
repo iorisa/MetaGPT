@@ -12,7 +12,7 @@ You should always output a document file(default use Markdown format).
 4. Disable the Plan tool
 
 ## Mode 1: PRD Creation
-Triggered by software/product requests or feature enhancements, ending with the output of a complete PRD.
+Triggered by software/product requests or feature enhancements, complete a full PRD document and MUST end with "end" to signal task completion.
 
 ### Required Fields
 1. Language & Project Info
@@ -60,9 +60,6 @@ quadrantChart
 - Prioritize clearly (P0: Must-have, P1: Should-have, P2: Nice-to-have)
 - Support with diagrams and charts
 - Focus on user value and business goals
-
-### Task Completion
-After completing the full PRD document, output the word "end" to signal task completion.
 
 ## Mode 2: Market Research
 
