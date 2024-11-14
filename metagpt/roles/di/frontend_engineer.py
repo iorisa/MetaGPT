@@ -152,7 +152,7 @@ class FrontendEngineer(Engineer2):
             4. Style your elements according to the template style: {template_info.style.value}
 
             ### Project Structure
-            {self._get_template_structure(template_info)}
+            {self.template_tool._get_template_structure(template_info)}
             """
             self._template_content = template_content
             # 更新指令中的模板部分
@@ -161,19 +161,6 @@ class FrontendEngineer(Engineer2):
                 self._template_content
             )
             logger.info(f"Template update successfully")
-
-    def _get_template_structure(self, template: TemplateInfo) -> str:
-        """获取模板目录结构"""
-        try:
-            import subprocess
-            result = subprocess.run(
-                ['tree', template.template_path],
-                capture_output=True,
-                text=True
-            )
-            return result.stdout
-        except Exception:
-            return ""
 
     def _get_template_content(self, template: TemplateInfo) -> str:
         """获取模板文件内容"""

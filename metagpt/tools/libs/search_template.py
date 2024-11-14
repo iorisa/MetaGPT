@@ -106,13 +106,14 @@ class SearchTemplate(BaseModel):
         """初始化 RAG 引擎并加载模板描述"""
         # template_docs = []
         template_objs = []
-        
+
         # 首先准备所有模板文档和对象
         for template in self.templates.values():
             doc = f"""
             Template Style: {template.style.value}
             Description: {template.description}
             Required Fields: {', '.join(template.required_fields)}
+            
             Template Path:
             {template.template_path}
             """
@@ -136,15 +137,16 @@ class SearchTemplate(BaseModel):
             ]
         )
 
-    def _get_template_content(self, template: TemplateInfo) -> str:
-        """获取模板内容"""
+    def _get_template_structure(self, template: TemplateInfo) -> str:
+        """获取模板目录结构"""
         try:
-            content = ""
-            for file_path in template.template_path.rglob("*"):
-                if file_path.is_file() and file_path.suffix in ['.html', '.js', '.css']:
-                    content += f"\n### {file_path.name}\n"
-                    content += read_file_by_path(file_path)
-            return content
+            import subprocess
+            result = subprocess.run(
+                ['tree', template.template_path],
+                capture_output=True,
+                text=True
+            )
+            return result.stdout
         except Exception:
             return ""
 
@@ -178,14 +180,15 @@ class SearchTemplate(BaseModel):
 
     def monitor_performance(func: Callable) -> Callable:
         """性能监控装饰器"""
-        
+
         @wraps(func)
         async def wrapper(self, *args, **kwargs) -> Any:
             start_time = time.time()
             result = await func(self, *args, **kwargs)
             execution_time = time.time() - start_time
 
-            logger.info(f"Action: {func.__name__}, Execution time: {execution_time:.2f}s, Success: {result is not None}")
+            logger.info(
+                f"Action: {func.__name__}, Execution time: {execution_time:.2f}s, Success: {result is not None}")
 
             return result
 
