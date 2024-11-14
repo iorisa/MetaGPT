@@ -196,22 +196,29 @@ class SearchTemplate(BaseModel):
 
     @monitor_performance
     async def search(self, requirement: str) -> Optional[TemplateInfo]:
-        """搜索匹配的模板并提取用户信息"""
+        """Search for matching template and extract user information.
+
+        Args:
+            requirement: User's requirement text for template search.
+
+        Returns:
+            TemplateInfo if a matching template is found, None otherwise.
+
+        Raises:
+            Exception: If template search process fails.
+        """
         try:
             template = await self._select_template(requirement)
             if not template:
-                logger.warning("No matching template found")
+                logger.warning('No matching template found')
                 return None
 
-            # user_info = await self._extract_user_info(requirement, template.required_fields)
-
-            logger.info(f"Selected template: {template.style.value}")
-            # logger.info(f"User info: {user_info}")
-
+            logger.info(f'Selected template: {template.style.value}')
             return template
+
         except Exception as e:
-            logger.error(f"Template search failed: {str(e)}")
-            logger.error(f"Requirement: {requirement}")
+            logger.error(f'Template search failed: {str(e)}')
+            logger.error(f'Requirement: {requirement}')
             return None
 
     def get_template(self, style: TemplateStyle) -> Optional[TemplateInfo]:
@@ -309,37 +316,6 @@ class SearchTemplate(BaseModel):
         except Exception as e:
             logger.error(f"Failed to copy template: {str(e)}")
             raise IOError(f"Failed to copy template: {str(e)}")
-
-    @monitor_performance
-    async def update_user_info(self, target_path: Path, user_info: Dict[str, Any]) -> bool:
-        """将用户信息应用到模板中"""
-        try:
-            # Get all template files that need to be modified
-            template_files = list(target_path.rglob("*.html")) + list(target_path.rglob("*.js")) + list(
-                target_path.rglob("*.css"))
-
-            for file_path in template_files:
-                # Read file content
-                content = await read_file_by_path(file_path)
-
-                # Replace placeholders with user information
-                new_content = content
-                for key, value in user_info.items():
-                    if value:  # Only replace if value is not None
-                        placeholder = f"{{{{user.{key}}}}}"
-                        new_content = new_content.replace(placeholder, str(value))
-
-                # Write modified content back
-                await awrite(file_path, new_content)
-
-            logger.info(f"User info applied: {str(target_path)}")
-            logger.info(f"Modified files: {len(template_files)}")
-
-            return True
-
-        except Exception as e:
-            logger.error(f"Error applying user info: {str(e)}")
-            return False
 
     async def _complete_user_info(self, user_info: Dict[str, Any], required_fields: List[str]) -> Dict[str, Any]:
         """补充缺失的用户信息

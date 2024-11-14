@@ -1,7 +1,7 @@
 import copy
 import re
 from pathlib import Path
-from typing import Tuple
+from typing import Any, Dict, Tuple
 
 from metagpt.actions import UserRequirement
 from metagpt.actions.search_enhanced_qa import SearchEnhancedQA
@@ -19,7 +19,7 @@ from metagpt.tools.libs.image_getter import ImageGetter
 from metagpt.tools.libs.search_template import TemplateInfo
 from metagpt.const import METAGPT_ROOT
 from metagpt.tools.tool_registry import register_tool
-from metagpt.utils.common import any_to_str
+from metagpt.utils.common import any_to_str, awrite
 from metagpt.utils.report import ThoughtReporter
 
 from metagpt.schema import UserMessage
@@ -95,9 +95,9 @@ class FrontendEngineer(Engineer2):
         # Check if the latest message is a development request
         send_msg = self._get_latest_message()
 
-        flag = await self._is_development_request(send_msg)
+        # flag = await self._is_development_request(send_msg)
         # logger.info(f"think: {send_msg}, {flag}")
-        if self.is_first_dev_request and flag:
+        if self.is_first_dev_request:
             template_result = await self.handle_template(send_msg.content)
             logger.info(f"Template search result: {template_result}")
             self.is_first_dev_request = False  # Update flag
@@ -105,37 +105,39 @@ class FrontendEngineer(Engineer2):
             # Update memory
             self.rc.memory.add(UserMessage(content=template_result))
 
-        else:
-            logger.warning("Current message is not a development request")
-
         await self._format_instruction()
         res = await super()._think()
         return res
 
-    async def _is_development_request(self, send_msg: Message) -> bool:
-        """判断当前请求是否为软件开发需求
-        
-        使用 LLM 来智能判断用户输入是否属于软件开发需求。
+
+    async def update_search_template_tool(self, **kwargs) -> bool:
+        """Updates SearchTemplate with some user defined information
 
         Args:
-            send_msg: 当前角色收到的消息
-            
+            **kwargs: User defined information
+
         Returns:
-            bool: 是否为软件开发需求
+            bool: True if update succeeds, False otherwise.
+
+        Raises:
+            IOError: If file reading or writing operations fail.
+            Exception: For any other unexpected errors.
         """
         try:
-            # 使用 RoleZero 进行快速判断
-            prompt = f"""请判断以下用户输入是否是一个web开发相关的需求(请不要回答其他内容, 名片设计类请求也属于web开发)：
-            
-            用户输入: {send_msg.content}
-            
-            只需要回答 "是" 或 "否"。"""
-            
-            result = await self.llm.aask(prompt)
-            return result.strip() != "否"
-            
+            # update rag top_k, check 'rag_top_k' where in kwargs
+            if 'rag_top_k' in kwargs:
+                rag_top_k = kwargs.get('rag_top_k')
+                if isinstance(rag_top_k, int) and rag_top_k > 0:
+                    if hasattr(self.template_tool, '_engine'):
+
+                        logger.info(f"Updated RAG top_k to {rag_top_k}")
+                else:
+                    logger.warning(f"Invalid rag_top_k value: {rag_top_k}")
+
+            return True
+
         except Exception as e:
-            logger.warning(f"Error in _is_development_request: {str(e)}")
+            logger.error(f'Error applying user info: {str(e)}')
             return False
 
     def _retrieve_experience(self) -> str:
@@ -143,7 +145,7 @@ class FrontendEngineer(Engineer2):
 
     async def set_template(self, template_info: TemplateInfo=None) -> None:
         if template_info is not None:
-            """更新模板信息到系统提示词"""
+            """Update template information to system prompt"""
             template_content = f"""
             ### Template Intro
             1. This is a template for {template_info.description}
@@ -155,26 +157,15 @@ class FrontendEngineer(Engineer2):
             {self.template_tool._get_template_structure(template_info)}
             """
             self._template_content = template_content
-            # 更新指令中的模板部分
+            # Update template part in instruction
             self.instruction = self.instruction.replace(
                 GENERAL_WEB_APP_TEMPLATE,
                 self._template_content
             )
             logger.info(f"Template update successfully")
 
-    def _get_template_content(self, template: TemplateInfo) -> str:
-        """获取模板文件内容"""
-        content = ""
-        try:
-            for file_path in template.template_path.rglob("*"):
-                if file_path.is_file() and file_path.suffix in ['.html', '.js', '.css']:
-                    content += f"\n#### {file_path.name}\n"
-                    content += read_file_by_path(file_path)
-            return content
-        except Exception:
-            return ""
 
-    async def handle_template(self, requirement: str) -> str:
+    async def handle_template(self, requirement: str, template: TemplateInfo=None) -> str:
         """Process template-related requirements
 
         Args:
@@ -184,23 +175,21 @@ class FrontendEngineer(Engineer2):
             Processing result description
         """
         try:
-            # 1. 搜索匹配的模板
+            # 1. Search for matching template
             template = await self.template_tool.search(requirement)
             if not template:
-                return "未找到匹配的模板"
+                return "Can't find a matching template"
 
-            # template, user_info = result
-
-            # 2. 应用模板
+            # 2. Apply template
             await self.set_template(template)
 
             success = await self.template_tool.copy_template(template)
             if not success:
-                return "模板复制失败"
+                return "Failed to copy template"
 
 
-            return f"成功复制{template.style.value}模板，下一步请修改template文件夹名字为项目名字"
+            return f"Successfully copied {template.style.value} template, next step is to rename the template folder to the project name"
 
         except Exception as e:
 
-            return f"模板处理过程中出现错误: {str(e)}"
+            return f"Error during template processing: {str(e)}"
