@@ -24,9 +24,10 @@ from metagpt.tools.libs.terminal import Terminal
 from metagpt.tools.tool_registry import register_tool
 from metagpt.utils.common import CodeParser, awrite
 from metagpt.utils.report import EditorReporter
+from metagpt.tools.libs.search_template import SearchTemplate
 
 
-@register_tool(include_functions=["write_new_code"])
+@register_tool(include_functions=["write_new_code", "handle_template"])
 class Engineer2(RoleZero):
     name: str = "Alex"
     profile: str = "Engineer"
@@ -34,6 +35,7 @@ class Engineer2(RoleZero):
     instruction: str = ENGINEER2_INSTRUCTION
     terminal: Terminal = Field(default_factory=Terminal, exclude=True)
     deployer: Deployer = Field(default_factory=Deployer, exclude=True)
+    template_tool: SearchTemplate = Field(default_factory=SearchTemplate, exclude=True)
     tools: list[str] = [
         "Plan",
         "Editor",
@@ -51,11 +53,9 @@ class Engineer2(RoleZero):
     run_eval: bool = False
     output_diff: str = ""
     max_react_loop: int = 40
+    # 添加标记，用于跟踪是否是第一次收到软件开发需求
+    is_first_dev_request: bool = Field(default=True, exclude=True)
 
-    async def _think(self) -> bool:
-        await self._format_instruction()
-        res = await super()._think()
-        return res
 
     async def _format_instruction(self):
         """
@@ -174,3 +174,4 @@ class Engineer2(RoleZero):
         if not self.planner.plan.is_plan_finished():
             self.planner.plan.finish_all_tasks()
         return await super()._end()
+

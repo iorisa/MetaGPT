@@ -9,14 +9,36 @@ from metagpt.roles import Architect, Engineer, ProductManager, ProjectManager
 from metagpt.roles.di.data_analyst import DataAnalyst
 from metagpt.roles.di.engineer2 import Engineer2
 from metagpt.roles.di.team_leader import TeamLeader
+from metagpt.roles.di.frontend_engineer import FrontendEngineer
 from metagpt.schema import Message
 
+# 添加名片模板相关的测试需求
+BUSINESS_CARD_REQ = """帮我制作一张个人名片，我是一名软件工程师，喜欢自然的设计风格。
+个人信息如下：
+- 姓名：张三
+- 职位：高级软件工程师
+- 邮箱：zhangsan@example.com
+- 电话：13800138000
+- 个人描述：专注于AI和云计算领域的全栈开发
+- MBTI：INTJ
+"""
+
+BUSINESS_CARD_REQ_EN = """Please create a business card for me. I am a software engineer who prefers minimalist design.
+Personal information:
+- Name: John Doe
+- Position: Senior Software Engineer
+- Email: john.doe@example.com
+- Phone: +1-234-567-8900
+- Description: Full-stack developer specializing in AI and cloud computing
+- MBTI: INTJ
+"""
 
 async def main(requirement="", enable_human_input=False, use_fixed_sop=False, allow_idle_time=30):
     if use_fixed_sop:
         engineer = Engineer(n_borg=5, use_code_review=False)
     else:
-        engineer = Engineer2()
+        # engineer = Engineer2()
+        engineer = FrontendEngineer()
 
     env = MGXEnv()
     env.add_roles(
@@ -26,7 +48,6 @@ async def main(requirement="", enable_human_input=False, use_fixed_sop=False, al
             Architect(use_fixed_sop=use_fixed_sop),
             ProjectManager(use_fixed_sop=use_fixed_sop),
             engineer,
-            # QaEngineer(),
             DataAnalyst(),
         ]
     )
@@ -38,8 +59,6 @@ async def main(requirement="", enable_human_input=False, use_fixed_sop=False, al
 
     if requirement:
         env.publish_message(Message(content=requirement))
-        # user_defined_recipient = "Alex"
-        # env.publish_message(Message(content=requirement, send_to={user_defined_recipient}), user_defined_recipient=user_defined_recipient)
 
     allow_idle_time = allow_idle_time if enable_human_input else 1
     start_time = time.time()
@@ -52,7 +71,6 @@ async def main(requirement="", enable_human_input=False, use_fixed_sop=False, al
         print("No more human input, terminating, press ENTER for a full termination.")
         stop_event.set()
         human_input_thread.join()
-
 
 def send_human_input(env, stop_event):
     """
@@ -77,7 +95,6 @@ def send_human_input(env, stop_event):
     send_thread = threading.Thread(target=send_messages, args=())
     send_thread.start()
     return send_thread
-
 
 GAME_REQ = "create a 2048 game"
 GAME_REQ_ZH = "写一个贪吃蛇游戏"
@@ -161,10 +178,11 @@ CODING_REQ1 = "写一个java的hello world程序"
 CODING_REQ2 = "python里的装饰器是什么"
 CODING_REQ3 = "python里的装饰器是怎么用的，给我个例子"
 
+Example_1 = "帮我制作一张个人名片"
 
 if __name__ == "__main__":
     # NOTE: Add access_token to test github issue fixing
     os.environ["access_token"] = "ghp_xxx"
     # NOTE: Change the requirement to the one you want to test
     #       Set enable_human_input to True if you want to simulate sending messages in chatbox
-    asyncio.run(main(requirement=GAME_REQ, enable_human_input=False, use_fixed_sop=False))
+    asyncio.run(main(requirement=BUSINESS_CARD_REQ, enable_human_input=False, use_fixed_sop=False))
