@@ -297,11 +297,11 @@ README 内容:
             logger.error(f'Requirement: {requirement}')
             return None
 
-    def get_template(self, style: TemplateStyle) -> Optional[TemplateInfo]:
+    def get_template(self, style: str) -> Optional[TemplateInfo]:
         """获取指定风格的模板"""
         return self.templates.get(style, None)
 
-    def get_all_templates(self) -> Dict[TemplateStyle, TemplateInfo]:
+    def get_all_templates(self) -> Dict[str, TemplateInfo]:
         """获取所有模板"""
         return self.templates.copy()
 
