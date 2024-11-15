@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 from enum import Enum
 from pathlib import Path
@@ -108,7 +109,7 @@ def monitor_performance(func: Callable) -> Callable:
 class SearchTemplate(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    templates: Dict[TemplateStyle, TemplateInfo] = Field(default_factory=dict)
+    templates: Dict[str, TemplateInfo] = Field(default_factory=dict)
     llm: Optional[LLM] = Field(default=None)
     template_version: str = Field(default="1.0.0")
     deployment_config: Dict[str, Any] = Field(default_factory=dict)
@@ -332,6 +333,16 @@ README 内容:
         """注册新模板"""
         self.templates[template.style] = template
 
+    def parse_response(self, text: str) -> str:
+        pattern = r'\*\*"([^"]*?)"\*\*'
+        match = re.search(pattern, text, re.DOTALL)
+        if match:
+            style_name = match.group(1)
+            # style_name = style_name.replace(" ", "").replace("\"", "").replace("'", "")
+        else:
+            raise Exception
+        return style_name
+
     async def _select_template(self, requirement: str) -> Optional[TemplateInfo]:
         """Use RAG to select the best-matched template."""
         try:
@@ -340,31 +351,8 @@ README 内容:
             if not result:
                 return None
 
-            # logger.info("meta data", result.metadata)
-
-            # 首先尝试从 source_nodes 中获取风格信息
-            if hasattr(result, 'source_nodes') and result.source_nodes:
-                for node in result.source_nodes:
-                    if hasattr(node, 'metadata') and 'style' in node.metadata:
-                        style_name = node.metadata['style']
-                        try:
-                            style = TemplateStyle(style_name)
-                            return self.templates.get(style)
-                        except ValueError:
-                            continue
-
-            # 如果从 source_nodes 中没找到，尝试从 response 文本中提取风格信息
-            if hasattr(result, 'response'):
-                response_text = str(result.response).lower()
-                # 根据响应文本判断最适合的模板风格
-                if '销售' in response_text or 'sale' in response_text:
-                    return self.templates.get(TemplateStyle.SALE)
-                elif '自然' in response_text or 'nature' in response_text:
-                    return self.templates.get(TemplateStyle.NATURE)
-
-            # 默认返回通用模板
-            logger.info("Using default COMMON template style")
-            return self.templates.get(TemplateStyle.COMMON)
+            style_name = self.parse_response(result.response)
+            return self.templates.get(style_name)
 
         except Exception as e:
             logger.error(f"Error selecting template: {str(e)}")
@@ -387,7 +375,7 @@ README 内容:
             logger.error(f"Failed to copy template: {str(e)}")
             raise IOError(f"Failed to copy template: {str(e)}")
 
-    async def _complete_user_info(self, user_info: Dict[str, Any], required_fields: List[str]) -> Dict[str, Any]:
+    
         """补充缺失的用户信息
         
         如果有缺失字段，使用LLM生成合理的默认值
@@ -466,21 +454,21 @@ README 内容:
         """获取所有模板所需字段"""
         return list(set([field for template in self.templates.values() for field in template.required_fields]))
 
-# if __name__ == "__main__":
-#     import asyncio
-#
-#
-#     async def main():
-#         async with SearchTemplate() as search_tool:
-#             requirement = "帮我制作一张个人名片，我是一名产品经理"
-#             result = await search_tool.search(requirement)
-#
-#             if result:
-#                 template = result
-#                 print(f"Selected template: {template.style}")
-#                 # print(f"User info: {user_info}")
-#             else:
-#                 print("No matching template found")
-#
-#
-#     asyncio.run(main())
+if __name__ == "__main__":
+    import asyncio
+
+
+    async def main():
+        async with SearchTemplate() as search_tool:
+            requirement = "帮我制作一张个人名片，我是一名产品经理"
+            result = await search_tool.search(requirement)
+
+            if result:
+                template = result
+                print(f"Selected template: {template.style}")
+                # print(f"User info: {user_info}")
+            else:
+                print("No matching template found")
+
+
+    asyncio.run(main())

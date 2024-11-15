@@ -5,24 +5,20 @@ import re
 from pathlib import Path
 from typing import Any, Dict, Tuple, Optional
 
-from metagpt.actions import UserRequirement
-from metagpt.actions.search_enhanced_qa import SearchEnhancedQA
 from metagpt.prompts.di.frontend_engineer import FE_EXAPMLE, FRONTEND_ENGINEER_PROMPT
-from metagpt.prompts.di.role_zero import QUICK_THINK_PROMPT, QUICK_RESPONSE_SYSTEM_PROMPT, QUICK_THINK_TAG
 from metagpt.roles.di.engineer2 import Engineer2
 
 from metagpt.logs import logger
 
 from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE
-from metagpt.schema import Message, AIMessage
+from metagpt.schema import Message
 from metagpt.tools.libs.cr import CodeReview
 from metagpt.tools.libs.git import git_create_pull
 from metagpt.tools.libs.image_getter import ImageGetter
 from metagpt.tools.libs.search_template import TemplateInfo
 from metagpt.const import METAGPT_ROOT
 from metagpt.tools.tool_registry import register_tool
-from metagpt.utils.common import any_to_str, awrite
-from metagpt.utils.report import ThoughtReporter
+from metagpt.utils.common import CodeParser
 
 from metagpt.schema import UserMessage
 
@@ -179,8 +175,15 @@ class FrontendEngineer(Engineer2):
         ### User Input
         {user_input}
 
-        ### User Information
-        Please return the value of the missing fields in JSON format.
+        ### Output Format
+```json
+
+```
+Do not use escape characters in json data, particularly within file paths.
+Process any JSON-like strings in the input to ensure they are valid JSON format. Fix common issues like unescaped quotes, missing commas, invalid line breaks, and ensure the output can be directly parsed by json.loads(). Return the corrected JSON string while preserving the original data structure and values.
+Help check if there are any formatting issues with the JSON data? If so, please help format it.
+If no issues are detected, the original json data should be returned unchanged. Do not omit any information.
+        ### Output
         ```json
         {{
             "user_info": {{
@@ -195,13 +198,13 @@ class FrontendEngineer(Engineer2):
         }}
         ```
         """
-        logger.info(f"Extracting user info from: {user_input}")
+        # logger.info(f"Extracting user info from: {user_input}")
         num = 0
         while num < 3:
             try:
                 user_info = await self.llm.aask(prompt, system_msgs=["You are a helpful assistant"])
                 # parse json
-                user_info = user_info.replace("```json", "").replace("```", "").strip("\n")
+                user_info = CodeParser.parse_code(user_info, "json")
                 user_info = json.loads(user_info)["user_info"]
                 if user_info:
                     return user_info
