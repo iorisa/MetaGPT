@@ -129,7 +129,7 @@ class FrontendEngineer(Engineer2):
             1. This is a template for {template_info.description}
             2. The template is at {METAGPT_ROOT}/workspace/template
             3. Required fields: {', '.join(template_info.required_fields)}
-            4. Style your elements according to the template style: {template_info.style.value}
+            4. Style your elements according to the template style: {template_info.style}
 
             ### Project Structure
             {self.template_tool._get_template_structure(template_info)}
