@@ -122,17 +122,10 @@ class SearchTemplate(BaseModel):
         self.output_dir.mkdir(parents=True, exist_ok=True)
         # 添加一个标志位来追踪初始化状态
         self._initialized = False
-    
-    async def _ensure_initialized(self):
-        """确保模板和RAG引擎已经初始化"""
-        if not self._initialized:
-            await self._init_templates()
-            self._init_rag_engine()
-            self._initialized = True
 
-    def _init_rag_engine(self):
+    @monitor_performance
+    async def _init_rag_engine(self):
         """初始化 RAG 引擎并加载模板描述"""
-        # template_docs = []
         template_objs = []
 
         # 首先准备所有模板文档和对象
@@ -145,7 +138,6 @@ class SearchTemplate(BaseModel):
             Template Path:
             {template.template_path}
             """
-            # template_docs.append(doc)
             template_objs.append(
                 TemplateRAGObject(
                     content=doc,
@@ -156,14 +148,23 @@ class SearchTemplate(BaseModel):
                 )
             )
 
-        # 使用准备好的对象初始化引擎
-        self._engine = SimpleEngine.from_objs(
-            objs=template_objs,  # 传入初始对象列表
+        # 使用 asyncio.to_thread 将同步操作包装为异步
+        self._engine = await asyncio.to_thread(
+            SimpleEngine.from_objs,
+            objs=template_objs,
             retriever_configs=[
-                FAISSRetrieverConfig(dimensions=1536),  # 明确指定维度
+                FAISSRetrieverConfig(dimensions=1536),
                 BM25RetrieverConfig()
             ]
         )
+        
+
+    async def _ensure_initialized(self):
+        """确保模板和RAG引擎已经初始化"""
+        if not self._initialized:
+            await self._init_templates()
+            await self._init_rag_engine()  # 修改为await调用
+            self._initialized = True
 
     def _get_template_structure(self, template: Path) -> str:
         """获取模板目录结构"""
@@ -305,7 +306,7 @@ README 内容:
         try:
             # 确保已初始化
             await self._ensure_initialized()
-            
+
             template = await self._select_template(requirement)
             if not template:
                 logger.warning('No matching template found')
