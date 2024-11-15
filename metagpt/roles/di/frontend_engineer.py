@@ -176,6 +176,7 @@ class FrontendEngineer(Engineer2):
         while num < 3:
             user_info = await self.llm.aask(prompt)
             # parse json
+            user_info = user_info.replace("```json", "").replace("```", "").strip("\n")
             user_info = json.loads(user_info)["user_info"]
             if user_info:
                 return user_info
