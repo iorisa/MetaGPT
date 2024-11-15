@@ -95,7 +95,7 @@ class FrontendEngineer(Engineer2):
                 return msg
         return None
 
-    async def update_user_info(self, user_input: str, user_info: Dict[str, Any]) -> Dict[str, Any]:
+    async def update_user_info(self, user_input: str, user_info: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         update user information
 
@@ -108,7 +108,10 @@ class FrontendEngineer(Engineer2):
         """
         try:
             new_user_info = await self.extract_user_info(user_input)
-            user_info.update(new_user_info)
+            if user_info:
+                user_info.update(new_user_info)
+            else:
+                user_info = new_user_info
             return user_info
         except Exception as e:
             logger.error(f"Error updating user info: {str(e)}")
