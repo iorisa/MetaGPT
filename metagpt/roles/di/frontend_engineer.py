@@ -231,11 +231,11 @@ If no issues are detected, the original json data should be returned unchanged. 
             # 2. Apply template
             await self.set_template(template)
 
-            success = await self.template_tool.copy_template(template)
-            if not success:
+            target_dir = await self.template_tool.copy_template(template)
+            if not target_dir:
                 return "Failed to copy template"
 
-            return f"Successfully copied {template.style} template, next step is to rename the template folder to the project name"
+            return f"Successfully copied {template.style} template to {target_dir}, next step is to rename the template folder to the project name"
 
         except Exception as e:
 

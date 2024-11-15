@@ -37,30 +37,6 @@ class TemplateRAGObject(BaseModel):
         return self.metadata
 
 
-class TemplateStyle(str, Enum):
-    """模板风格枚举
-    
-    继承 str 使其更容易序列化和处理
-    """
-    COMMON = "common"  # 普通风格
-    NATURE = "nature"  # 自然风格
-    SALE = "sale"    # 销售风格
-
-    @classmethod
-    def register(cls, style_name: str) -> 'TemplateStyle':
-        """注册新的模板风格
-        
-        Args:
-            style_name: 新风格的名称
-            
-        Returns:
-            新创建的 TemplateStyle 枚举成员
-        """
-        if style_name.upper() not in cls.__members__:
-            cls._member_map_[style_name.upper()] = style_name.lower()
-        return cls(style_name.lower())
-
-
 class TemplateInfo(BaseModel):
     """模板信息数据类"""
     # style: TemplateStyle
@@ -333,44 +309,30 @@ README 内容:
         """注册新模板"""
         self.templates[template.style] = template
 
-    def parse_response(self, text: str) -> str:
-        pattern = r'\*\*"([^"]*?)"\*\*'
-        match = re.search(pattern, text, re.DOTALL)
-        if match:
-            style_name = match.group(1)
-            # style_name = style_name.replace(" ", "").replace("\"", "").replace("'", "")
-        else:
-            raise Exception
-        return style_name
-
     async def _select_template(self, requirement: str) -> Optional[TemplateInfo]:
-        """使用RAG选择最匹配的模板"""
+        """Use RAG to select the most matching template."""
         try:
-            logger.info("开始搜索模板")
-            # 限制检索结果数量
-            result = await self._engine.aretrieve(
-                requirement,
-            )
+            logger.info("Start searching for templates")
+            result = await self._engine.aretrieve(requirement)
             if not result:
                 return None
 
-            # 从结果列表中取出分数最高的模板风格
+            # Take the template style with the highest score from the results list.
             max_score_node = max(result, key=lambda x: x.score)
             style_name = max_score_node.metadata['obj'].metadata['style']
             
             return self.templates.get(style_name)
 
         except Exception as e:
-            logger.error(f"选择模板时出错: {str(e)}")
+            logger.error(f"Error selecting template:{str(e)}")
             return None
 
     async def copy_template(self, template: TemplateInfo) -> Path:
-        """复制模板到目标位置"""
+        """Copy the template to the target location."""
         if not template.template_path.exists():
             raise FileNotFoundError(f"Template path {template.template_path} does not exist")
 
         target_dir = self.output_dir
-        # target_dir.mkdir(parents=True, exist_ok=True)
 
         try:
             shutil.copytree(template.template_path, target_dir, dirs_exist_ok=True)
@@ -380,29 +342,6 @@ README 内容:
             logger.error(f"Failed to copy template: {str(e)}")
             raise IOError(f"Failed to copy template: {str(e)}")
 
-    
-        """补充缺失的用户信息
-        
-        如果有缺失字段，使用LLM生成合理的默认值
-        """
-        complete_info = user_info.copy()
-        missing_fields = [field for field in required_fields if field not in user_info or not user_info[field]]
-
-        if missing_fields:
-            prompt = f"""基于已有信息，为以下字段生成合理的默认值:
-            已有信息: {json.dumps(user_info, ensure_ascii=False)}
-            需要补充的字段: {', '.join(missing_fields)}
-            
-            请以JSON格式返回补充的字段值。
-            """
-            result = await self.llm.aask(prompt)
-            try:
-                supplementary_info = json.loads(result)
-                complete_info.update(supplementary_info)
-            except json.JSONDecodeError:
-                pass
-
-        return complete_info
     async def __aenter__(self):
         await self._init_templates()
         self._init_rag_engine()
