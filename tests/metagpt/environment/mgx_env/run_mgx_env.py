@@ -179,4 +179,4 @@ if __name__ == "__main__":
     os.environ["access_token"] = "ghp_xxx"
     # NOTE: Change the requirement to the one you want to test
     #       Set enable_human_input to True if you want to simulate sending messages in chatbox
-    asyncio.run(main(requirement=Example_1, enable_human_input=False, use_fixed_sop=False))
+    asyncio.run(main(requirement=BUSINESS_CARD_REQ, enable_human_input=False, use_fixed_sop=False))
