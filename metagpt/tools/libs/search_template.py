@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any, Callable
 from functools import wraps
 import time
+import asyncio
 
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
@@ -119,6 +120,15 @@ class SearchTemplate(BaseModel):
         super().__init__(**kwargs)
         self.llm = kwargs.get('llm') or LLM()
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        # 添加一个标志位来追踪初始化状态
+        self._initialized = False
+    
+    async def _ensure_initialized(self):
+        """确保模板和RAG引擎已经初始化"""
+        if not self._initialized:
+            await self._init_templates()
+            self._init_rag_engine()
+            self._initialized = True
 
     def _init_rag_engine(self):
         """初始化 RAG 引擎并加载模板描述"""
@@ -257,21 +267,25 @@ README 内容:
     
     @monitor_performance
     async def _init_templates(self) -> None:
-        """从模板目录自动加载所有模板"""
+        """从模板目录异步加载所有模板"""
         base_path = METAGPT_ROOT / "template"
         if not base_path.exists():
             logger.warning(f"模板基础目录不存在: {base_path}")
             return
 
-        # 直接使用异步方式遍历和处理模板
-        for template_dir in base_path.iterdir():
-            if not template_dir.is_dir():
-                continue
-            
-            template_info = await self._parse_template_config(template_dir)
+        # 获取所有模板目录
+        template_dirs = [d for d in base_path.iterdir() if d.is_dir()]
+        
+        # 使用 asyncio.gather 并发处理所有模板
+        template_infos = await asyncio.gather(
+            *[self._parse_template_config(template_dir) for template_dir in template_dirs]
+        )
+        
+        # 过滤掉 None 值并更新模板字典
+        for template_info in template_infos:
             if template_info:
                 self.templates[template_info.style] = template_info
-                logger.info(f"成功加载模板: {template_info.style} from {template_dir}")
+                logger.info(f"成功加载模板: {template_info.style}")
 
     
 
@@ -289,6 +303,9 @@ README 内容:
             Exception: If template search process fails.
         """
         try:
+            # 确保已初始化
+            await self._ensure_initialized()
+            
             template = await self._select_template(requirement)
             if not template:
                 logger.warning('No matching template found')
