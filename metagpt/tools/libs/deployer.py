@@ -21,7 +21,7 @@ class Deployer:
             dist_dir (str): The dist directory of the web project after run build.
             proj_name (str): Project name to appear in the public URL.
         >>>
-            deployer = Deployer("dist", proj_name="my-proj")
+            await Deployer().deploy_to_public("dist", "my-proj")
         """
         url = await self.static_server(dist_dir)
         return f"Project {proj_name} deployed successfully to: {url}"
