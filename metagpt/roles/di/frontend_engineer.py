@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import json
 import re
@@ -155,9 +156,10 @@ class FrontendEngineer(Engineer2):
         {user_input}
 
         ### User Information
+        Please return the value of the missing fields in JSON format.
         ```json
-        {
-            "user_info": {
+        {{
+            "user_info": {{
                 "name": "value1",
                 "job_title": "value2",
                 "email": "value3",
@@ -165,14 +167,20 @@ class FrontendEngineer(Engineer2):
                 "brief_description": "value5",
                 "MBTI": "value6",
                 ...
-            }
-        }
+            }}
+        }}
         ```
         """
-        user_info = await self.llm.aask(prompt)
-        # parse json
-        user_info = json.loads(user_info)["user_info"]
-        return user_info
+        logger.info(f"Extracting user info from: {user_input}")
+        num = 0
+        while num < 3:
+            user_info = await self.llm.aask(prompt)
+            # parse json
+            user_info = json.loads(user_info)["user_info"]
+            if user_info:
+                return user_info
+            num += 1
+        return None
 
     async def handle_template(self, requirement: str) -> Tuple[str, Optional[Dict[str, Any]]]:
         """Process template-related requirements
@@ -206,3 +214,18 @@ class FrontendEngineer(Engineer2):
         except Exception as e:
 
             return f"Error during template processing: {str(e)}", None
+
+
+# 测试
+async def main():
+    engineer = FrontendEngineer()
+    result = await engineer.handle_template("帮我设计一个个人名片")
+    if isinstance(result, tuple):
+        template_result, user_info = result
+        print(template_result)
+        print(user_info)
+    else:
+        print(result)
+
+if __name__ == "__main__":
+    asyncio.run(main())
