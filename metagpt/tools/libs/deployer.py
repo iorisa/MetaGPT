@@ -14,13 +14,14 @@ class Deployer:
         """This function will be implemented in the remote service."""
         return "http://127.0.0.1:8000/index.html"
 
-    async def deploy_to_public(self, dist_dir: str):
+    async def deploy_to_public(self, dist_dir: str, proj_name: str) -> str:
         """
         Deploy a web project to public.
         Args:
             dist_dir (str): The dist directory of the web project after run build.
+            proj_name (str): Project name to appear in the public URL.
         >>>
-            deployer = Deployer("2048_game/dist")
+            deployer = Deployer("dist", proj_name="my-proj")
         """
         url = await self.static_server(dist_dir)
-        return "The Project is deployed to: " + url + "\n Deployment successed!"
+        return f"Project {proj_name} deployed successfully to: {url}"
