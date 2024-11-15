@@ -201,7 +201,7 @@ class FrontendEngineer(Engineer2):
             user_info = await self.extract_user_info(requirement)
             logger.info(f"User info: {user_info}")
 
-            return f"Successfully copied {template.style.value} template, next step is to rename the template folder to the project name", user_info
+            return f"Successfully copied {template.style} template, next step is to rename the template folder to the project name", user_info
 
         except Exception as e:
 
