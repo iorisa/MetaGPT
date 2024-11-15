@@ -371,35 +371,6 @@ README 内容:
             logger.error(f"Result response: {result.response if hasattr(result, 'response') else None}")
             return None
 
-    @monitor_performance
-    async def direct_select(self, style: TemplateStyle, user_info: Dict[str, Any]) -> Optional[
-        Tuple[TemplateInfo, Dict[str, Any]]]:
-        """Handling the case where the user directly selects a template
-
-        Args:
-            style: The template style chosen by the user
-            user_info: Information provided by the user
-
-        Returns:
-            If successful, returns a tuple (template information, supplemented user information)
-            If failed, returns None
-        """
-        try:
-            template = self.get_template(style)
-            if not template:
-                return None
-
-            # 补充缺失的用户信息
-            complete_info = await self._complete_user_info(user_info, template.required_fields)
-
-            logger.info(f"Direct select: Template {style}")
-            logger.info(f"User info: {complete_info}")
-
-            return template, complete_info
-        except Exception as e:
-            logger.error(f"Error direct selecting template: {str(e)}")
-            return None
-
     async def copy_template(self, template: TemplateInfo) -> Path:
         """复制模板到目标位置"""
         if not template.template_path.exists():
@@ -495,21 +466,21 @@ README 内容:
         """获取所有模板所需字段"""
         return list(set([field for template in self.templates.values() for field in template.required_fields]))
 
-if __name__ == "__main__":
-    import asyncio
-
-
-    async def main():
-        async with SearchTemplate() as search_tool:
-            requirement = "帮我制作一张个人名片，我是一名产品经理"
-            result = await search_tool.search(requirement)
-
-            if result:
-                template = result
-                print(f"Selected template: {template.style}")
-                # print(f"User info: {user_info}")
-            else:
-                print("No matching template found")
-
-
-    asyncio.run(main())
+# if __name__ == "__main__":
+#     import asyncio
+#
+#
+#     async def main():
+#         async with SearchTemplate() as search_tool:
+#             requirement = "帮我制作一张个人名片，我是一名产品经理"
+#             result = await search_tool.search(requirement)
+#
+#             if result:
+#                 template = result
+#                 print(f"Selected template: {template.style}")
+#                 # print(f"User info: {user_info}")
+#             else:
+#                 print("No matching template found")
+#
+#
+#     asyncio.run(main())

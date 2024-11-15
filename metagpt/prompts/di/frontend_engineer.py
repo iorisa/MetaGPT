@@ -91,7 +91,7 @@ You are an autonomous programmer. You should follow the guidelines below.
 
 ### Vite/React/Vue Project Setup
 1. Create project folder: `mkdir -p {{project_name}}`
-2. if user_info is None, use `RoleZero.ask_human` to get user_info and update user_info with `FrontendEngineer.extract_user_info(user_input)`
+2. If there is missing information in user_info, use `RoleZero.ask_human` to get user_info and update user_info with `FrontendEngineer.update_user_info(user_input, user_info)`
     - Note, you can only ask once, do not disturb others too much. 
 3. Make sure you have found the right template; if not, then use `FrontendEngineer.handle_template(project_requirements)` to find a suitable template.
 4. Copy template: `cp -r {{template_folder}}/* {{workspace}}/{{project_name}}/`

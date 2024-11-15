@@ -35,7 +35,7 @@ def read_file_by_path(file_path: Path) -> str:
     except Exception:
         return ""
 
-@register_tool(include_functions=["handle_template", "extract_user_info"])
+@register_tool(include_functions=["handle_template", "update_user_info"])
 class FrontendEngineer(Engineer2):
     instruction: str = FRONTEND_ENGINEER_PROMPT
     tools: list[str] = [
@@ -71,7 +71,7 @@ class FrontendEngineer(Engineer2):
                     "RoleZero.reply_to_human": self._end,
                     "Deployer.deploy_to_public": self._deploy_to_public,
                     "FrontendEngineer.handle_template": self.handle_template,
-                    "FrontendEngineer.extract_user_info": self.extract_user_info,
+                    "FrontendEngineer.update_user_info": self.update_user_info,
                 }
             )
         else:
@@ -86,7 +86,7 @@ class FrontendEngineer(Engineer2):
                     "Terminal.run_command": self.terminal.run_command,
                     "Deployer.deploy_to_public": self._deploy_to_public,
                     "FrontendEngineer.handle_template": self.handle_template,
-                    "FrontendEngineer.extract_user_info": self.extract_user_info,
+                    "FrontendEngineer.update_user_info": self.update_user_info,
                 }
             )
     def _get_latest_message(self) -> Message:
@@ -95,21 +95,42 @@ class FrontendEngineer(Engineer2):
                 return msg
         return None
 
+    async def update_user_info(self, user_input: str, user_info: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        update user information
+
+        args:
+            user_input: user input
+            user_info: user information, a dictionary
+        
+        returns:
+            updated user information
+        """
+        try:
+            new_user_info = await self.extract_user_info(user_input)
+            user_info.update(new_user_info)
+            return user_info
+        except Exception as e:
+            logger.error(f"Error updating user info: {str(e)}")
+            return user_info
+
+
     async def _think(self) -> bool:
         # Check if the latest message is a development request
         send_msg = self._get_latest_message()
 
         if self.is_first_dev_request:
+            content = send_msg.content.replace("[Message] from Mike to Alex: ", "")
             logger.info(f"First dev request, handle template")
-            result = await self.handle_template(send_msg.content)
-            if isinstance(result, tuple):
-                template_result, user_info = result
-            else:
-                template_result, user_info = result, None
-            logger.info(f"Template search result: {template_result}")
+            # extrac user info
+            user_info = await self.extract_user_info(content)
+            
+            logger.info(f"User info: {user_info}")
+            result = await self.handle_template(content)
+            logger.info(f"Template search result: {result}")
 
             content = "This is First Dev Request, I have already handled the template, now I will start to develop the project. \n\nThe following is the template information and user information.\n\n"
-            content += f"{content}\n\n{template_result}\n\nUser info: {user_info}"
+            content += f"{content}\n\n{result}\n\nUser info: {user_info}"
             # Update memory
             self.rc.memory.add(UserMessage(content=content))
             logger.info(f"First dev request, memory updated")
@@ -174,7 +195,7 @@ class FrontendEngineer(Engineer2):
         logger.info(f"Extracting user info from: {user_input}")
         num = 0
         while num < 3:
-            user_info = await self.llm.aask(prompt)
+            user_info = await self.llm.aask(prompt, system_msgs=["You are a helpful assistant"])
             # parse json
             user_info = user_info.replace("```json", "").replace("```", "").strip("\n")
             user_info = json.loads(user_info)["user_info"]
@@ -183,7 +204,7 @@ class FrontendEngineer(Engineer2):
             num += 1
         return None
 
-    async def handle_template(self, requirement: str) -> Tuple[str, Optional[Dict[str, Any]]]:
+    async def handle_template(self, requirement: str) -> str:
         """Process template-related requirements
 
         Args:
@@ -206,27 +227,23 @@ class FrontendEngineer(Engineer2):
             if not success:
                 return "Failed to copy template"
 
-            # extrac user info
-            user_info = await self.extract_user_info(requirement)
-            logger.info(f"User info: {user_info}")
-
-            return f"Successfully copied {template.style} template, next step is to rename the template folder to the project name", user_info
+            return f"Successfully copied {template.style} template, next step is to rename the template folder to the project name"
 
         except Exception as e:
 
-            return f"Error during template processing: {str(e)}", None
+            return f"Error during template processing: {str(e)}"
 
 
 # 测试
-async def main():
-    engineer = FrontendEngineer()
-    result = await engineer.handle_template("帮我设计一个个人名片")
-    if isinstance(result, tuple):
-        template_result, user_info = result
-        print(template_result)
-        print(user_info)
-    else:
-        print(result)
-
-if __name__ == "__main__":
-    asyncio.run(main())
+# async def main():
+#     engineer = FrontendEngineer()
+#     result = await engineer.handle_template("帮我设计一个个人名片")
+#     if isinstance(result, tuple):
+#         template_result, user_info = result
+#         print(template_result)
+#         print(user_info)
+#     else:
+#         print(result)
+#
+# if __name__ == "__main__":
+#     asyncio.run(main())
