@@ -89,7 +89,7 @@ class RoleZero(Role):
         # "Editor.open_file",
     ]
     # Equipped with three basic tools by default for optional use
-    editor: Editor = Editor(enable_auto_lint=True)
+    editor: Editor = Editor(window=50, enable_auto_lint=True)
     browser: Browser = Browser()
     working_dir: str = Field(default_factory=lambda: str(DEFAULT_WORKSPACE_ROOT.resolve()))
 
@@ -589,7 +589,7 @@ class RoleZero(Role):
             else:
                 command_output += f"\n[command]: {cmd['args']['cmd']} \n[command output] : {tool_output}"
             self.working_dir = (await self.terminal.run_command("pwd")).strip()
-            self.editor._set_workdir(self.working_dir)
+            self.editor.set_workdir(self.working_dir)
 
         return command_output
 

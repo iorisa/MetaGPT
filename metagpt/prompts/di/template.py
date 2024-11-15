@@ -39,7 +39,7 @@ CONFIG_CONTENT = read_file(REACT_TEMPLATE_PATH.resolve().absolute() / "vite.conf
 
 GENERAL_WEB_APP_TEMPLATE = f"""
 ### Template Intro
-1. This is a template for gneral web app or game development. It is based on React framework with Tailwind CSS. The template includes the basic structure of a React project, including an index.html file and a src directory with an App.jsx file.
+1. This is a template for general web app or game development. It is based on React framework with Tailwind CSS. The template includes the basic structure of a React project, including an index.html file and a src directory with an App.jsx file.
 2. The template is at {TEMPLATE_PATH}.
 3. Modify index.html, create new jsx files under src if needed, and rewrite src/App.jsx to meet the user's requirements.
 4. Style your elements with Tailwind CSS classes directly in the jsx files.

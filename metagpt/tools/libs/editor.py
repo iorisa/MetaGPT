@@ -1,9 +1,9 @@
 """
-This file is borrowed from OpenDevin
-You can find the original repository here:
+This file is modified from OpenHands (August 2024 version):
 https://github.com/All-Hands-AI/OpenHands/blob/main/openhands/runtime/plugins/agent_skills/file_ops/file_ops.py
 """
 import os
+import re
 import shutil
 import tempfile
 from pathlib import Path
@@ -13,6 +13,7 @@ import tiktoken
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from metagpt.const import DEFAULT_WORKSPACE_ROOT
+from metagpt.logs import logger
 from metagpt.tools.libs.index_repo import DEFAULT_MIN_TOKEN_COUNT, IndexRepo
 from metagpt.tools.libs.linter import Linter
 from metagpt.tools.tool_registry import register_tool
@@ -111,6 +112,8 @@ class Editor(BaseModel):
     """
     A tool for reading, understanding, writing, and editing files.
     Support local file including text-based files (txt, md, json, py, html, js, css, etc.), pdf, docx, excluding images, csv, excel, or online links
+    For agent: Do NOT initiate multiple Editor.insert_content_at_line calls at the same time, since the line number will change starting with the first execution, making line number of the subsequent calls incorrect. Split the calls into separate responses.
+               For the same reason, Editor.insert_content_at_line should NOT go behind Editor.edit_file_by_replace in the same response. Perform insert operation in a separate response.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -272,7 +275,7 @@ class Editor(BaseModel):
             return ""
         return f"[File: {current_file.resolve()} ({total_lines} lines total)]\n"
 
-    def _set_workdir(self, path: str) -> None:
+    def set_workdir(self, path: str) -> None:
         """
         Sets the working directory to the given path. eg: repo directory.
         You MUST to set it up before open the file.
@@ -701,7 +704,7 @@ class Editor(BaseModel):
         success_edit_info = SUCCESS_EDIT_INFO.format(
             file_name=file_name.resolve(),
             n_total_lines=n_total_lines,
-            window_after_applied=self._print_window(file_name, self.current_line, 30),
+            window_after_applied=self._print_window(file_name, self.current_line, self.window),
             line_number=self.current_line,
         ).strip()
         return success_edit_info
@@ -885,6 +888,9 @@ class Editor(BaseModel):
                 raise ValueError(f"The file '{file_name}' is empty. Please use the append method to add content.")
             raise ValueError("`to_replace` must not be empty.")
 
+        to_replace = self._rm_line_no(to_replace)
+        new_content = self._rm_line_no(new_content)
+
         if file_content.count(to_replace) > 1:
             raise ValueError(
                 f"`to_replace` ```{to_replace}``` appears more than once, please include enough lines to make code in `to_replace` unique."
@@ -902,10 +908,10 @@ class Editor(BaseModel):
                 f"`to_replace` ```{to_replace}``` not found in {file_name}. Read the file carefully with Editor.read and make sure you give the right content to replace. If you want to insert new content, use Editor.insert_content_at_line instead."
             )
 
-        if to_replace == new_content:
-            raise ValueError(
-                "`to_replace` and `new_content` must be different. Use Editor.read to read the file again, then rethink about the content you want to replace and the new content."
-            )
+        # if to_replace == new_content:
+        #     raise ValueError(
+        #         "`to_replace` and `new_content` must be different. Use Editor.read to read the file again, then rethink about the content you want to replace and the new content."
+        #     )
 
         ### Take a easy way to replace the content with direct string operation. Also disable linting for now ###
         ### TODO: unittest to cover this part ###
@@ -991,10 +997,6 @@ class Editor(BaseModel):
             file_name: (str): The name of the file to edit.
             line_number (int): The line number (starting from 1) to insert the content after. The insert content will be add between the line of line_number-1 and line_number
             insert_content (str): The content to insert betweed the previous_line_content and current_line_content.The insert_content must be a complete block of code at.
-
-        NOTE:
-            This tool is exclusive. If you use this tool, you cannot use any other commands in the current response.
-            If you need to use it multiple times, wait for the next turn.
         """
         file_name = self._try_fix_path(file_name)
         ret_str = self._edit_file_impl(
@@ -1015,9 +1017,6 @@ class Editor(BaseModel):
         Args:
             file_name: str: The name of the file to edit.
             content: str: The content to insert.
-        NOTE:
-            This tool is exclusive. If you use this tool, you cannot use any other commands in the current response.
-            If you need to use it multiple times, wait for the next turn.
         """
         file_name = self._try_fix_path(file_name)
         ret_str = self._edit_file_impl(
@@ -1136,6 +1135,14 @@ class Editor(BaseModel):
         if not path.is_absolute():
             path = self.working_dir / path
         return path
+
+    @staticmethod
+    def _rm_line_no(content: str) -> str:
+        line_no_pattern = "\n[0-9]{3}\|"
+        if re.search(line_no_pattern, content):
+            logger.warning("Line numbers detected in content and will be removed")
+            content = re.sub(line_no_pattern, "\n", content)
+        return content
 
     @staticmethod
     async def similarity_search(query: str, path: Union[str, Path]) -> List[str]:

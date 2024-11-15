@@ -56,11 +56,6 @@ Note:
 27. Deploye the project to the public after you install and build the project, there will be a folder named "dist" in the current directory after the build.
 28. Use Engineer2.write_new_code to rewrite the whole file when you fail to use Editor.edit_file_by_replace more than three times.
 """
-CURRENT_STATE = """
-The current editor state is:
-(Current directory: {current_directory})
-(Open file: {editor_open_file})
-"""
 ENGINEER2_INSTRUCTION = ROLE_INSTRUCTION + EXTRA_INSTRUCTION.strip()
 
 WRITE_CODE_SYSTEM_PROMPT = """

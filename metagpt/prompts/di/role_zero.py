@@ -38,34 +38,9 @@ Special Command: Use {{"command_name": "end"}} to do nothing or indicate complet
 # Instruction
 {instruction}
 
-"""
-
-CMD_EXPERIENCE_MASK = f"""
-# Past Experience
-{EXPERIENCE_MASK}
-"""
-
-CMD_PROMPT = (
-    CMD_EXPERIENCE_MASK
-    + """
-# Tool State
-{current_state}
-
-# Current Plan
-{plan_status}
-
-# Current Task
-{current_task}
-
-# Response Language
-you must respond in {respond_language}.
-
-Pay close attention to the Example provided, you can reuse the example for your current situation if it fits.
-If you open a file, the line number is displayed at the front of each line.
-You may use any of the available commands to create a plan or update the plan. You may output mutiple commands, they will be executed sequentially.
+You may use any of the available commands. You may output mutiple commands, they will be executed sequentially.
 If you finish current task, you will automatically take the next task in the existing plan, use Plan.finish_current_task, DON'T append a new task.
-Review the latest plan's outcome, focusing on achievements. If your completed task matches the current, consider it finished.
-Using Editor.insert_content_at_line and Editor.edit_file_by_replace more than once in the current command list is forbidden. Because the command is mutually exclusive and will change the line number after execution.
+Review the latest plan's outcome. If your completed task matches the current, consider it finished.
 In your response, include at least one command. If you want to stop, use {{"command_name":"end"}} command.
 
 # Your commands in a json array, in the following output format with correct command_name and args.
@@ -81,6 +56,29 @@ Output should adhere to the following format.
 ]
 ```
 Notice: your output JSON data section must start with **```json [**
+"""
+
+CMD_EXPERIENCE_MASK = f"""
+# Past Experience
+{EXPERIENCE_MASK}
+"""
+
+CMD_PROMPT = (
+    CMD_EXPERIENCE_MASK
+    + """
+# Current State
+{current_state}
+
+# Current Plan
+{plan_status}
+
+# Current Task
+{current_task}
+
+# Response Language
+you must respond in {respond_language}.
+
+Your commands (include at least one command. If you want to stop, use {{"command_name":"end"}} command):
 """
 )
 

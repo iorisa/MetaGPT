@@ -7,11 +7,7 @@ from pydantic import Field
 from metagpt.logs import logger
 
 # from metagpt.actions.write_code_review import ValidateAndRewriteCode
-from metagpt.prompts.di.engineer2 import (
-    CURRENT_STATE,
-    ENGINEER2_INSTRUCTION,
-    WRITE_CODE_PROMPT,
-)
+from metagpt.prompts.di.engineer2 import ENGINEER2_INSTRUCTION, WRITE_CODE_PROMPT
 from metagpt.roles.di.role_zero import RoleZero
 from metagpt.schema import UserMessage
 from metagpt.strategy.experience_retriever import ENGINEER_EXAMPLE
@@ -62,13 +58,12 @@ class Engineer2(RoleZero):
         Display the current terminal and editor state.
         This information will be dynamically added to the command prompt.
         """
+        if not self.terminal.initial_workdir:
+            # A special case to set terminal dir based on Role dir. This happens one time when Role is deserialized and terminal re-initialized
+            self.terminal.set_initial_workdir(self.working_dir)
         self.working_dir = (await self.terminal.run_command("pwd")).strip()
-        self.editor._set_workdir(self.working_dir)
-        state = {
-            "editor_open_file": self.editor.current_file,
-            "current_directory": self.working_dir,
-        }
-        self.cmd_prompt_current_state = CURRENT_STATE.format(**state).strip()
+        self.editor.set_workdir(self.working_dir)
+        self.cmd_prompt_current_state = f"current directory: {self.working_dir}"
 
     def _update_tool_execution(self):
         # validate = ValidateAndRewriteCode()
