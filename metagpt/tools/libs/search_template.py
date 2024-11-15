@@ -72,19 +72,6 @@ def read_file_by_path(file_path: Path) -> str:
     ],
 )
 class SearchTemplate(BaseModel):
-    """模板搜索工具，用于根据用户需求匹配合适的名片模板
-    
-    ## Example
-    需求：帮我制作一张个人名片，我是一名产品经理
-    使用方法：
-    >>> template_tool = SearchTemplate()
-    >>> result = await template_tool.search("帮我制作一张个人名片，我是一名产品经理")
-    >>> if result:
-    >>>     template, user_info = result
-    >>>     print(f"Selected template: {template.style}")
-    >>>     print(f"User info: {user_info}")
-    """
-
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     templates: Dict[TemplateStyle, TemplateInfo] = Field(default_factory=dict)
@@ -340,7 +327,14 @@ class SearchTemplate(BaseModel):
                 pass
 
         return complete_info
+    async def __aenter__(self):
+        await self.reload_templates()
+        return self
 
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        pass
+
+    
     @monitor_performance
     async def reload_templates(self) -> None:
         """重新加载所有模板，支持热更新"""
@@ -354,6 +348,39 @@ class SearchTemplate(BaseModel):
         except Exception as e:
             logger.error(f"Error reloading templates: {str(e)}")
 
+    async def update_search_template_tool(self, **kwargs) -> bool:
+        """Updates SearchTemplate with some user defined information
+
+        Args:
+            **kwargs: User defined information
+
+        Returns:
+            bool: True if update succeeds, False otherwise.
+
+        Raises:
+            IOError: If file reading or writing operations fail.
+            Exception: For any other unexpected errors.
+        """
+        try:
+            # update rag top_k, check 'rag_top_k' where in kwargs
+            if 'rag_top_k' in kwargs:
+                rag_top_k = kwargs.get('rag_top_k')
+                if isinstance(rag_top_k, int) and rag_top_k > 0:
+                    if hasattr(self.template_tool, '_engine'):
+
+                        logger.info(f"Updated RAG top_k to {rag_top_k}")
+                else:
+                    logger.warning(f"Invalid rag_top_k value: {rag_top_k}")
+
+            return True
+
+        except Exception as e:
+            logger.error(f'Error applying user info: {str(e)}')
+            return False
+
+    def get_required_fields(self) -> List[str]:
+        """获取所有模板所需字段"""
+        return list(set([field for template in self.templates.values() for field in template.required_fields]))
 
 if __name__ == "__main__":
     import asyncio
@@ -365,9 +392,9 @@ if __name__ == "__main__":
             result = await search_tool.search(requirement)
 
             if result:
-                template, user_info = result
+                template = result
                 print(f"Selected template: {template.style}")
-                print(f"User info: {user_info}")
+                # print(f"User info: {user_info}")
             else:
                 print("No matching template found")
 

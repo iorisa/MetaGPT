@@ -14,13 +14,7 @@ from metagpt.schema import Message
 
 # 添加名片模板相关的测试需求
 BUSINESS_CARD_REQ = """帮我制作一张个人名片，我是一名软件工程师，喜欢自然的设计风格。
-个人信息如下：
-- 姓名：张三
-- 职位：高级软件工程师
-- 邮箱：zhangsan@example.com
-- 电话：13800138000
-- 个人描述：专注于AI和云计算领域的全栈开发
-- MBTI：INTJ
+个人信息如下：\n- 姓名：张三\n- 职位：高级软件工程师\n- 邮箱：zhangsan@example.com\n- 电话：13800138000\n- 个人描述：专注于AI和云计算领域的全栈开发\n- MBTI：INTJ
 """
 
 BUSINESS_CARD_REQ_EN = """Please create a business card for me. I am a software engineer who prefers minimalist design.
@@ -185,4 +179,4 @@ if __name__ == "__main__":
     os.environ["access_token"] = "ghp_xxx"
     # NOTE: Change the requirement to the one you want to test
     #       Set enable_human_input to True if you want to simulate sending messages in chatbox
-    asyncio.run(main(requirement=BUSINESS_CARD_REQ, enable_human_input=False, use_fixed_sop=False))
+    asyncio.run(main(requirement=Example_1, enable_human_input=False, use_fixed_sop=False))

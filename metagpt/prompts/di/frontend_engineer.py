@@ -91,24 +91,19 @@ You are an autonomous programmer. You should follow the guidelines below.
 
 ### Vite/React/Vue Project Setup
 1. Create project folder: `mkdir -p {{project_name}}`
-2. Search for available web project templates:
-   A. Use `FrontendEngineer.handle_template(project_requirements)` to find matching template first
-   B. If NO suitable template found:
-      - Fall back to default React/Vue templates, the Default framework templates:
-        - React template: `{REACT_TEMPLATE_PATH.resolve().absolute()}`
-        - Vue template: `{VUE_TEMPLATE_PATH.resolve().absolute()}`
-      - Follow standard Vite project setup process
-        
-3. Copy template: `cp -r {{template_folder}}/* {{workspace}}/{{project_name}}/`
-   - Must be a single response without other commands
-4. Navigate and list files: `cd {{workspace}}/{{project_name}} && pwd && tree`
-5. Read src files and index.html before planning
-6. Plan file modifications:
+2. if user_info is None, use `RoleZero.ask_human` to get user_info and update user_info with `FrontendEngineer.extract_user_info(user_input)`
+    - Note, you can only ask once, do not disturb others too much. 
+3. Make sure you have found the right template; if not, then use `FrontendEngineer.handle_template(project_requirements)` to find a suitable template.
+4. Copy template: `cp -r {{template_folder}}/* {{workspace}}/{{project_name}}/`
+   - Must be a single response without other commands 
+5. Navigate and list files: `cd {{workspace}}/{{project_name}} && pwd && tree`
+6. Read src files and index.html before planning
+7. Plan file modifications:
    - Always rewrite index.html and src folder files
    - Use Tailwind CSS for styling
    - Make sure created the project folder with `mkdir -p {{project_name}}`
    - Remember you are in {{project_name}} directory
-7. Build and deploy:
+8. Build and deploy:
    - Run `pnpm i && pnpm run build`
    - Deploy dist folder to public
 

@@ -1,7 +1,8 @@
 import copy
+import json
 import re
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, Optional
 
 from metagpt.actions import UserRequirement
 from metagpt.actions.search_enhanced_qa import SearchEnhancedQA
@@ -33,7 +34,7 @@ def read_file_by_path(file_path: Path) -> str:
     except Exception:
         return ""
 
-@register_tool(include_functions=["handle_template"])
+@register_tool(include_functions=["handle_template", "extract_user_info"])
 class FrontendEngineer(Engineer2):
     instruction: str = FRONTEND_ENGINEER_PROMPT
     tools: list[str] = [
@@ -69,6 +70,7 @@ class FrontendEngineer(Engineer2):
                     "RoleZero.reply_to_human": self._end,
                     "Deployer.deploy_to_public": self._deploy_to_public,
                     "FrontendEngineer.handle_template": self.handle_template,
+                    "FrontendEngineer.extract_user_info": self.extract_user_info,
                 }
             )
         else:
@@ -83,6 +85,7 @@ class FrontendEngineer(Engineer2):
                     "Terminal.run_command": self.terminal.run_command,
                     "Deployer.deploy_to_public": self._deploy_to_public,
                     "FrontendEngineer.handle_template": self.handle_template,
+                    "FrontendEngineer.extract_user_info": self.extract_user_info,
                 }
             )
     def _get_latest_message(self) -> Message:
@@ -95,50 +98,20 @@ class FrontendEngineer(Engineer2):
         # Check if the latest message is a development request
         send_msg = self._get_latest_message()
 
-        # flag = await self._is_development_request(send_msg)
-        # logger.info(f"think: {send_msg}, {flag}")
         if self.is_first_dev_request:
-            template_result = await self.handle_template(send_msg.content)
+            logger.info(f"First dev request, handle template")
+            template_result, user_info = await self.handle_template(send_msg.content)
             logger.info(f"Template search result: {template_result}")
             self.is_first_dev_request = False  # Update flag
-
+            content = "This is First Dev Request, I have already handled the template, now I will start to develop the project. \n\nThe following is the template information and user information.\n\n"
+            content += f"{content}\n\n{template_result}\n\nUser info: {user_info}"
             # Update memory
-            self.rc.memory.add(UserMessage(content=template_result))
+            self.rc.memory.add(UserMessage(content=content))
+            logger.info(f"First dev request, memory updated")
 
         await self._format_instruction()
         res = await super()._think()
         return res
-
-
-    async def update_search_template_tool(self, **kwargs) -> bool:
-        """Updates SearchTemplate with some user defined information
-
-        Args:
-            **kwargs: User defined information
-
-        Returns:
-            bool: True if update succeeds, False otherwise.
-
-        Raises:
-            IOError: If file reading or writing operations fail.
-            Exception: For any other unexpected errors.
-        """
-        try:
-            # update rag top_k, check 'rag_top_k' where in kwargs
-            if 'rag_top_k' in kwargs:
-                rag_top_k = kwargs.get('rag_top_k')
-                if isinstance(rag_top_k, int) and rag_top_k > 0:
-                    if hasattr(self.template_tool, '_engine'):
-
-                        logger.info(f"Updated RAG top_k to {rag_top_k}")
-                else:
-                    logger.warning(f"Invalid rag_top_k value: {rag_top_k}")
-
-            return True
-
-        except Exception as e:
-            logger.error(f'Error applying user info: {str(e)}')
-            return False
 
     def _retrieve_experience(self) -> str:
         return FE_EXAPMLE
@@ -164,12 +137,44 @@ class FrontendEngineer(Engineer2):
             )
             logger.info(f"Template update successfully")
 
+    async def extract_user_info(self, user_input: str) -> Dict[str, Any]:
+        """Extract user information from user_info with LLM"""
+        required_fields = self.template_tool.get_required_fields()
+        required_fields_str = ", ".join(required_fields)
+        prompt = f"""
+        ## Task
+        Please extract the following information from the requirement
+        ### Required fields
+        {required_fields_str}
+        ### User Input
+        {user_input}
 
-    async def handle_template(self, requirement: str, template: TemplateInfo=None) -> str:
+        ### User Information
+        ```json
+        {
+            "user_info": {
+                "name": "value1",
+                "job_title": "value2",
+                "email": "value3",
+                "phone": "value4",
+                "brief_description": "value5",
+                "MBTI": "value6",
+                ...
+            }
+        }
+        ```
+        """
+        user_info = await self.llm.aask(prompt)
+        # parse json
+        user_info = json.loads(user_info)["user_info"]
+        return user_info
+
+    async def handle_template(self, requirement: str) -> Tuple[str, Optional[Dict[str, Any]]]:
         """Process template-related requirements
 
         Args:
             requirement: User requirement description
+            template: Template information
 
         Returns:
             Processing result description
@@ -187,9 +192,12 @@ class FrontendEngineer(Engineer2):
             if not success:
                 return "Failed to copy template"
 
+            # extrac user info
+            user_info = await self.extract_user_info(requirement)
+            logger.info(f"User info: {user_info}")
 
-            return f"Successfully copied {template.style.value} template, next step is to rename the template folder to the project name"
+            return f"Successfully copied {template.style.value} template, next step is to rename the template folder to the project name", user_info
 
         except Exception as e:
 
-            return f"Error during template processing: {str(e)}"
+            return f"Error during template processing: {str(e)}", None
