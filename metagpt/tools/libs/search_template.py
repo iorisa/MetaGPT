@@ -344,19 +344,24 @@ README 内容:
         return style_name
 
     async def _select_template(self, requirement: str) -> Optional[TemplateInfo]:
-        """Use RAG to select the best-matched template."""
+        """使用RAG选择最匹配的模板"""
         try:
-            # 使用 RAG 检索最相关的模板
-            result = await self._engine.aquery(requirement)
+            logger.info("开始搜索模板")
+            # 限制检索结果数量
+            result = await self._engine.aretrieve(
+                requirement,
+            )
             if not result:
                 return None
 
-            style_name = self.parse_response(result.response)
+            # 从结果列表中取出分数最高的模板风格
+            max_score_node = max(result, key=lambda x: x.score)
+            style_name = max_score_node.metadata['obj'].metadata['style']
+            
             return self.templates.get(style_name)
 
         except Exception as e:
-            logger.error(f"Error selecting template: {str(e)}")
-            logger.error(f"Result response: {result.response if hasattr(result, 'response') else None}")
+            logger.error(f"选择模板时出错: {str(e)}")
             return None
 
     async def copy_template(self, template: TemplateInfo) -> Path:
