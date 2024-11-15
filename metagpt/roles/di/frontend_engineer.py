@@ -198,13 +198,15 @@ class FrontendEngineer(Engineer2):
         logger.info(f"Extracting user info from: {user_input}")
         num = 0
         while num < 3:
-            user_info = await self.llm.aask(prompt, system_msgs=["You are a helpful assistant"])
-            # parse json
-            user_info = user_info.replace("```json", "").replace("```", "").strip("\n")
-            user_info = json.loads(user_info)["user_info"]
-            if user_info:
-                return user_info
-            num += 1
+            try:
+                user_info = await self.llm.aask(prompt, system_msgs=["You are a helpful assistant"])
+                # parse json
+                user_info = user_info.replace("```json", "").replace("```", "").strip("\n")
+                user_info = json.loads(user_info)["user_info"]
+                if user_info:
+                    return user_info
+            except Exception as e:
+                num += 1
         return None
 
     async def handle_template(self, requirement: str) -> str:
