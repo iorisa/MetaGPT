@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from metagpt.actions import UserRequirement
 from metagpt.const import AGENT, IMAGES, MESSAGE_ROUTE_TO_ALL, TEAMLEADER_NAME
 from metagpt.environment.base_env import Environment
-from metagpt.logs import get_human_input
+from metagpt.logs import get_human_input, logger
 from metagpt.roles import Role
-from metagpt.schema import Message, SerializationMixin
+from metagpt.schema import Message, SerializationMixin, any_to_str
 from metagpt.utils.common import extract_and_encode_images
 
 
@@ -23,6 +24,9 @@ class MGXEnv(Environment, SerializationMixin):
 
     def publish_message(self, message: Message, user_defined_recipient: str = "", publicer: str = "") -> bool:
         """let the team leader take over message publishing"""
+        if message.cause_by == any_to_str(UserRequirement):
+            logger.info(f"User Requirement: {message.content}; Recipient: {user_defined_recipient}")
+
         message = self.attach_images(message)  # for multi-modal message
 
         tl = self.get_role(TEAMLEADER_NAME)  # TeamLeader's name is Mike

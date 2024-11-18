@@ -3,7 +3,8 @@ import os
 import re
 from asyncio import Queue
 from asyncio.subprocess import PIPE, STDOUT
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Union
 
 from metagpt.config2 import Config
 from metagpt.const import DEFAULT_WORKSPACE_ROOT, SWE_SETUP_PATH
@@ -12,7 +13,7 @@ from metagpt.tools.tool_registry import register_tool
 from metagpt.utils.report import END_MARKER_VALUE, TerminalReporter
 
 
-@register_tool()
+@register_tool(include_functions=["run_command"])
 class Terminal:
     """
     A tool for running terminal commands.
@@ -33,6 +34,7 @@ class Terminal:
             # serve cmd have a space behind it,
             "serve ": "Use Deployer.deploy_to_public instead.",
         }
+        self.initial_workdir = None  # to be set by the agent using it
 
     async def _start_process(self):
         # Start a persistent shell process
@@ -94,6 +96,11 @@ class Terminal:
             output += await self._read_and_process_output(cmd)
 
         return output
+
+    async def set_initial_workdir(self, path: Union[str, Path]):
+        if Path(path).exists():
+            await self.run_command(f"cd {path}")
+            self.initial_workdir = path
 
     async def execute_in_conda_env(self, cmd: str, env, daemon=False) -> str:
         """

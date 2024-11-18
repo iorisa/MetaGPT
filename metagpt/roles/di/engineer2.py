@@ -7,11 +7,7 @@ from pydantic import Field
 from metagpt.logs import logger
 
 # from metagpt.actions.write_code_review import ValidateAndRewriteCode
-from metagpt.prompts.di.engineer2 import (
-    CURRENT_STATE,
-    ENGINEER2_INSTRUCTION,
-    WRITE_CODE_PROMPT,
-)
+from metagpt.prompts.di.engineer2 import ENGINEER2_INSTRUCTION, WRITE_CODE_PROMPT
 from metagpt.roles.di.role_zero import RoleZero
 from metagpt.schema import UserMessage
 from metagpt.strategy.experience_retriever import ENGINEER_EXAMPLE
@@ -66,13 +62,12 @@ class Engineer2(RoleZero):
         Display the current terminal and editor state.
         This information will be dynamically added to the command prompt.
         """
+        if not self.terminal.initial_workdir:
+            # A special case to set terminal dir based on Role dir. This happens one time when Role is deserialized and terminal re-initialized
+            await self.terminal.set_initial_workdir(self.working_dir)
         self.working_dir = (await self.terminal.run_command("pwd")).strip()
-        self.editor._set_workdir(self.working_dir)
-        state = {
-            "editor_open_file": self.editor.current_file,
-            "current_directory": self.working_dir,
-        }
-        self.cmd_prompt_current_state = CURRENT_STATE.format(**state).strip()
+        self.editor.set_workdir(self.working_dir)
+        self.cmd_prompt_current_state = f"current directory: {self.working_dir}"
 
     def _update_tool_execution(self):
         # validate = ValidateAndRewriteCode()
@@ -150,7 +145,7 @@ class Engineer2(RoleZero):
 
         return output_msg
 
-    async def _deploy_to_public(self, dist_dir):
+    async def _deploy_to_public(self, dist_dir, proj_name):
         """fix the dist_dir path to absolute path before deploying
         Args:
             dist_dir (str): The dist directory of the web project after run build. This must be an absolute path.
@@ -161,7 +156,7 @@ class Engineer2(RoleZero):
             if not default_dir.exists():
                 raise ValueError("dist_dir must be an absolute path.")
             dist_dir = default_dir
-        return await self.deployer.deploy_to_public(dist_dir)
+        return await self.deployer.deploy_to_public(dist_dir, proj_name)
 
     async def _eval_terminal_run(self, cmd):
         """change command pull/push/commit to end."""
