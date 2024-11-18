@@ -36,10 +36,6 @@ class FrontendEngineer(Engineer2):
         "FrontendEngineer"
     ]
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self._template_content = GENERAL_WEB_APP_TEMPLATE
-
     def _update_tool_execution(self):
         # validate = ValidateAndRewriteCode()
         cr = CodeReview()
