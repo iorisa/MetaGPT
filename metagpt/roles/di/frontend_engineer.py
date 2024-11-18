@@ -5,14 +5,14 @@ from metagpt.roles.di.engineer2 import Engineer2
 
 from metagpt.logs import logger
 
-from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE
+from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE, GENERAL_WEB_APP_TEMPLATE_PROMPT
 from metagpt.schema import Message
 from metagpt.tools.libs.search_template import TemplateInfo
 from metagpt.tools.tool_registry import register_tool
 
 from metagpt.schema import UserMessage
 
-@register_tool(include_functions=["handle_template"])
+@register_tool(include_functions=["search_template"])
 class FrontendEngineer(Engineer2):
     instruction: str = FRONTEND_ENGINEER_PROMPT
     tools: list[str] = [
@@ -30,7 +30,7 @@ class FrontendEngineer(Engineer2):
         super()._update_tool_execution()
         self.tool_execution_map.update(
             {
-                "FrontendEngineer.handle_template": self.handle_template,
+                "FrontendEngineer.search_template": self.search_template,
             }
         )
 
@@ -47,15 +47,9 @@ class FrontendEngineer(Engineer2):
         if self.is_first_dev_request:
             content = send_msg.content.replace("[Message] from Mike to Alex: ", "")
             logger.info(f"First dev request, handle template")
-            # extrac user info
-            # user_info = await self.extract_user_info(content)
-
-            # logger.info(f"User info: {user_info}")
-            result = await self.handle_template(content)
+            result = await self.search_template(content)
             logger.info(f"Template search result: {result}")
 
-            # content = "This is First Dev Request, I have already handled the template, now I will start to develop the project. \n\nThe following is the template information and user information.\n\n"
-            # content += f"{content}\n\n{result}\n\nUser info: {user_info}"
             content = "This is First Dev Request, I have already handled the template, now I will start to develop the project. \n\nThe following is the template information.\n\n"
             content += f"{content}\n\n{result}\n\n"
             # Update memory
@@ -75,12 +69,12 @@ class FrontendEngineer(Engineer2):
         self._template_content = await self.template_tool.get_template_info(template_info)
         # Update template part in instruction
         self.instruction = self.instruction.replace(
-            GENERAL_WEB_APP_TEMPLATE,
+            GENERAL_WEB_APP_TEMPLATE_PROMPT,
             self._template_content
         )
         logger.info(f"Template update successfully")
 
-    async def handle_template(self, requirement: str) -> str:
+    async def search_template(self, requirement: str) -> str:
         """Process template-related requirements
 
         Args:

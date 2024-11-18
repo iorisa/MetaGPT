@@ -23,7 +23,7 @@ from metagpt.utils.report import EditorReporter
 from metagpt.tools.libs.search_template import SearchTemplate
 
 
-@register_tool(include_functions=["write_new_code", "handle_template"])
+@register_tool(include_functions=["write_new_code", "search_template"])
 class Engineer2(RoleZero):
     name: str = "Alex"
     profile: str = "Engineer"
@@ -31,7 +31,7 @@ class Engineer2(RoleZero):
     instruction: str = ENGINEER2_INSTRUCTION
     terminal: Terminal = Field(default_factory=Terminal, exclude=True)
     deployer: Deployer = Field(default_factory=Deployer, exclude=True)
-    template_tool: SearchTemplate = Field(default_factory=SearchTemplate, exclude=True)
+    template_tool: SearchTemplate = Field(default_factory=SearchTemplate, exclude=False)
     tools: list[str] = [
         "Plan",
         "Editor",

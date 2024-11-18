@@ -3,16 +3,15 @@ from __future__ import annotations
 import json
 import shutil
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Callable
-from functools import wraps
-import time
+from typing import Dict, List, Optional, Any
+
 import asyncio
 
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 from metagpt.llm import LLM
 from metagpt.tools.tool_registry import register_tool
-from metagpt.utils.common import awrite, aread
+from metagpt.utils.common import awrite, aread, log_time
 
 from metagpt.rag.engines import SimpleEngine
 from metagpt.rag.schema import FAISSRetrieverConfig, BM25RetrieverConfig
@@ -46,23 +45,6 @@ class TemplateInfo(BaseModel):
     required_fields: List[str] = Field(description="Required field list")
 
 
-def monitor_performance(func: Callable) -> Callable:
-    """Performance Monitoring Decorator"""
-
-    @wraps(func)
-    async def wrapper(self, *args, **kwargs) -> Any:
-        start_time = time.time()
-        result = await func(self, *args, **kwargs)
-        execution_time = time.time() - start_time
-
-        logger.info(
-            f"Action: {func.__name__}, Execution time: {execution_time:.2f}s, Success: {result is not None}")
-
-        return result
-
-    return wrapper
-
-
 @register_tool(
     tags=["template", "search"],
     include_functions=[
@@ -88,7 +70,7 @@ class SearchTemplate(BaseModel):
         # Add a flag to track the initialization status.
         self._initialized = False
 
-    @monitor_performance
+    @log_time
     async def _init_rag_engine(self):
         """Initialize the RAG engine and load the template description."""
         template_objs = []
@@ -118,7 +100,7 @@ class SearchTemplate(BaseModel):
             SimpleEngine.from_objs,
             objs=template_objs,
             retriever_configs=[
-                FAISSRetrieverConfig(dimensions=1536),
+                FAISSRetrieverConfig(),
                 BM25RetrieverConfig()
             ]
         )
@@ -236,7 +218,7 @@ class SearchTemplate(BaseModel):
                 required_fields=config['required_fields']
             )
 
-    @monitor_performance
+    @log_time
     async def _init_templates(self) -> None:
         """Load all templates asynchronously from the template directory."""
         base_path = METAGPT_ROOT / "template"
@@ -258,7 +240,7 @@ class SearchTemplate(BaseModel):
                 self.templates[template_info.style] = template_info
                 logger.info(f"Template loaded successfully:{template_info.style}")
 
-    @monitor_performance
+    @log_time
     async def search(self, requirement: str) -> Optional[TemplateInfo]:
         """Search for matching template and extract user information.
 
@@ -314,7 +296,7 @@ class SearchTemplate(BaseModel):
     async def __aexit__(self, exc_type, exc_value, traceback):
         pass
 
-    @monitor_performance
+    @log_time
     async def reload_templates(self) -> None:
         """Reload all templates, support hot update"""
         try:
@@ -367,14 +349,15 @@ class SearchTemplate(BaseModel):
             return ""
         else:
             return GENERAL_WEB_APP_TEMPLATE.format(
-                template_info.description,
-                f"{METAGPT_ROOT}/workspace/template",
-                self._get_template_structure(template_info.template_path),
-                await aread(template_info.template_path / "index.html"),
-                await aread(template_info.template_path / "src" / "main.jsx"),
-                await aread(template_info.template_path / "src" / "App.jsx"),
-                await aread(template_info.template_path / "src" / "index.css"),
-                await aread(template_info.template_path / "vite.config.js")
+                GENERAL_WEB_APP_TEMPLATE_DESCRIPTION=template_info.description,
+                TEMPLATE_PATH=f"{METAGPT_ROOT}/workspace/template",
+                TEMPLATE_STRUCTURE=self._get_template_structure(template_info.template_path),
+                INDEX_CONTENT=await aread(template_info.template_path / "index.html"),
+                MAIN_CONTENT=await aread(template_info.template_path / "src" / "main.js"),
+                APP_CONTENT=await aread(template_info.template_path / "src" / "App.vue"),
+                INDEX_CSS_CONTENT=await aread(template_info.template_path / "src" / "style.css"),
+                CONFIG_CONTENT=await aread(template_info.template_path / "vite.config.js")
             )
+            
         
 
