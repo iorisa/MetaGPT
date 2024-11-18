@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import json
-import re
 import shutil
-from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any, Callable
+from typing import Dict, List, Optional, Any, Callable
 from functools import wraps
 import time
 import asyncio
@@ -24,62 +22,51 @@ from metagpt.logs import logger
 
 
 class TemplateRAGObject(BaseModel):
-    """实现 RAGObject 接口的模板对象类"""
-    content: str = Field(description="模板内容")
-    metadata: dict = Field(description="元数据")
+    """Template object class implementing the RAGObject interface"""
+    content: str = Field(description="Template content")
+    metadata: dict = Field(description="Metadata")
 
     def rag_key(self) -> str:
-        """返回用于 RAG 检索的关键内容"""
+        """Return key content used for RAG retrieval"""
         return self.content
 
     def rag_meta(self) -> dict:
-        """返回元数据"""
+        """Return metadata"""
         return self.metadata
 
 
 class TemplateInfo(BaseModel):
-    """模板信息数据类"""
+    """Template information data category"""
     # style: TemplateStyle
-    style: str = Field(description="模板风格") 
-    template_path: Path = Field(description="模板路径")
-    preview_image: str = Field(description="预览图片路径")
-    description: str = Field(description="模板描述")
-    required_fields: List[str] = Field(description="必需的字段列表")
+    style: str = Field(description="Template style")
+    template_path: Path = Field(description="Template path")
+    preview_image: str = Field(description="Preview image path")
+    description: str = Field(description="Template description")
+    required_fields: List[str] = Field(description="Required field list")
 
-
-def read_file_by_path(file_path: Path) -> str:
-    """读取文件内容"""
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            return f.read()
-    except Exception:
-        return ""
 
 def monitor_performance(func: Callable) -> Callable:
-        """性能监控装饰器"""
+    """Performance Monitoring Decorator"""
 
-        @wraps(func)
-        async def wrapper(self, *args, **kwargs) -> Any:
-            start_time = time.time()
-            result = await func(self, *args, **kwargs)
-            execution_time = time.time() - start_time
+    @wraps(func)
+    async def wrapper(self, *args, **kwargs) -> Any:
+        start_time = time.time()
+        result = await func(self, *args, **kwargs)
+        execution_time = time.time() - start_time
 
-            logger.info(
-                f"Action: {func.__name__}, Execution time: {execution_time:.2f}s, Success: {result is not None}")
+        logger.info(
+            f"Action: {func.__name__}, Execution time: {execution_time:.2f}s, Success: {result is not None}")
 
-            return result
+        return result
 
-        return wrapper
+    return wrapper
+
 
 @register_tool(
-    tags=["template", "search", "update_user_info"],
+    tags=["template", "search"],
     include_functions=[
         "search",
-        "get_template",
-        "get_all_templates",
-        "register_template",
         "direct_select",
-        "update_user_info"
     ],
 )
 class SearchTemplate(BaseModel):
@@ -97,15 +84,15 @@ class SearchTemplate(BaseModel):
         super().__init__(**kwargs)
         self.llm = kwargs.get('llm') or LLM()
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        # 添加一个标志位来追踪初始化状态
+        # Add a flag to track the initialization status.
         self._initialized = False
 
     @monitor_performance
     async def _init_rag_engine(self):
-        """初始化 RAG 引擎并加载模板描述"""
+        """Initialize the RAG engine and load the template description."""
         template_objs = []
 
-        # 首先准备所有模板文档和对象
+        # First, prepare all template documents and objects.
         for template in self.templates.values():
             doc = f"""
             Template Style: {template.style}
@@ -125,7 +112,7 @@ class SearchTemplate(BaseModel):
                 )
             )
 
-        # 使用 asyncio.to_thread 将同步操作包装为异步
+        # Wrap synchronous operations as asynchronous using asyncio.to_thread.
         self._engine = await asyncio.to_thread(
             SimpleEngine.from_objs,
             objs=template_objs,
@@ -134,17 +121,16 @@ class SearchTemplate(BaseModel):
                 BM25RetrieverConfig()
             ]
         )
-        
 
     async def _ensure_initialized(self):
-        """确保模板和RAG引擎已经初始化"""
+        """Ensure that the template and RAG engine have been initialized."""
         if not self._initialized:
             await self._init_templates()
-            await self._init_rag_engine()  # 修改为await调用
+            await self._init_rag_engine()
             self._initialized = True
 
     def _get_template_structure(self, template: Path) -> str:
-        """获取模板目录结构"""
+        """Get template directory structure"""
         try:
             import subprocess
             result = subprocess.run(
@@ -157,21 +143,21 @@ class SearchTemplate(BaseModel):
             return ""
 
     async def _parse_template_config(self, template_dir: Path) -> Optional[TemplateInfo]:
-        """解析模板目录下的配置文件,如果配置不存在则通过 LLM 生成"""
+        """Parse the configuration files in the template directory; if the configuration does not exist, generate it using LLM."""
         config_path = template_dir / "template_config.json"
         style = template_dir.name
-        
-        # 尝试读取现有配置
+
+        # Try to read the existing configuration.
         if config_path.exists():
             template_info = await self._read_existing_config(config_path)
             if template_info:
                 return template_info
-        
-        # 生成新配置
+
+        # Generate new configuration
         return await self._generate_config(template_dir, style, config_path)
 
     async def _read_existing_config(self, config_path: Path) -> Optional[TemplateInfo]:
-        """读取并验证现有的配置文件"""
+        """Read and verify the existing configuration file."""
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
@@ -181,57 +167,49 @@ class SearchTemplate(BaseModel):
             return None
 
     async def _generate_config(self, template_dir: Path, style: str, config_path: Path) -> Optional[TemplateInfo]:
-        """通过 LLM 生成新的配置"""
-        try:
-            dir_structure = self._get_template_structure(template_dir)
-            readme_content = read_file_by_path(template_dir / "README.md")
-            
-            prompt = f"""请根据以下模板目录信息生成一个模板配置:
+        """Generate new configurations through LLM"""
+        dir_structure = self._get_template_structure(template_dir)
+        readme_content = await aread(template_dir / "README.md")
 
-目录结构:
-{dir_structure}
+        prompt = f"""Please generate a template configuration based on the following template directory information:
+        Directory structure:
+        {dir_structure}
 
-README 内容:
-{readme_content}
+        README content:
+        {readme_content}
 
-请生成一个 JSON 格式的配置，包含以下字段:
-1. preview_image: 预览图片路径
-2. description: 模板描述
-3. required_fields: 必需的字段列表
+        Please generate a configuration in JSON format that includes the following fields:
+        1. preview_image: Path to the preview image
+        2. description: Template description
+        3. required_fields: List of required fields
 
-请确保生成的是合法的 JSON 格式。
-```json
-{{
-    "style": "{style}",
-    "preview_image": "the path of preview image, relative to template root",
-    "description": "the description of template",
-    "required_fields": ["name", "job", "email", "phone", "description", "mbti"]
-}}
-```
-"""
-            result = await self.llm.aask(prompt)
-            result = result.replace("```json", "").replace("```", "").strip("\n")
-            config = json.loads(result)
-            
-            template_info = self._validate_config(config, config_path)
-            if template_info:
-                await awrite(config_path, json.dumps(config, indent=2, ensure_ascii=False))
-                logger.info(f"已生成并保存模板配置: {config_path}")
-                return template_info
-            
-        except Exception as e:
-            logger.error(f"通过 LLM 生成配置失败: {str(e)}")
-            return None
+        Please ensure that the generated configuration is in valid JSON format.
+        ```json
+        {{
+            "style": "{style}",
+            "preview_image": "the path of preview image, relative to template root",
+            "description": "the description of template",
+            "required_fields": ["name", "job", "email", "phone", "description", "mbti"]
+        }}
+        ```
+        """
+        result = await self.llm.aask(prompt)
+        result = result.replace("```json", "").replace("```", "").strip("\n")
+        config = json.loads(result)
+
+        template_info = self._validate_config(config, config_path)
+        if template_info:
+            await awrite(config_path, json.dumps(config, indent=2, ensure_ascii=False))
+            logger.info(f"The template configuration has been generated and saved.: {config_path}")
+            return template_info
 
     def _validate_config(self, config: dict, config_path: Path) -> Optional[TemplateInfo]:
-        """验证配置并创建 TemplateInfo 对象"""
+        """Validate the configuration and create a TemplateInfo object."""
         required_config_fields = {'style', 'preview_image', 'description', 'required_fields'}
         if not all(field in config for field in required_config_fields):
-            logger.warning(f"模板配置文件缺少必要字段: {config_path}")
+            logger.warning(f"The template configuration file is missing necessary fields: {config_path}")
             return None
-        
-        try:
-                
+        else:
             return TemplateInfo(
                 style=config['style'],
                 template_path=config_path.parent,
@@ -239,33 +217,28 @@ README 内容:
                 description=config['description'],
                 required_fields=config['required_fields']
             )
-        except Exception as e:
-            logger.error(f"验证配置失败: {str(e)}")
-            return None
-    
+
     @monitor_performance
     async def _init_templates(self) -> None:
-        """从模板目录异步加载所有模板"""
+        """Load all templates asynchronously from the template directory."""
         base_path = METAGPT_ROOT / "template"
         if not base_path.exists():
-            logger.warning(f"模板基础目录不存在: {base_path}")
+            logger.warning(f"The template base directory does not exist: {base_path}")
             return
 
-        # 获取所有模板目录
+        # Get all template directories
         template_dirs = [d for d in base_path.iterdir() if d.is_dir()]
-        
-        # 使用 asyncio.gather 并发处理所有模板
+
+        # Use asyncio.gather to concurrently process all templates.
         template_infos = await asyncio.gather(
             *[self._parse_template_config(template_dir) for template_dir in template_dirs]
         )
-        
-        # 过滤掉 None 值并更新模板字典
+
+        # Filter out None values and update the template dictionary
         for template_info in template_infos:
             if template_info:
                 self.templates[template_info.style] = template_info
-                logger.info(f"成功加载模板: {template_info.style}")
-
-    
+                logger.info(f"Template loaded successfully:{template_info.style}")
 
     @monitor_performance
     async def search(self, requirement: str) -> Optional[TemplateInfo]:
@@ -280,52 +253,29 @@ README 内容:
         Raises:
             Exception: If template search process fails.
         """
-        try:
-            # 确保已初始化
-            await self._ensure_initialized()
+        # Ensure it is initialized.
+        await self._ensure_initialized()
 
-            template = await self._select_template(requirement)
-            if not template:
-                logger.warning('No matching template found')
-                return None
-
-            logger.info(f'Selected template: {template.style}')
-            return template
-
-        except Exception as e:
-            logger.error(f'Template search failed: {str(e)}')
-            logger.error(f'Requirement: {requirement}')
+        template = await self._select_template(requirement)
+        if not template:
+            logger.warning('No matching template found')
             return None
 
-    def get_template(self, style: str) -> Optional[TemplateInfo]:
-        """获取指定风格的模板"""
-        return self.templates.get(style, None)
-
-    def get_all_templates(self) -> Dict[str, TemplateInfo]:
-        """获取所有模板"""
-        return self.templates.copy()
-
-    def register_template(self, template: TemplateInfo) -> None:
-        """注册新模板"""
-        self.templates[template.style] = template
+        logger.info(f'Selected template: {template.style}')
+        return template
 
     async def _select_template(self, requirement: str) -> Optional[TemplateInfo]:
         """Use RAG to select the most matching template."""
-        try:
-            logger.info("Start searching for templates")
-            result = await self._engine.aretrieve(requirement)
-            if not result:
-                return None
-
-            # Take the template style with the highest score from the results list.
-            max_score_node = max(result, key=lambda x: x.score)
-            style_name = max_score_node.metadata['obj'].metadata['style']
-            
-            return self.templates.get(style_name)
-
-        except Exception as e:
-            logger.error(f"Error selecting template:{str(e)}")
+        logger.info("Start searching for templates")
+        result = await self._engine.aretrieve(requirement)
+        if not result:
             return None
+
+        # Take the template style with the highest score from the results list.
+        max_score_node = max(result, key=lambda x: x.score)
+        style_name = max_score_node.metadata['obj'].metadata['style']
+
+        return self.templates.get(style_name)
 
     async def copy_template(self, template: TemplateInfo) -> Path:
         """Copy the template to the target location."""
@@ -334,13 +284,9 @@ README 内容:
 
         target_dir = self.output_dir
 
-        try:
-            shutil.copytree(template.template_path, target_dir, dirs_exist_ok=True)
-            logger.info(f"Template copied: {template.style} -> {target_dir}")
-            return target_dir
-        except Exception as e:
-            logger.error(f"Failed to copy template: {str(e)}")
-            raise IOError(f"Failed to copy template: {str(e)}")
+        shutil.copytree(template.template_path, target_dir, dirs_exist_ok=True)
+        logger.info(f"Template copied: {template.style} -> {target_dir}")
+        return target_dir
 
     async def __aenter__(self):
         await self._init_templates()
@@ -350,14 +296,13 @@ README 内容:
     async def __aexit__(self, exc_type, exc_value, traceback):
         pass
 
-    
     @monitor_performance
     async def reload_templates(self) -> None:
-        """重新加载所有模板，支持热更新"""
+        """Reload all templates, support hot update"""
         try:
-            # 清空现有模板
+            # Clear existing template
             self.templates.clear()
-            # 重新始化模板
+            # Reinitialize template
             await self._init_templates()
 
             logger.info(f"Templates reloaded: {len(self.templates)}")
@@ -383,7 +328,6 @@ README 内容:
                 rag_top_k = kwargs.get('rag_top_k')
                 if isinstance(rag_top_k, int) and rag_top_k > 0:
                     if hasattr(self.template_tool, '_engine'):
-
                         logger.info(f"Updated RAG top_k to {rag_top_k}")
                 else:
                     logger.warning(f"Invalid rag_top_k value: {rag_top_k}")
@@ -395,8 +339,9 @@ README 内容:
             return False
 
     def get_required_fields(self) -> List[str]:
-        """获取所有模板所需字段"""
+        """Get all required fields for the template"""
         return list(set([field for template in self.templates.values() for field in template.required_fields]))
+
 
 if __name__ == "__main__":
     import asyncio

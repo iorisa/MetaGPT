@@ -53,9 +53,13 @@ class Engineer2(RoleZero):
     run_eval: bool = False
     output_diff: str = ""
     max_react_loop: int = 40
-    # 添加标记，用于跟踪是否是第一次收到软件开发需求
+    #Add a tag to track whether this is the first time receiving software development requirements.
     is_first_dev_request: bool = Field(default=True, exclude=True)
 
+    async def _think(self) -> bool:
+        await self._format_instruction()
+        res = await super()._think()
+        return res
 
     async def _format_instruction(self):
         """

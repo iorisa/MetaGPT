@@ -22,15 +22,6 @@ from metagpt.utils.common import CodeParser
 
 from metagpt.schema import UserMessage
 
-
-def read_file_by_path(file_path: Path) -> str:
-    """读取文件内容"""
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            return f.read()
-    except Exception:
-        return ""
-
 @register_tool(include_functions=["handle_template", "update_user_info"])
 class FrontendEngineer(Engineer2):
     instruction: str = FRONTEND_ENGINEER_PROMPT
@@ -142,34 +133,13 @@ class FrontendEngineer(Engineer2):
     def _retrieve_experience(self) -> str:
         return FE_EXAPMLE
 
-    async def set_template(self, template_info: TemplateInfo=None) -> None:
-        if template_info is not None:
-            """Update template information to system prompt"""
-            template_content = f"""
-            ### Template Intro
-            1. This is a template for {template_info.description}
-            2. The template is at {METAGPT_ROOT}/workspace/template
-            3. Required fields: {', '.join(template_info.required_fields)}
-            4. Style your elements according to the template style: {template_info.style}
-
-            ### Project Structure
-            {self.template_tool._get_template_structure(template_info)}
-            """
-            self._template_content = template_content
-            # Update template part in instruction
-            self.instruction = self.instruction.replace(
-                GENERAL_WEB_APP_TEMPLATE,
-                self._template_content
-            )
-            logger.info(f"Template update successfully")
-
     async def extract_user_info(self, user_input: str) -> Dict[str, Any]:
         """Extract user information from user_info with LLM"""
         required_fields = self.template_tool.get_required_fields()
         required_fields_str = ", ".join(required_fields)
         prompt = f"""
         ## Task
-        Please extract the following information from the requirement
+        Please extract the following USER information from the requirement
         ### Required fields
         {required_fields_str}
         ### User Input
@@ -222,27 +192,19 @@ If no issues are detected, the original json data should be returned unchanged. 
         Returns:
             Processing result description
         """
-        try:
-            # 1. Search for matching template
-            template = await self.template_tool.search(requirement)
-            if not template:
-                return "Can't find a matching template"
+        # 1. Search for matching template
+        template = await self.template_tool.search(requirement)
+        if not template:
+            return "Can't find a matching template"
 
-            # 2. Apply template
-            await self.set_template(template)
+        target_dir = await self.template_tool.copy_template(template)
+        if not target_dir:
+            return "Failed to copy template"
 
-            target_dir = await self.template_tool.copy_template(template)
-            if not target_dir:
-                return "Failed to copy template"
-
-            return f"Successfully copied {template.style} template to {target_dir}, next step is to rename the template folder to the project name"
-
-        except Exception as e:
-
-            return f"Error during template processing: {str(e)}"
+        return f"Successfully copied {template.style} template to {target_dir}, next step is to rename the template folder to the project name"
 
 
-# 测试
+# test
 # async def main():
 #     engineer = FrontendEngineer()
 #     result = await engineer.handle_template("帮我设计一个个人名片")

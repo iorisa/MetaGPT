@@ -194,4 +194,5 @@ tests/data/requirements/*.jpg
 
 # template
 template/
-.gitignore
+tests/metagpt/environment/mgx_env/run_mgx_env.py
+/metagpt/prompts/di/frontend_engineer_backup.py
