@@ -341,23 +341,3 @@ class SearchTemplate(BaseModel):
     def get_required_fields(self) -> List[str]:
         """Get all required fields for the template"""
         return list(set([field for template in self.templates.values() for field in template.required_fields]))
-
-
-if __name__ == "__main__":
-    import asyncio
-
-
-    async def main():
-        async with SearchTemplate() as search_tool:
-            requirement = "帮我制作一张个人名片，我是一名产品经理"
-            result = await search_tool.search(requirement)
-
-            if result:
-                template = result
-                print(f"Selected template: {template.style}")
-                # print(f"User info: {user_info}")
-            else:
-                print("No matching template found")
-
-
-    asyncio.run(main())

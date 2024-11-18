@@ -198,18 +198,3 @@ If no issues are detected, the original json data should be returned unchanged. 
             return "Failed to copy template"
 
         return f"Successfully copied {template.style} template to {target_dir}, next step is to rename the template folder to the project name"
-
-
-# test
-# async def main():
-#     engineer = FrontendEngineer()
-#     result = await engineer.handle_template("帮我设计一个个人名片")
-#     if isinstance(result, tuple):
-#         template_result, user_info = result
-#         print(template_result)
-#         print(user_info)
-#     else:
-#         print(result)
-#
-# if __name__ == "__main__":
-#     asyncio.run(main())
