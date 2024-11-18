@@ -50,28 +50,6 @@ class FrontendEngineer(Engineer2):
                 return msg
         return None
 
-    async def update_user_info(self, user_input: str, user_info: Dict[str, Any] = None) -> Dict[str, Any]:
-        """
-        update user information
-
-        args:
-            user_input: user input
-            user_info: user information, a dictionary
-        
-        returns:
-            updated user information
-        """
-        try:
-            new_user_info = await self.extract_user_info(user_input)
-            if user_info:
-                user_info.update(new_user_info)
-            else:
-                user_info = new_user_info
-            return user_info
-        except Exception as e:
-            logger.error(f"Error updating user info: {str(e)}")
-            return user_info
-
     async def _think(self) -> bool:
         # Check if the latest message is a development request
         send_msg = self._get_latest_message()
@@ -101,55 +79,6 @@ class FrontendEngineer(Engineer2):
 
     def _retrieve_experience(self) -> str:
         return FE_EXAPMLE
-
-    async def extract_user_info(self, user_input: str) -> Dict[str, Any]:
-        """Extract user information from user_info with LLM"""
-        required_fields = self.template_tool.get_required_fields()
-        required_fields_str = ", ".join(required_fields)
-        prompt = f"""
-        ## Task
-        Please extract the following USER information from the requirement
-        ### Required fields
-        {required_fields_str}
-        ### User Input
-        {user_input}
-
-        ### Output Format
-```json
-
-```
-Do not use escape characters in json data, particularly within file paths.
-Process any JSON-like strings in the input to ensure they are valid JSON format. Fix common issues like unescaped quotes, missing commas, invalid line breaks, and ensure the output can be directly parsed by json.loads(). Return the corrected JSON string while preserving the original data structure and values.
-Help check if there are any formatting issues with the JSON data? If so, please help format it.
-If no issues are detected, the original json data should be returned unchanged. Do not omit any information.
-        ### Output
-        ```json
-        {{
-            "user_info": {{
-                "name": "value1",
-                "job_title": "value2",
-                "email": "value3",
-                "phone": "value4",
-                "brief_description": "value5",
-                "MBTI": "value6",
-                ...
-            }}
-        }}
-        ```
-        """
-        # logger.info(f"Extracting user info from: {user_input}")
-        num = 0
-        while num < 3:
-            try:
-                user_info = await self.llm.aask(prompt, system_msgs=["You are a helpful assistant"])
-                # parse json
-                user_info = CodeParser.parse_code(user_info, "json")
-                user_info = json.loads(user_info)["user_info"]
-                if user_info:
-                    return user_info
-            except Exception as e:
-                num += 1
-        return None
 
     async def set_template(self, template_info: TemplateInfo = None) -> None:
         
