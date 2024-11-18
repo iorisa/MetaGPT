@@ -22,7 +22,7 @@ from metagpt.utils.common import CodeParser
 
 from metagpt.schema import UserMessage
 
-@register_tool(include_functions=["handle_template", "update_user_info"])
+@register_tool(include_functions=["handle_template"])
 class FrontendEngineer(Engineer2):
     instruction: str = FRONTEND_ENGINEER_PROMPT
     tools: list[str] = [
@@ -37,41 +37,13 @@ class FrontendEngineer(Engineer2):
     ]
 
     def _update_tool_execution(self):
-        # validate = ValidateAndRewriteCode()
-        cr = CodeReview()
-        image_getter = ImageGetter()
-        if self.run_eval is True:
-            # Evalute tool map
-            self.tool_execution_map.update(
-                {
-                    "git_create_pull": git_create_pull,
-                    "Engineer2.write_new_code": self.write_new_code,
-                    "ImageGetter.get_image": image_getter.get_image,
-                    "CodeReview.review": cr.review,
-                    "CodeReview.fix": cr.fix,
-                    "Terminal.run_command": self._eval_terminal_run,
-                    "RoleZero.ask_human": self._end,
-                    "RoleZero.reply_to_human": self._end,
-                    "Deployer.deploy_to_public": self._deploy_to_public,
-                    "FrontendEngineer.handle_template": self.handle_template,
-                    "FrontendEngineer.update_user_info": self.update_user_info,
-                }
-            )
-        else:
-            # Default tool map
-            self.tool_execution_map.update(
-                {
-                    "git_create_pull": git_create_pull,
-                    "Engineer2.write_new_code": self.write_new_code,
-                    "ImageGetter.get_image": image_getter.get_image,
-                    "CodeReview.review": cr.review,
-                    "CodeReview.fix": cr.fix,
-                    "Terminal.run_command": self.terminal.run_command,
-                    "Deployer.deploy_to_public": self._deploy_to_public,
-                    "FrontendEngineer.handle_template": self.handle_template,
-                    "FrontendEngineer.update_user_info": self.update_user_info,
-                }
-            )
+        super()._update_tool_execution()
+        self.tool_execution_map.update(
+            {
+                "FrontendEngineer.handle_template": self.handle_template,
+            }
+        )
+
     def _get_latest_message(self) -> Message:
         for msg in self.rc.memory.get():
             if "Alex" in msg.send_to:
@@ -100,7 +72,6 @@ class FrontendEngineer(Engineer2):
             logger.error(f"Error updating user info: {str(e)}")
             return user_info
 
-
     async def _think(self) -> bool:
         # Check if the latest message is a development request
         send_msg = self._get_latest_message()
@@ -109,14 +80,16 @@ class FrontendEngineer(Engineer2):
             content = send_msg.content.replace("[Message] from Mike to Alex: ", "")
             logger.info(f"First dev request, handle template")
             # extrac user info
-            user_info = await self.extract_user_info(content)
-            
-            logger.info(f"User info: {user_info}")
+            # user_info = await self.extract_user_info(content)
+
+            # logger.info(f"User info: {user_info}")
             result = await self.handle_template(content)
             logger.info(f"Template search result: {result}")
 
-            content = "This is First Dev Request, I have already handled the template, now I will start to develop the project. \n\nThe following is the template information and user information.\n\n"
-            content += f"{content}\n\n{result}\n\nUser info: {user_info}"
+            # content = "This is First Dev Request, I have already handled the template, now I will start to develop the project. \n\nThe following is the template information and user information.\n\n"
+            # content += f"{content}\n\n{result}\n\nUser info: {user_info}"
+            content = "This is First Dev Request, I have already handled the template, now I will start to develop the project. \n\nThe following is the template information.\n\n"
+            content += f"{content}\n\n{result}\n\n"
             # Update memory
             self.rc.memory.add(UserMessage(content=content))
             logger.info(f"First dev request, memory updated")
@@ -178,6 +151,16 @@ If no issues are detected, the original json data should be returned unchanged. 
                 num += 1
         return None
 
+    async def set_template(self, template_info: TemplateInfo = None) -> None:
+        
+        self._template_content = await self.template_tool.get_template_info(template_info)
+        # Update template part in instruction
+        self.instruction = self.instruction.replace(
+            GENERAL_WEB_APP_TEMPLATE,
+            self._template_content
+        )
+        logger.info(f"Template update successfully")
+
     async def handle_template(self, requirement: str) -> str:
         """Process template-related requirements
 
@@ -192,6 +175,9 @@ If no issues are detected, the original json data should be returned unchanged. 
         template = await self.template_tool.search(requirement)
         if not template:
             return "Can't find a matching template"
+
+        # update template info
+        await self.set_template(template)
 
         target_dir = await self.template_tool.copy_template(template)
         if not target_dir:
