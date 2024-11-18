@@ -17,6 +17,7 @@ from metagpt.utils.common import awrite, aread
 from metagpt.rag.engines import SimpleEngine
 from metagpt.rag.schema import FAISSRetrieverConfig, BM25RetrieverConfig
 from metagpt.const import METAGPT_ROOT
+from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE
 
 from metagpt.logs import logger
 
@@ -121,6 +122,23 @@ class SearchTemplate(BaseModel):
                 BM25RetrieverConfig()
             ]
         )
+
+        async def set_engine(self, engine: SimpleEngine) -> None:
+            """Set a pre-computed RAG engine.
+
+            Args:
+                engine: A pre-computed SimpleEngine instance
+
+            Notes:
+                1. The engine should contain vector representations for all templates
+                2. Calling this method will skip the execution of _init_rag_engine
+            """
+            if not isinstance(engine, SimpleEngine):
+                logger.error("Provided engine is not of type SimpleEngine")
+                return
+                
+            self._engine = engine
+            logger.info("Successfully set pre-computed RAG engine")
 
     async def _ensure_initialized(self):
         """Ensure that the template and RAG engine have been initialized."""
@@ -347,30 +365,16 @@ class SearchTemplate(BaseModel):
         """Get the template information for the given template style"""
         if template_info is None:
             return ""
-        return f"""### Template Intro
-            1. This is a template for {template_info.description}
-            2. The template is at {METAGPT_ROOT}/workspace/template
-            3. Modify index.html, create new jsx files under src if needed, and rewrite src/App.jsx to meet the user's requirements.
-            4. Style your elements with Tailwind CSS classes directly in the jsx files.
-
-            ### Template Structure
-            {self._get_template_structure(template_info.template_path)}
-            
-            ### File Content
-            #### index.html (Modify the title)
-            {await aread(template_info.template_path / "index.html")}
-
-            #### src/main.jsx (You should NOT modify it)
-            {await aread(template_info.template_path / "src" / "main.jsx")}
-
-            #### src/App.jsx (to be modified)
-            {await aread(template_info.template_path / "src" / "App.jsx")}
-
-            #### src/index.css (You should NOT modify it)
-            {await aread(template_info.template_path / "src" / "index.css")}
-
-            #### vite.config.js (only modify it if extra config is absolutely necessary)
-            {await aread(template_info.template_path / "vite.config.js")}
-
-        """
+        else:
+            return GENERAL_WEB_APP_TEMPLATE.format(
+                template_info.description,
+                f"{METAGPT_ROOT}/workspace/template",
+                self._get_template_structure(template_info.template_path),
+                await aread(template_info.template_path / "index.html"),
+                await aread(template_info.template_path / "src" / "main.jsx"),
+                await aread(template_info.template_path / "src" / "App.jsx"),
+                await aread(template_info.template_path / "src" / "index.css"),
+                await aread(template_info.template_path / "vite.config.js")
+            )
+        
 
