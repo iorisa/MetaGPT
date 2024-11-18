@@ -1,9 +1,4 @@
 import asyncio
-import copy
-import json
-import re
-from pathlib import Path
-from typing import Any, Dict, Tuple, Optional
 
 from metagpt.prompts.di.frontend_engineer import FE_EXAPMLE, FRONTEND_ENGINEER_PROMPT
 from metagpt.roles.di.engineer2 import Engineer2
@@ -12,13 +7,8 @@ from metagpt.logs import logger
 
 from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE
 from metagpt.schema import Message
-from metagpt.tools.libs.cr import CodeReview
-from metagpt.tools.libs.git import git_create_pull
-from metagpt.tools.libs.image_getter import ImageGetter
 from metagpt.tools.libs.search_template import TemplateInfo
-from metagpt.const import METAGPT_ROOT
 from metagpt.tools.tool_registry import register_tool
-from metagpt.utils.common import CodeParser
 
 from metagpt.schema import UserMessage
 
