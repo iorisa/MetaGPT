@@ -12,12 +12,13 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 from metagpt.llm import LLM
 from metagpt.tools.tool_registry import register_tool
-from metagpt.utils.common import awrite, aread, log_time, OutputParser
+from metagpt.utils.common import awrite, log_time, OutputParser
+from metagpt.prompts.di.template import read_file
 
 from metagpt.rag.engines import SimpleEngine
 from metagpt.rag.schema import FAISSRetrieverConfig, BM25RetrieverConfig
 from metagpt.const import METAGPT_ROOT
-from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE
+from metagpt.prompts.di.template import VUE_APP_TEMPLATE
 
 from metagpt.logs import logger
 
@@ -166,7 +167,7 @@ class SearchTemplate(BaseModel):
     async def _generate_config(self, template_dir: Path, style: str, config_path: Path) -> Optional[TemplateInfo]:
         """Generate new configurations through LLM"""
         dir_structure = self._get_template_structure(template_dir)
-        readme_content = await aread(template_dir / "README.md")
+        readme_content = read_file(template_dir / "README.md")
 
         prompt = f"""Please generate a template configuration based on the following template directory information:
         Directory structure:
@@ -253,7 +254,7 @@ class SearchTemplate(BaseModel):
         result = await self._engine.aretrieve(requirement)
         if not result:
             logger.warning('No matching template found')
-            return None, extra_user_info
+            return None, "no user info here"
         template, extra_user_info  = await self.select_from_candidates(result)
 
         logger.info(f'Selected template: {template.style}')
@@ -340,15 +341,15 @@ class SearchTemplate(BaseModel):
         if template_info is None:
             return ""
         else:
-            return GENERAL_WEB_APP_TEMPLATE.format(
-                GENERAL_WEB_APP_TEMPLATE_DESCRIPTION=template_info.description,
+            return VUE_APP_TEMPLATE.format(
+                VUE_APP_TEMPLATE_DESCRIPTION=template_info.description,
                 TEMPLATE_PATH=f"{METAGPT_ROOT}/workspace/template",
                 TEMPLATE_STRUCTURE=self._get_template_structure(template_info.template_path),
-                INDEX_CONTENT=await aread(template_info.template_path / "index.html"),
-                MAIN_CONTENT=await aread(template_info.template_path / "src" / "main.js"),
-                APP_CONTENT=await aread(template_info.template_path / "src" / "App.vue"),
-                INDEX_CSS_CONTENT=await aread(template_info.template_path / "src" / "style.css"),
-                CONFIG_CONTENT=await aread(template_info.template_path / "vite.config.js")
+                INDEX_CONTENT=read_file(template_info.template_path / "index.html"),
+                MAIN_CONTENT=read_file(template_info.template_path / "src" / "main.js"),
+                APP_CONTENT=read_file(template_info.template_path / "src" / "App.vue"),
+                INDEX_CSS_CONTENT=read_file(template_info.template_path / "src" / "style.css"),
+                CONFIG_CONTENT=read_file(template_info.template_path / "vite.config.js")
             )
             
         

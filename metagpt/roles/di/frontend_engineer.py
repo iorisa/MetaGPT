@@ -5,7 +5,7 @@ from metagpt.roles.di.engineer2 import Engineer2
 
 from metagpt.logs import logger
 
-from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE, GENERAL_WEB_APP_TEMPLATE_PROMPT
+from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE_PROMPT
 from metagpt.schema import Message
 from metagpt.tools.libs.search_template import TemplateInfo
 from metagpt.tools.tool_registry import register_tool

@@ -10,8 +10,8 @@ def read_file(file_path: str) -> str:
     return FileBlock(path=str(file_path), content=content)
 
 
-TEMPLATE_PATH = VUE_TEMPLATE_PATH.resolve().absolute() if VUE_TEMPLATE_PATH.exists() else "N/A"
-TEMPLATE_STRUCTURE = (
+VUE_TEMPLATE_PATH = VUE_TEMPLATE_PATH.resolve().absolute() if VUE_TEMPLATE_PATH.exists() else "N/A"
+VUE_TEMPLATE_STRUCTURE = (
     """
 vue_template/
 ├── README.md
@@ -28,20 +28,20 @@ vue_template/
 ├── tailwind.config.js
 └── vite.config.js
 """
-    if TEMPLATE_PATH != "N/A"
+    if VUE_TEMPLATE_PATH != "N/A"
     else ""
 )
-INDEX_CONTENT = read_file(VUE_TEMPLATE_PATH.resolve().absolute() / "index.html")
-MAIN_CONTENT = read_file(VUE_TEMPLATE_PATH.resolve().absolute() / "src/main.js")
-APP_CONTENT = read_file(VUE_TEMPLATE_PATH.resolve().absolute() / "src/App.vue")
-INDEX_CSS_CONTENT = read_file(VUE_TEMPLATE_PATH.resolve().absolute() / "src/style.css")
-CONFIG_CONTENT = read_file(VUE_TEMPLATE_PATH.resolve().absolute() / "vite.config.js")
+VUE_INDEX_CONTENT = read_file(VUE_TEMPLATE_PATH.resolve().absolute() / "index.html")
+VUE_MAIN_CONTENT = read_file(VUE_TEMPLATE_PATH.resolve().absolute() / "src/main.js")
+VUE_APP_CONTENT = read_file(VUE_TEMPLATE_PATH.resolve().absolute() / "src/App.vue")
+VUE_INDEX_CSS_CONTENT = read_file(VUE_TEMPLATE_PATH.resolve().absolute() / "src/style.css")
+VUE_CONFIG_CONTENT = read_file(VUE_TEMPLATE_PATH.resolve().absolute() / "vite.config.js")
 
-GENERAL_WEB_APP_TEMPLATE_DESCRIPTION = "general web app or game development. It is based on React framework with Tailwind CSS. The template includes the basic structure of a React project, including an index.html file and a src directory with an App.jsx file."
+VUE_APP_TEMPLATE_DESCRIPTION = "general web app or game development. It is based on VUE framework with Tailwind CSS. The template includes the basic structure of a React project, including an index.html file and a src directory with an App.vue file."
 
-GENERAL_WEB_APP_TEMPLATE = f"""
-### Template Intro
-1. This is a template for {{GENERAL_WEB_APP_TEMPLATE_DESCRIPTION}}
+VUE_APP_TEMPLATE = f"""
+#### VUE Template Intro
+1. This is a template for {{VUE_APP_TEMPLATE_DESCRIPTION}}
 2. The template is at {{TEMPLATE_PATH}}.
 3. Modify index.html, create new jsx files under src if needed, and rewrite src/App.vue to meet the user's requirements.
 4. Style your elements with Tailwind CSS classes directly in the vue files.
@@ -66,13 +66,70 @@ GENERAL_WEB_APP_TEMPLATE = f"""
 {{CONFIG_CONTENT}}
 """
 
-GENERAL_WEB_APP_TEMPLATE_PROMPT = GENERAL_WEB_APP_TEMPLATE.format(
-    GENERAL_WEB_APP_TEMPLATE_DESCRIPTION=GENERAL_WEB_APP_TEMPLATE_DESCRIPTION,
-    TEMPLATE_PATH=TEMPLATE_PATH,
-    TEMPLATE_STRUCTURE=TEMPLATE_STRUCTURE,
-    INDEX_CONTENT=INDEX_CONTENT,
-    MAIN_CONTENT=MAIN_CONTENT,
-    APP_CONTENT=APP_CONTENT,
-    INDEX_CSS_CONTENT=INDEX_CSS_CONTENT,
-    CONFIG_CONTENT=CONFIG_CONTENT
+# REACT_TEMPLATE_PATH = REACT_TEMPLATE_PATH.resolve().absolute() if REACT_TEMPLATE_PATH.exists() else "N/A"
+REACT_TEMPLATE_STRUCTURE = (
+    """
+react_template/
+|-- eslint.config.js
+|-- index.html
+|-- package.json
+|-- pnpm-lock.yaml
+|-- postcss.config.js
+|-- public
+|-- src
+|   |-- App.jsx
+|   |-- index.css
+|   `-- main.jsx
+|-- tailwind.config.js
+`-- vite.config.js
+"""
+    if REACT_TEMPLATE_PATH != "N/A"
+    else ""
 )
+REACT_INDEX_CONTENT = read_file(REACT_TEMPLATE_PATH.resolve().absolute() / "index.html")
+REACT_MAIN_CONTENT = read_file(REACT_TEMPLATE_PATH.resolve().absolute() / "src/main.jsx")
+REACT_APP_CONTENT = read_file(REACT_TEMPLATE_PATH.resolve().absolute() / "src/App.jsx")
+REACT_INDEX_CSS_CONTENT = read_file(REACT_TEMPLATE_PATH.resolve().absolute() / "src/index.css")
+REACT_CONFIG_CONTENT = read_file(REACT_TEMPLATE_PATH.resolve().absolute() / "vite.config.js")
+
+
+REACT_APP_TEMPLATE = f"""
+#### REACT Template Intro
+1. This is a template for general web app or game development. It is based on React framework with Tailwind CSS. The template includes the basic structure of a React project, including an index.html file and a src directory with an App.jsx file.
+2. The template is at {REACT_TEMPLATE_PATH}.
+3. Modify index.html, create new jsx files under src if needed, and rewrite src/App.jsx to meet the user's requirements.
+4. Style your elements with Tailwind CSS classes directly in the jsx files.
+
+### Project Structure
+{REACT_TEMPLATE_STRUCTURE}
+
+### File Content
+#### index.html (Modify the title)
+{REACT_INDEX_CONTENT}
+
+#### src/main.jsx (You should NOT modify it)
+{REACT_MAIN_CONTENT}
+
+#### src/App.jsx (to be modified)
+{REACT_APP_CONTENT}
+
+#### src/index.css (You should NOT modify it)
+{REACT_INDEX_CSS_CONTENT}
+
+#### vite.config.js (only modify it if extra config is absolutely necessary)
+{REACT_CONFIG_CONTENT}
+"""
+
+
+VUE_APP_TEMPLATE_PROMPT = VUE_APP_TEMPLATE.format(
+    VUE_APP_TEMPLATE_DESCRIPTION=VUE_APP_TEMPLATE_DESCRIPTION,
+    TEMPLATE_PATH=VUE_TEMPLATE_PATH,
+    TEMPLATE_STRUCTURE=VUE_TEMPLATE_STRUCTURE,
+    INDEX_CONTENT=VUE_INDEX_CONTENT,
+    MAIN_CONTENT=VUE_MAIN_CONTENT,
+    APP_CONTENT=VUE_APP_CONTENT,
+    INDEX_CSS_CONTENT=VUE_INDEX_CSS_CONTENT,
+    CONFIG_CONTENT=VUE_CONFIG_CONTENT
+)
+GENERAL_WEB_APP_TEMPLATE_PROMPT = "### Template Intro\n"
+GENERAL_WEB_APP_TEMPLATE_PROMPT += VUE_APP_TEMPLATE_PROMPT + REACT_APP_TEMPLATE
