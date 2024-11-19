@@ -27,6 +27,8 @@ class FrontendEngineer(Engineer2):
         "FrontendEngineer"
     ]
 
+
+
     def _update_tool_execution(self):
         super()._update_tool_execution()
         self.tool_execution_map.update(
@@ -75,8 +77,6 @@ class FrontendEngineer(Engineer2):
         self.rc.memory.add(UserMessage(content=content))
         logger.info(f"Template information, User info and extra info updated: \n{content}")
 
-    def _is_business_card_requirement(self, requirement: str) -> bool:
-        return "名片" in requirement or "business card" in requirement.lower()
 
     async def search_template(self, requirement: str) -> str:
         """Process template-related requirements
@@ -88,9 +88,6 @@ class FrontendEngineer(Engineer2):
         Returns:
             Processing result description
         """
-        # is_business_card_requirement = self._is_business_card_requirement(requirement)
-        # if not is_business_card_requirement:
-        #     return "The requirement is not a business card requirement"
 
         # 1. Search for matching template
         template, extra_user_info = await self.template_tool.search(requirement)

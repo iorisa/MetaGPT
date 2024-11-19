@@ -16,7 +16,7 @@ from metagpt.utils.common import awrite, log_time, OutputParser
 from metagpt.prompts.di.template import read_file
 
 from metagpt.rag.engines import SimpleEngine
-from metagpt.rag.schema import FAISSRetrieverConfig, BM25RetrieverConfig
+from metagpt.rag.schema import FAISSRetrieverConfig, BM25RetrieverConfig, LLMRankerConfig
 from metagpt.const import METAGPT_ROOT
 from metagpt.prompts.di.template import VUE_APP_TEMPLATE
 
@@ -104,7 +104,8 @@ class SearchTemplate(BaseModel):
             retriever_configs=[
                 FAISSRetrieverConfig(),
                 BM25RetrieverConfig()
-            ]
+            ],
+            ranker_configs=[LLMRankerConfig()],
         )
 
         async def set_engine(self, engine: SimpleEngine) -> None:
