@@ -4,6 +4,7 @@ import json
 import shutil
 from pathlib import Path
 from typing import Dict, List, Optional, Any
+import subprocess
 
 import asyncio
 
@@ -131,16 +132,12 @@ class SearchTemplate(BaseModel):
 
     def _get_template_structure(self, template: Path) -> str:
         """Get template directory structure"""
-        try:
-            import subprocess
-            result = subprocess.run(
-                ['tree', template],
-                capture_output=True,
-                text=True
-            )
-            return result.stdout
-        except Exception:
-            return ""
+        result = subprocess.run(
+            ['tree', template],
+            capture_output=True,
+            text=True
+        )
+        return result.stdout
 
     async def _parse_template_config(self, template_dir: Path) -> Optional[TemplateInfo]:
         """Parse the configuration files in the template directory; if the configuration does not exist, generate it using LLM."""
@@ -252,25 +249,22 @@ class SearchTemplate(BaseModel):
         """
         # Ensure it is initialized.
         await self._ensure_initialized()
-
-        template, extra_user_info  = await self.select_from_candidates(requirement)
-        if not template:
+        logger.info("Start searching for templates")
+        result = await self._engine.aretrieve(requirement)
+        if not result:
             logger.warning('No matching template found')
             return None, extra_user_info
+        template, extra_user_info  = await self.select_from_candidates(result)
 
         logger.info(f'Selected template: {template.style}')
         return template, extra_user_info
 
-    async def select_from_candidates(self, requirement: str) -> Optional[TemplateInfo]:
+    async def select_from_candidates(self, result: List[Any]) -> Optional[TemplateInfo]:
         """Use RAG to select the most matching template."""
-        logger.info("Start searching for templates")
-        result = await self._engine.aretrieve(requirement)
-        if not result:
-            return None
+
         # Take the top k templates with the highest scores from the results list. 
         top_k_score_node = result[-self.rag_top_k:]
         template_infos = [self.templates.get(node.metadata['obj'].metadata['style']) for node in top_k_score_node]
-        # style_name = max_score_node.metadata['obj'].metadata['style']
 
         return template_infos[0], "no other user info"
 
