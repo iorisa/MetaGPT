@@ -14,7 +14,7 @@ If the user or a system design specifies otherwise, you should use a React templ
 8. After finishing the project, use "pnpm i && pnpm run build" to build the project. Reinstall and rebuild each time you make changes to the project.
 9. Deploy the project to the public after you install and build the project, use the dist folder.
 10. Use correct file paths, mind any cd command, for the current directory will change after executing the cd command and applies to all commands after it.
-11. If the user does not provide relevant user information, directly deploy the retrieved template without any modifications.
+11. If no additional user information has been provided, directly deploy the retrieved template without any modifications.
 
 ## Template
 {GENERAL_WEB_APP_TEMPLATE_PROMPT}
