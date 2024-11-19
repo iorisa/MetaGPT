@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import shutil
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 import subprocess
 
 import asyncio
@@ -236,7 +236,7 @@ class SearchTemplate(BaseModel):
                 logger.info(f"Template loaded successfully:{template_info.style}")
 
     @log_time
-    async def search(self, requirement: str) -> Optional[TemplateInfo]:
+    async def search(self, requirement: str) -> Optional[Tuple[TemplateInfo, str]]:
         """Search for matching template and extract user information.
 
         Args:
@@ -255,19 +255,19 @@ class SearchTemplate(BaseModel):
         if not result:
             logger.warning('No matching template found')
             return None, ""
-        template, extra_user_info  = await self.select_from_candidates(result)
-
+        template_name, extra_user_info  = await self.select_from_candidates(result)
+        template = self.templates.get(template_name)
         logger.info(f'Selected template: {template.style}')
         return template, extra_user_info
 
-    async def select_from_candidates(self, result: List[Any]) -> Optional[TemplateInfo]:
+    async def select_from_candidates(self, result: List[Any]) -> Optional[Tuple[str, str]]:
         """Use RAG to select the most matching template."""
 
         # Take the top k templates with the highest scores from the results list. 
         top_k_score_node = result[-self.rag_top_k:]
-        template_infos = [self.templates.get(node.metadata['obj'].metadata['style']) for node in top_k_score_node]
-
-        return template_infos[0], ""
+        # template_infos = [self.templates.get(node.metadata['obj'].metadata['style']) for node in top_k_score_node]
+        selected_template_names = [node.metadata['obj'].metadata['style'] for node in top_k_score_node]
+        return selected_template_names[0], ""
     
     # async def extract_user_info(self, )
 

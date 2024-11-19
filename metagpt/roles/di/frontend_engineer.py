@@ -12,6 +12,7 @@ from metagpt.tools.tool_registry import register_tool
 
 from metagpt.schema import UserMessage
 
+
 @register_tool(include_functions=["search_template"])
 class FrontendEngineer(Engineer2):
     instruction: str = FRONTEND_ENGINEER_PROMPT
@@ -59,8 +60,9 @@ class FrontendEngineer(Engineer2):
     def _retrieve_experience(self) -> str:
         return FE_EXAPMLE
 
-    async def set_template(self, template_info: TemplateInfo = None, extra_user_info: str = None, extra_info: str = None) -> None:
-        
+    async def set_template(self, template_info: TemplateInfo = None, extra_user_info: str = None,
+                           extra_info: str = None) -> None:
+
         self._template_content = await self.template_tool.get_template_info(template_info)
         # Update template part in instruction
         self.instruction = self.instruction.replace(
@@ -86,9 +88,9 @@ class FrontendEngineer(Engineer2):
         Returns:
             Processing result description
         """
-        is_business_card_requirement = self._is_business_card_requirement(requirement)
-        if not is_business_card_requirement:
-            return "The requirement is not a business card requirement"
+        # is_business_card_requirement = self._is_business_card_requirement(requirement)
+        # if not is_business_card_requirement:
+        #     return "The requirement is not a business card requirement"
 
         # 1. Search for matching template
         template, extra_user_info = await self.template_tool.search(requirement)
@@ -101,7 +103,6 @@ class FrontendEngineer(Engineer2):
         # update template info
         await self.set_template(template, extra_user_info, extra_info)
 
-        
         if not target_dir:
             return "Failed to copy template"
 
