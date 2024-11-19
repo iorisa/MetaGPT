@@ -254,7 +254,7 @@ class SearchTemplate(BaseModel):
         result = await self._engine.aretrieve(requirement)
         if not result:
             logger.warning('No matching template found')
-            return None, "no user info here"
+            return None, ""
         template, extra_user_info  = await self.select_from_candidates(result)
 
         logger.info(f'Selected template: {template.style}')
@@ -267,7 +267,9 @@ class SearchTemplate(BaseModel):
         top_k_score_node = result[-self.rag_top_k:]
         template_infos = [self.templates.get(node.metadata['obj'].metadata['style']) for node in top_k_score_node]
 
-        return template_infos[0], "no other user info"
+        return template_infos[0], ""
+    
+    # async def extract_user_info(self, )
 
     async def copy_template(self, template: TemplateInfo) -> Path:
         """Copy the template to the target location."""
