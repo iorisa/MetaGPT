@@ -71,7 +71,7 @@ class FrontendEngineer(Engineer2):
         content = f"{extra_info}\n\n{extra_user_info}"
         # Update memory
         self.rc.memory.add(UserMessage(content=content))
-        logger.info(f"Template information, User info and extra info updated")
+        logger.info(f"Template information, User info and extra info updated: \n{content}")
 
     def _is_business_card_requirement(self, requirement: str) -> bool:
         return "名片" in requirement or "business card" in requirement.lower()
@@ -97,7 +97,7 @@ class FrontendEngineer(Engineer2):
 
         target_dir = await self.template_tool.copy_template(template)
 
-        extra_info = f"Successfully copied {template.style} template to {target_dir}, next step is to rename the template folder to the project name"
+        extra_info = f"Successfully copied {template.style} template to {target_dir}, next step is to rename the template folder to the project name. If NO additional user information has been provided, you should directly deploy the retrieved template without any modifications."
         # update template info
         await self.set_template(template, extra_user_info, extra_info)
 
