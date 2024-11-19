@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 from metagpt.llm import LLM
 from metagpt.tools.tool_registry import register_tool
-from metagpt.utils.common import awrite, aread, log_time
+from metagpt.utils.common import awrite, aread, log_time, OutputParser
 
 from metagpt.rag.engines import SimpleEngine
 from metagpt.rag.schema import FAISSRetrieverConfig, BM25RetrieverConfig
@@ -40,7 +40,6 @@ class TemplateInfo(BaseModel):
     # style: TemplateStyle
     style: str = Field(description="Template style")
     template_path: Path = Field(description="Template path")
-    preview_image: str = Field(description="Preview image path")
     description: str = Field(description="Template description")
     required_fields: List[str] = Field(description="Required field list")
 
@@ -48,8 +47,7 @@ class TemplateInfo(BaseModel):
 @register_tool(
     tags=["template", "search"],
     include_functions=[
-        "search",
-        "direct_select",
+        "search"
     ],
 )
 class SearchTemplate(BaseModel):
@@ -60,6 +58,8 @@ class SearchTemplate(BaseModel):
     template_version: str = Field(default="1.0.0")
     deployment_config: Dict[str, Any] = Field(default_factory=dict)
     output_dir: Path = Field(default=Path(METAGPT_ROOT) / "workspace" / "template")
+
+    rag_top_k: int = Field(default=3, description="RAG top k")
 
     _engine: Optional[SimpleEngine] = PrivateAttr(default=None)
 
@@ -89,7 +89,7 @@ class SearchTemplate(BaseModel):
                 TemplateRAGObject(
                     content=doc,
                     metadata={
-                        "type": "template",
+                        "type": "Business Card Template",
                         "style": template.style
                     }
                 )
@@ -163,7 +163,7 @@ class SearchTemplate(BaseModel):
                 config = json.load(f)
             return self._validate_config(config, config_path)
         except Exception as e:
-            logger.error(f"解析现有配置文件失败: {str(e)}")
+            logger.error(f"Failed to parse the existing configuration file:{str(e)}")
             return None
 
     async def _generate_config(self, template_dir: Path, style: str, config_path: Path) -> Optional[TemplateInfo]:
@@ -179,22 +179,20 @@ class SearchTemplate(BaseModel):
         {readme_content}
 
         Please generate a configuration in JSON format that includes the following fields:
-        1. preview_image: Path to the preview image
-        2. description: Template description
-        3. required_fields: List of required fields
+        1. description: Template description
+        2. required_fields: List of required fields
 
         Please ensure that the generated configuration is in valid JSON format.
         ```json
         {{
             "style": "{style}",
-            "preview_image": "the path of preview image, relative to template root",
             "description": "the description of template",
             "required_fields": ["name", "job", "email", "phone", "description", "mbti"]
         }}
         ```
         """
         result = await self.llm.aask(prompt)
-        result = result.replace("```json", "").replace("```", "").strip("\n")
+        result = OutputParser.parse_code(result, "json")
         config = json.loads(result)
 
         template_info = self._validate_config(config, config_path)
@@ -205,7 +203,7 @@ class SearchTemplate(BaseModel):
 
     def _validate_config(self, config: dict, config_path: Path) -> Optional[TemplateInfo]:
         """Validate the configuration and create a TemplateInfo object."""
-        required_config_fields = {'style', 'preview_image', 'description', 'required_fields'}
+        required_config_fields = {'style', 'description', 'required_fields'}
         if not all(field in config for field in required_config_fields):
             logger.warning(f"The template configuration file is missing necessary fields: {config_path}")
             return None
@@ -213,7 +211,6 @@ class SearchTemplate(BaseModel):
             return TemplateInfo(
                 style=config['style'],
                 template_path=config_path.parent,
-                preview_image=config['preview_image'],
                 description=config['description'],
                 required_fields=config['required_fields']
             )
@@ -221,7 +218,7 @@ class SearchTemplate(BaseModel):
     @log_time
     async def _init_templates(self) -> None:
         """Load all templates asynchronously from the template directory."""
-        base_path = METAGPT_ROOT / "template"
+        base_path = METAGPT_ROOT / "template" / "personal_business_card_templates"
         if not base_path.exists():
             logger.warning(f"The template base directory does not exist: {base_path}")
             return
@@ -256,26 +253,26 @@ class SearchTemplate(BaseModel):
         # Ensure it is initialized.
         await self._ensure_initialized()
 
-        template = await self._select_template(requirement)
+        template, extra_user_info  = await self.select_from_candidates(requirement)
         if not template:
             logger.warning('No matching template found')
-            return None
+            return None, extra_user_info
 
         logger.info(f'Selected template: {template.style}')
-        return template
+        return template, extra_user_info
 
-    async def _select_template(self, requirement: str) -> Optional[TemplateInfo]:
+    async def select_from_candidates(self, requirement: str) -> Optional[TemplateInfo]:
         """Use RAG to select the most matching template."""
         logger.info("Start searching for templates")
         result = await self._engine.aretrieve(requirement)
         if not result:
             return None
+        # Take the top k templates with the highest scores from the results list. 
+        top_k_score_node = result[-self.rag_top_k:]
+        template_infos = [self.templates.get(node.metadata['obj'].metadata['style']) for node in top_k_score_node]
+        # style_name = max_score_node.metadata['obj'].metadata['style']
 
-        # Take the template style with the highest score from the results list.
-        max_score_node = max(result, key=lambda x: x.score)
-        style_name = max_score_node.metadata['obj'].metadata['style']
-
-        return self.templates.get(style_name)
+        return template_infos[0], "no other user info"
 
     async def copy_template(self, template: TemplateInfo) -> Path:
         """Copy the template to the target location."""
@@ -328,6 +325,7 @@ class SearchTemplate(BaseModel):
                 rag_top_k = kwargs.get('rag_top_k')
                 if isinstance(rag_top_k, int) and rag_top_k > 0:
                     if hasattr(self.template_tool, '_engine'):
+                        self.rag_top_k = rag_top_k
                         logger.info(f"Updated RAG top_k to {rag_top_k}")
                 else:
                     logger.warning(f"Invalid rag_top_k value: {rag_top_k}")

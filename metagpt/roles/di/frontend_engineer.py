@@ -50,11 +50,6 @@ class FrontendEngineer(Engineer2):
             result = await self.search_template(content)
             logger.info(f"Template search result: {result}")
 
-            content = "This is First Dev Request, I have already handled the template, now I will start to develop the project. \n\nThe following is the template information.\n\n"
-            content += f"{content}\n\n{result}\n\n"
-            # Update memory
-            self.rc.memory.add(UserMessage(content=content))
-            logger.info(f"First dev request, memory updated")
             self.is_first_dev_request = False  # Update flag
 
         await self._format_instruction()
@@ -64,7 +59,7 @@ class FrontendEngineer(Engineer2):
     def _retrieve_experience(self) -> str:
         return FE_EXAPMLE
 
-    async def set_template(self, template_info: TemplateInfo = None) -> None:
+    async def set_template(self, template_info: TemplateInfo = None, extra_user_info: str = None, extra_info: str = None) -> None:
         
         self._template_content = await self.template_tool.get_template_info(template_info)
         # Update template part in instruction
@@ -72,7 +67,11 @@ class FrontendEngineer(Engineer2):
             GENERAL_WEB_APP_TEMPLATE_PROMPT,
             self._template_content
         )
-        logger.info(f"Template update successfully")
+
+        content = f"{extra_info}\n\n{extra_user_info}"
+        # Update memory
+        self.rc.memory.add(UserMessage(content=content))
+        logger.info(f"Template information, User info and extra info updated")
 
     async def search_template(self, requirement: str) -> str:
         """Process template-related requirements
@@ -85,14 +84,17 @@ class FrontendEngineer(Engineer2):
             Processing result description
         """
         # 1. Search for matching template
-        template = await self.template_tool.search(requirement)
+        template, extra_user_info = await self.template_tool.search(requirement)
         if not template:
             return "Can't find a matching template"
 
-        # update template info
-        await self.set_template(template)
-
         target_dir = await self.template_tool.copy_template(template)
+
+        extra_info = f"Successfully copied {template.style} template to {target_dir}, next step is to rename the template folder to the project name"
+        # update template info
+        await self.set_template(template, extra_user_info, extra_info)
+
+        
         if not target_dir:
             return "Failed to copy template"
 
