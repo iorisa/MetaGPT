@@ -16,7 +16,7 @@ from metagpt.utils.common import awrite, log_time, OutputParser
 from metagpt.prompts.di.template import read_file
 
 from metagpt.rag.engines import SimpleEngine
-from metagpt.rag.schema import FAISSRetrieverConfig, BM25RetrieverConfig, LLMRankerConfig
+from metagpt.rag.schema import FAISSRetrieverConfig, BM25RetrieverConfig, LLMRankerConfig, ColbertRerankConfig
 from metagpt.const import METAGPT_ROOT
 from metagpt.prompts.di.template import VUE_APP_TEMPLATE
 
@@ -64,15 +64,27 @@ class SearchTemplate(BaseModel):
     rag_top_k: int = Field(default=3, description="RAG top k")
 
     _engine: Optional[SimpleEngine] = PrivateAttr(default=None)
+    _initialized: bool = PrivateAttr(default=False)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.llm = kwargs.get('llm') or LLM()
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        # Add a flag to track the initialization status.
-        self._initialized = False
+        
+        try:
+            # Try to get the current running loop
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # Instead of deferring, create a task in the running loop
+                loop.create_task(self._ensure_initialized())
+                return
+        except RuntimeError:
+            # If no loop is running, create a new one
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        
+        loop.run_until_complete(self._ensure_initialized())
 
-    @log_time
     async def _init_rag_engine(self):
         """Initialize the RAG engine and load the template description."""
         template_objs = []
@@ -108,29 +120,31 @@ class SearchTemplate(BaseModel):
             ranker_configs=[LLMRankerConfig()],
         )
 
-        async def set_engine(self, engine: SimpleEngine) -> None:
-            """Set a pre-computed RAG engine.
+    async def set_engine(self, engine: SimpleEngine) -> None:
+        """Set a pre-computed RAG engine.
 
-            Args:
-                engine: A pre-computed SimpleEngine instance
+        Args:
+            engine: A pre-computed SimpleEngine instance
 
-            Notes:
-                1. The engine should contain vector representations for all templates
-                2. Calling this method will skip the execution of _init_rag_engine
-            """
-            if not isinstance(engine, SimpleEngine):
-                logger.error("Provided engine is not of type SimpleEngine")
-                return
-                
-            self._engine = engine
-            logger.info("Successfully set pre-computed RAG engine")
+        Notes:
+            1. The engine should contain vector representations for all templates
+            2. Calling this method will skip the execution of _init_rag_engine
+        """
+        if not isinstance(engine, SimpleEngine):
+            logger.error("Provided engine is not of type SimpleEngine")
+            return
+            
+        self._engine = engine
+        logger.info("Successfully set pre-computed RAG engine")
 
+    @log_time
     async def _ensure_initialized(self):
         """Ensure that the template and RAG engine have been initialized."""
         if not self._initialized:
             await self._init_templates()
             await self._init_rag_engine()
             self._initialized = True
+
 
     def _get_template_structure(self, template: Path) -> str:
         """Get template directory structure"""
@@ -214,7 +228,6 @@ class SearchTemplate(BaseModel):
                 required_fields=config['required_fields']
             )
 
-    @log_time
     async def _init_templates(self) -> None:
         """Load all templates asynchronously from the template directory."""
         base_path = METAGPT_ROOT / "template" / "personal_business_card_templates"
@@ -249,8 +262,7 @@ class SearchTemplate(BaseModel):
         Raises:
             Exception: If template search process fails.
         """
-        # Ensure it is initialized.
-        await self._ensure_initialized()
+
         logger.info("Start searching for templates")
         result = await self._engine.aretrieve(requirement)
         if not result:
@@ -284,8 +296,8 @@ class SearchTemplate(BaseModel):
         return target_dir
 
     async def __aenter__(self):
-        await self._init_templates()
-        self._init_rag_engine()
+        """Initialize templates and RAG engine when entering context"""
+        await self._ensure_initialized()
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
