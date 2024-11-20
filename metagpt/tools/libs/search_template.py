@@ -141,8 +141,10 @@ class SearchTemplate(BaseModel):
     async def _ensure_initialized(self):
         """Ensure that the template and RAG engine have been initialized."""
         if not self._initialized:
-            await self._init_templates()
-            await self._init_rag_engine()
+            if not self.templates:
+                await self._init_templates()
+            if self._engine is None:
+                await self._init_rag_engine()
             self._initialized = True
 
 
