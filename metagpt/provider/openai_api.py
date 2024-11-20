@@ -115,7 +115,7 @@ class OpenAILLM(BaseLLM):
 
         log_llm_stream("\n")
         full_reply_content = "".join(collected_messages)
-        if not full_reply_content and raise_if_empty:
+        if raise_if_empty and not full_reply_content:
             raise ConnectionError("Response is empty.")
         if not usage:
             # Some services do not provide the usage attribute, such as OpenAI or OpenLLM
@@ -143,7 +143,7 @@ class OpenAILLM(BaseLLM):
     ) -> ChatCompletion:
         kwargs = self._cons_kwargs(messages, timeout=self.get_timeout(timeout))
         rsp: ChatCompletion = await self.aclient.chat.completions.create(**kwargs)
-        if (not rsp or not rsp.choices or not "".join([i.message.content for i in rsp.choices])) and raise_if_empty:
+        if raise_if_empty and (not rsp or not rsp.choices or not "".join([i.message.content for i in rsp.choices])):
             raise ConnectionError("Response is empty.")
         self._update_costs(rsp.usage)
         return rsp
