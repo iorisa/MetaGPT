@@ -136,6 +136,11 @@ class SearchTemplate(BaseModel):
             
         self._engine = engine
         logger.info("Successfully set pre-computed RAG engine")
+    
+    async def set_templates(self, templates: Dict[str, TemplateInfo]) -> None:
+        """Set the templates dictionary."""
+        self.templates = templates
+        logger.info(f"Templates set: {len(self.templates)}")
 
     @log_time
     async def _ensure_initialized(self):
