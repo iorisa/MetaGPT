@@ -157,7 +157,7 @@ class OpenAILLM(BaseLLM):
         wait=wait_random_exponential(min=1, max=60),
         stop=stop_after_attempt(6),
         after=after_log(logger, logger.level("WARNING").name),
-        retry=retry_if_exception_type(APIConnectionError),
+        retry=retry_if_exception_type((APIConnectionError, ConnectionError)),
         retry_error_callback=log_and_reraise,
     )
     async def acompletion_text(
