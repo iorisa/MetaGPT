@@ -243,6 +243,8 @@ class SearchTemplate(BaseModel):
             logger.warning("No matching template found")
             return None, ""
         template_name, extra_user_info = await self.select_from_candidates(result)
+        if template_name is None:
+            return None, ""
         template = self.templates.get(template_name)
         logger.info(f"Selected template: {template.style}")
         return template, extra_user_info
