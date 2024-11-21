@@ -39,31 +39,31 @@ VUE_CONFIG_CONTENT = read_file(VUE_TEMPLATE_PATH.resolve().absolute() / "vite.co
 
 VUE_APP_TEMPLATE_DESCRIPTION = "general web app or game development. It is based on VUE framework with Tailwind CSS. The template includes the basic structure of a React project, including an index.html file and a src directory with an App.vue file."
 
-VUE_APP_TEMPLATE = f"""
+VUE_APP_TEMPLATE = """
 #### VUE Template Intro
-1. This is a template for {{VUE_APP_TEMPLATE_DESCRIPTION}}
-2. The template is at {{TEMPLATE_PATH}}.
+1. This is a template for {VUE_APP_TEMPLATE_DESCRIPTION}
+2. The template is at {TEMPLATE_PATH}.
 3. Modify index.html, create new jsx files under src if needed, and rewrite src/App.vue to meet the user's requirements.
 4. Style your elements with Tailwind CSS classes directly in the vue files.
 
 ### Project Structure
-{{TEMPLATE_STRUCTURE}}
+{TEMPLATE_STRUCTURE}
 
 ### File Content
 #### index.html (Modify the title)
-{{INDEX_CONTENT}}
+{INDEX_CONTENT}
 
 #### src/main.js (You should NOT modify it)
-{{MAIN_CONTENT}}
+{MAIN_CONTENT}
 
 #### src/App.vue (to be modified)
-{{APP_CONTENT}}
+{APP_CONTENT}
 
 #### src/style.css (You should NOT modify it)
-{{INDEX_CSS_CONTENT}}
+{INDEX_CSS_CONTENT}
 
 #### vite.config.js (only modify it if extra config is absolutely necessary)
-{{CONFIG_CONTENT}}
+{CONFIG_CONTENT}
 """
 
 # REACT_TEMPLATE_PATH = REACT_TEMPLATE_PATH.resolve().absolute() if REACT_TEMPLATE_PATH.exists() else "N/A"
@@ -129,7 +129,7 @@ VUE_APP_TEMPLATE_PROMPT = VUE_APP_TEMPLATE.format(
     MAIN_CONTENT=VUE_MAIN_CONTENT,
     APP_CONTENT=VUE_APP_CONTENT,
     INDEX_CSS_CONTENT=VUE_INDEX_CSS_CONTENT,
-    CONFIG_CONTENT=VUE_CONFIG_CONTENT
+    CONFIG_CONTENT=VUE_CONFIG_CONTENT,
 )
-GENERAL_WEB_APP_TEMPLATE_PROMPT = "### Template Intro\n"
-GENERAL_WEB_APP_TEMPLATE_PROMPT += VUE_APP_TEMPLATE_PROMPT + REACT_APP_TEMPLATE
+
+GENERAL_WEB_APP_TEMPLATE_PROMPT = "### Template Intro\n" + REACT_APP_TEMPLATE

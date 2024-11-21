@@ -30,9 +30,7 @@ class ProductManager(RoleZero):
 
     name: str = "Alice"
     profile: str = "Product Manager"
-    goal: str = (
-        "Analyze user needs, create a PRD or Product Research report (including competitive analysis, market research) after collecting information and data online."
-    )
+    goal: str = "Analyze user needs, create a PRD or Product Research report (including competitive analysis, market research) after collecting information and data online."
     constraints: str = "utilize the same language as the user requirements for seamless communication"
     instruction: str = PRODUCT_MANAGER_INSTRUCTION
     tools: list[str] = [

@@ -16,11 +16,11 @@ from metagpt.tools.libs.deployer import Deployer
 from metagpt.tools.libs.editor import FileBlock
 from metagpt.tools.libs.git import git_create_pull
 from metagpt.tools.libs.image_getter import ImageGetter
+from metagpt.tools.libs.search_template import SearchTemplate
 from metagpt.tools.libs.terminal import Terminal
 from metagpt.tools.tool_registry import register_tool
 from metagpt.utils.common import CodeParser, awrite
 from metagpt.utils.report import EditorReporter
-from metagpt.tools.libs.search_template import SearchTemplate
 
 
 @register_tool(include_functions=["write_new_code", "search_template"])
@@ -49,7 +49,7 @@ class Engineer2(RoleZero):
     run_eval: bool = False
     output_diff: str = ""
     max_react_loop: int = 40
-    #Add a tag to track whether this is the first time receiving software development requirements.
+    # Add a tag to track whether this is the first time receiving software development requirements.
     is_first_dev_request: bool = Field(default=True, exclude=True)
 
     async def _think(self) -> bool:
@@ -173,4 +173,3 @@ class Engineer2(RoleZero):
         if not self.planner.plan.is_plan_finished():
             self.planner.plan.finish_all_tasks()
         return await super()._end()
-

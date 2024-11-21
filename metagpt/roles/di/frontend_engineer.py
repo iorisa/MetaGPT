@@ -1,16 +1,10 @@
-import asyncio
-
-from metagpt.prompts.di.frontend_engineer import FE_EXAPMLE, FRONTEND_ENGINEER_PROMPT
-from metagpt.roles.di.engineer2 import Engineer2
-
 from metagpt.logs import logger
-
+from metagpt.prompts.di.frontend_engineer import FE_EXAPMLE, FRONTEND_ENGINEER_PROMPT
 from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE_PROMPT
-from metagpt.schema import Message
+from metagpt.roles.di.engineer2 import Engineer2
+from metagpt.schema import UserMessage
 from metagpt.tools.libs.search_template import TemplateInfo
 from metagpt.tools.tool_registry import register_tool
-
-from metagpt.schema import UserMessage
 
 
 @register_tool(include_functions=["search_template"])
@@ -24,10 +18,8 @@ class FrontendEngineer(Engineer2):
         "ImageGetter",
         "Deployer",
         "Engineer2",
-        "FrontendEngineer"
+        "FrontendEngineer",
     ]
-
-
 
     def _update_tool_execution(self):
         super()._update_tool_execution()
@@ -37,19 +29,13 @@ class FrontendEngineer(Engineer2):
             }
         )
 
-    def _get_latest_message(self) -> Message:
-        for msg in self.rc.memory.get():
-            if "Alex" in msg.send_to:
-                return msg
-        return None
-
     async def _think(self) -> bool:
         # Check if the latest message is a development request
-        send_msg = self._get_latest_message()
+        send_msg = self.rc.memory.get(-1)[0]
 
         if self.is_first_dev_request:
             content = send_msg.content.replace("[Message] from Mike to Alex: ", "")
-            logger.info(f"First dev request, handle template")
+            logger.info("First dev request, handle template")
             result = await self.search_template(content)
             logger.info(f"Template search result: {result}")
 
@@ -62,21 +48,17 @@ class FrontendEngineer(Engineer2):
     def _retrieve_experience(self) -> str:
         return FE_EXAPMLE
 
-    async def set_template(self, template_info: TemplateInfo = None, extra_user_info: str = None,
-                           extra_info: str = None) -> None:
-
+    async def set_template(
+        self, template_info: TemplateInfo = None, extra_user_info: str = None, extra_info: str = None
+    ) -> None:
         self._template_content = await self.template_tool.get_template_info(template_info)
         # Update template part in instruction
-        self.instruction = self.instruction.replace(
-            GENERAL_WEB_APP_TEMPLATE_PROMPT,
-            self._template_content
-        )
+        self.instruction = self.instruction.replace(GENERAL_WEB_APP_TEMPLATE_PROMPT, self._template_content)
 
         content = f"{extra_info}\n\n{extra_user_info}"
         # Update memory
         self.rc.memory.add(UserMessage(content=content))
         logger.info(f"Template information, User info and extra info updated: \n{content}")
-
 
     async def search_template(self, requirement: str) -> str:
         """Process template-related requirements

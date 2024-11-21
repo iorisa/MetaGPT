@@ -1,30 +1,32 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import shutil
-from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple
 import subprocess
-
-import asyncio
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
-from metagpt.llm import LLM
-from metagpt.tools.tool_registry import register_tool
-from metagpt.utils.common import awrite, log_time, OutputParser
-from metagpt.prompts.di.template import read_file
-
-from metagpt.rag.engines import SimpleEngine
-from metagpt.rag.schema import FAISSRetrieverConfig, BM25RetrieverConfig, LLMRankerConfig, ColbertRerankConfig
 from metagpt.const import METAGPT_ROOT
-from metagpt.prompts.di.template import VUE_APP_TEMPLATE
-
+from metagpt.llm import LLM
 from metagpt.logs import logger
+from metagpt.prompts.di.template import VUE_APP_TEMPLATE, read_file
+from metagpt.rag.engines import SimpleEngine
+from metagpt.rag.schema import (
+    BM25RetrieverConfig,
+    FAISSRetrieverConfig,
+    LLMRankerConfig,
+)
+from metagpt.tools.tool_registry import register_tool
+from metagpt.utils.async_helper import run_coroutine_sync
+from metagpt.utils.common import OutputParser, awrite, log_time
 
 
 class TemplateRAGObject(BaseModel):
     """Template object class implementing the RAGObject interface"""
+
     content: str = Field(description="Template content")
     metadata: dict = Field(description="Metadata")
 
@@ -39,6 +41,7 @@ class TemplateRAGObject(BaseModel):
 
 class TemplateInfo(BaseModel):
     """Template information data category"""
+
     # style: TemplateStyle
     style: str = Field(description="Template style")
     template_path: Path = Field(description="Template path")
@@ -48,9 +51,7 @@ class TemplateInfo(BaseModel):
 
 @register_tool(
     tags=["template", "search"],
-    include_functions=[
-        "search"
-    ],
+    include_functions=["search"],
 )
 class SearchTemplate(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -68,22 +69,10 @@ class SearchTemplate(BaseModel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.llm = kwargs.get('llm') or LLM()
+        self.llm = kwargs.get("llm") or LLM()
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        
-        try:
-            # Try to get the current running loop
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # Instead of deferring, create a task in the running loop
-                loop.create_task(self._ensure_initialized())
-                return
-        except RuntimeError:
-            # If no loop is running, create a new one
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        loop.run_until_complete(self._ensure_initialized())
+
+        run_coroutine_sync(self._ensure_initialized())
 
     async def _init_rag_engine(self):
         """Initialize the RAG engine and load the template description."""
@@ -100,23 +89,14 @@ class SearchTemplate(BaseModel):
             {template.template_path}
             """
             template_objs.append(
-                TemplateRAGObject(
-                    content=doc,
-                    metadata={
-                        "type": "Business Card Template",
-                        "style": template.style
-                    }
-                )
+                TemplateRAGObject(content=doc, metadata={"type": "Business Card Template", "style": template.style})
             )
 
         # Wrap synchronous operations as asynchronous using asyncio.to_thread.
         self._engine = await asyncio.to_thread(
             SimpleEngine.from_objs,
             objs=template_objs,
-            retriever_configs=[
-                FAISSRetrieverConfig(),
-                BM25RetrieverConfig()
-            ],
+            retriever_configs=[FAISSRetrieverConfig(), BM25RetrieverConfig()],
             ranker_configs=[LLMRankerConfig()],
         )
 
@@ -133,10 +113,10 @@ class SearchTemplate(BaseModel):
         if not isinstance(engine, SimpleEngine):
             logger.error("Provided engine is not of type SimpleEngine")
             return
-            
+
         self._engine = engine
         logger.info("Successfully set pre-computed RAG engine")
-    
+
     async def set_templates(self, templates: Dict[str, TemplateInfo]) -> None:
         """Set the templates dictionary."""
         self.templates = templates
@@ -152,14 +132,9 @@ class SearchTemplate(BaseModel):
                 await self._init_rag_engine()
             self._initialized = True
 
-
     def _get_template_structure(self, template: Path) -> str:
         """Get template directory structure"""
-        result = subprocess.run(
-            ['tree', template],
-            capture_output=True,
-            text=True
-        )
+        result = subprocess.run(["tree", template], capture_output=True, text=True)
         return result.stdout
 
     async def _parse_template_config(self, template_dir: Path) -> Optional[TemplateInfo]:
@@ -179,7 +154,7 @@ class SearchTemplate(BaseModel):
     async def _read_existing_config(self, config_path: Path) -> Optional[TemplateInfo]:
         """Read and verify the existing configuration file."""
         try:
-            with open(config_path, 'r', encoding='utf-8') as f:
+            with open(config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
             return self._validate_config(config, config_path)
         except Exception as e:
@@ -223,16 +198,16 @@ class SearchTemplate(BaseModel):
 
     def _validate_config(self, config: dict, config_path: Path) -> Optional[TemplateInfo]:
         """Validate the configuration and create a TemplateInfo object."""
-        required_config_fields = {'style', 'description', 'required_fields'}
+        required_config_fields = {"style", "description", "required_fields"}
         if not all(field in config for field in required_config_fields):
             logger.warning(f"The template configuration file is missing necessary fields: {config_path}")
             return None
         else:
             return TemplateInfo(
-                style=config['style'],
+                style=config["style"],
                 template_path=config_path.parent,
-                description=config['description'],
-                required_fields=config['required_fields']
+                description=config["description"],
+                required_fields=config["required_fields"],
             )
 
     async def _init_templates(self) -> None:
@@ -273,22 +248,22 @@ class SearchTemplate(BaseModel):
         logger.info("Start searching for templates")
         result = await self._engine.aretrieve(requirement)
         if not result:
-            logger.warning('No matching template found')
+            logger.warning("No matching template found")
             return None, ""
-        template_name, extra_user_info  = await self.select_from_candidates(result)
+        template_name, extra_user_info = await self.select_from_candidates(result)
         template = self.templates.get(template_name)
-        logger.info(f'Selected template: {template.style}')
+        logger.info(f"Selected template: {template.style}")
         return template, extra_user_info
 
     async def select_from_candidates(self, result: List[Any]) -> Optional[Tuple[str, str]]:
         """Use RAG to select the most matching template."""
 
-        # Take the top k templates with the highest scores from the results list. 
-        top_k_score_node = result[-self.rag_top_k:]
+        # Take the top k templates with the highest scores from the results list.
+        top_k_score_node = result[-self.rag_top_k :]
         # template_infos = [self.templates.get(node.metadata['obj'].metadata['style']) for node in top_k_score_node]
-        selected_template_names = [node.metadata['obj'].metadata['style'] for node in top_k_score_node]
+        selected_template_names = [node.metadata["obj"].metadata["style"] for node in top_k_score_node]
         return selected_template_names[0], ""
-    
+
     # async def extract_user_info(self, )
 
     async def copy_template(self, template: TemplateInfo) -> Path:
@@ -338,10 +313,10 @@ class SearchTemplate(BaseModel):
         """
         try:
             # update rag top_k, check 'rag_top_k' where in kwargs
-            if 'rag_top_k' in kwargs:
-                rag_top_k = kwargs.get('rag_top_k')
+            if "rag_top_k" in kwargs:
+                rag_top_k = kwargs.get("rag_top_k")
                 if isinstance(rag_top_k, int) and rag_top_k > 0:
-                    if hasattr(self.template_tool, '_engine'):
+                    if hasattr(self.template_tool, "_engine"):
                         self.rag_top_k = rag_top_k
                         logger.info(f"Updated RAG top_k to {rag_top_k}")
                 else:
@@ -350,13 +325,12 @@ class SearchTemplate(BaseModel):
             return True
 
         except Exception as e:
-            logger.error(f'Error applying user info: {str(e)}')
+            logger.error(f"Error applying user info: {str(e)}")
             return False
 
     def get_required_fields(self) -> List[str]:
         """Get all required fields for the template"""
         return list(set([field for template in self.templates.values() for field in template.required_fields]))
-
 
     async def get_template_info(self, template_info: TemplateInfo = None) -> str:
         """Get the template information for the given template style"""
@@ -371,8 +345,5 @@ class SearchTemplate(BaseModel):
                 MAIN_CONTENT=read_file(template_info.template_path / "src" / "main.js"),
                 APP_CONTENT=read_file(template_info.template_path / "src" / "App.vue"),
                 INDEX_CSS_CONTENT=read_file(template_info.template_path / "src" / "style.css"),
-                CONFIG_CONTENT=read_file(template_info.template_path / "vite.config.js")
+                CONFIG_CONTENT=read_file(template_info.template_path / "vite.config.js"),
             )
-            
-        
-
