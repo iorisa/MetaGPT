@@ -1,15 +1,23 @@
+import os
+from importlib.util import find_spec
+from pathlib import Path
+
+from pydantic import model_validator
+
+from metagpt.const import METAGPT_ROOT
 from metagpt.logs import logger
 from metagpt.prompts.di.frontend_engineer import FE_EXAPMLE, FRONTEND_ENGINEER_PROMPT
 from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE_PROMPT
 from metagpt.roles.di.engineer2 import Engineer2
 from metagpt.schema import UserMessage
-from metagpt.tools.libs.search_template import TemplateInfo
+from metagpt.tools.libs.search_template import SearchTemplate, TemplateInfo
 from metagpt.tools.tool_registry import register_tool
 
 
 @register_tool(include_functions=["search_template"])
 class FrontendEngineer(Engineer2):
     instruction: str = FRONTEND_ENGINEER_PROMPT
+    template_tool: SearchTemplate = None
     tools: list[str] = [
         "Editor:read,write,edit_file_by_replace,insert_content_at_line,append_file",
         "RoleZero",
@@ -18,10 +26,39 @@ class FrontendEngineer(Engineer2):
         "ImageGetter",
         "Deployer",
         "Engineer2",
-        "FrontendEngineer",
     ]
 
-    def _update_tool_execution(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.set_search_template_tool()
+
+    def set_search_template_tool(self):
+        is_not_empty_templates_path = (
+            os.path.exists(Path(METAGPT_ROOT) / self.config.frontend_engineer_config.templates_path)
+            and len(os.listdir(Path(METAGPT_ROOT) / self.config.frontend_engineer_config.templates_path)) > 0
+        )
+        is_installed_rag = self._check_rag_installed()
+
+        if (
+            self.config.frontend_engineer_config.enable_search_template
+            and is_not_empty_templates_path
+            and is_installed_rag
+        ):
+            self.tools.append("FrontendEngineer")
+
+            self.template_tool = SearchTemplate(
+                template_path=Path(METAGPT_ROOT) / self.config.frontend_engineer_config.templates_path
+            )
+            logger.info("FrontendEngineer tools set")
+        else:
+            logger.warning("FrontendEngineer tools not set")
+
+    def _check_rag_installed(self) -> bool:
+        """Check if RAG dependencies are installed"""
+        return find_spec("llama_index") is not None
+
+    @model_validator(mode="after")
+    def _update_tool_execution(self) -> "FrontendEngineer":
         super()._update_tool_execution()
         self.tool_execution_map.update(
             {
@@ -36,8 +73,11 @@ class FrontendEngineer(Engineer2):
         if self.is_first_dev_request:
             content = send_msg.content.replace("[Message] from Mike to Alex: ", "")
             logger.info("First dev request, handle template")
-            result = await self.search_template(content)
-            logger.info(f"Template search result: {result}")
+            if self.template_tool:
+                result = await self.search_template(content)
+                logger.info(f"Template search result: {result}")
+            else:
+                logger.warning("Template tool not found, skip template search")
 
             self.is_first_dev_request = False  # Update flag
 

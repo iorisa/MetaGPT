@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, model_validator
 from metagpt.configs.browser_config import BrowserConfig
 from metagpt.configs.embedding_config import EmbeddingConfig
 from metagpt.configs.exp_pool_config import ExperiencePoolConfig
+from metagpt.configs.frontend_engineer_config import FrontendEngineerConfig
 from metagpt.configs.llm_config import LLMConfig, LLMType
 from metagpt.configs.mermaid_config import MermaidConfig
 from metagpt.configs.omniparse_config import OmniParseConfig
@@ -92,6 +93,9 @@ class Config(CLIParams, YamlModel):
 
     # RoleZero's configuration
     role_zero: RoleZeroConfig = Field(default_factory=RoleZeroConfig)
+
+    # FrontendEngineer's configuration
+    frontend_engineer_config: FrontendEngineerConfig = Field(default_factory=FrontendEngineerConfig)
 
     omniparse: Optional[OmniParseConfig] = None
 

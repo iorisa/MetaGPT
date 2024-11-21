@@ -16,14 +16,13 @@ from metagpt.tools.libs.deployer import Deployer
 from metagpt.tools.libs.editor import FileBlock
 from metagpt.tools.libs.git import git_create_pull
 from metagpt.tools.libs.image_getter import ImageGetter
-from metagpt.tools.libs.search_template import SearchTemplate
 from metagpt.tools.libs.terminal import Terminal
 from metagpt.tools.tool_registry import register_tool
 from metagpt.utils.common import CodeParser, awrite
 from metagpt.utils.report import EditorReporter
 
 
-@register_tool(include_functions=["write_new_code", "search_template"])
+@register_tool(include_functions=["write_new_code"])
 class Engineer2(RoleZero):
     name: str = "Alex"
     profile: str = "Engineer"
@@ -31,7 +30,6 @@ class Engineer2(RoleZero):
     instruction: str = ENGINEER2_INSTRUCTION
     terminal: Terminal = Field(default_factory=Terminal, exclude=True)
     deployer: Deployer = Field(default_factory=Deployer, exclude=True)
-    template_tool: SearchTemplate = Field(default_factory=SearchTemplate, exclude=False)
     tools: list[str] = [
         "Plan",
         "Editor",
@@ -50,7 +48,7 @@ class Engineer2(RoleZero):
     output_diff: str = ""
     max_react_loop: int = 40
     # Add a tag to track whether this is the first time receiving software development requirements.
-    is_first_dev_request: bool = Field(default=True, exclude=True)
+    is_first_dev_request: bool = Field(default=True, exclude=False)
 
     async def _think(self) -> bool:
         await self._format_instruction()

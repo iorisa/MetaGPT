@@ -57,6 +57,7 @@ class SearchTemplate(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     templates: Dict[str, TemplateInfo] = Field(default_factory=dict)
+    template_path: Path = Field(default=Path(METAGPT_ROOT) / "template" / "personal_business_card_templates")
     llm: Optional[LLM] = Field(default=None)
     template_version: str = Field(default="1.0.0")
     deployment_config: Dict[str, Any] = Field(default_factory=dict)
@@ -212,13 +213,12 @@ class SearchTemplate(BaseModel):
 
     async def _init_templates(self) -> None:
         """Load all templates asynchronously from the template directory."""
-        base_path = METAGPT_ROOT / "template" / "personal_business_card_templates"
-        if not base_path.exists():
-            logger.warning(f"The template base directory does not exist: {base_path}")
+        if not self.template_path.exists():
+            logger.warning(f"The template base directory does not exist: {self.template_path}")
             return
 
         # Get all template directories
-        template_dirs = [d for d in base_path.iterdir() if d.is_dir()]
+        template_dirs = [d for d in self.template_path.iterdir() if d.is_dir()]
 
         # Use asyncio.gather to concurrently process all templates.
         template_infos = await asyncio.gather(
