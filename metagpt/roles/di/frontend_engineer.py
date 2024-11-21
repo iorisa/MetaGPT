@@ -30,7 +30,6 @@ class FrontendEngineer(Engineer2):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.set_search_template_tool()
 
     def set_search_template_tool(self):
         is_not_empty_templates_path = (
@@ -44,8 +43,6 @@ class FrontendEngineer(Engineer2):
             and is_not_empty_templates_path
             and is_installed_rag
         ):
-            self.tools.append("FrontendEngineer")
-
             self.template_tool = SearchTemplate(
                 template_path=Path(METAGPT_ROOT) / self.config.frontend_engineer_config.templates_path
             )
@@ -65,6 +62,13 @@ class FrontendEngineer(Engineer2):
                 "FrontendEngineer.search_template": self.search_template,
             }
         )
+        if self.template_tool is None:
+            self.set_search_template_tool()
+
+        if self.template_tool is not None:
+            self.tools.append("FrontendEngineer")
+
+        return self
 
     async def _think(self) -> bool:
         # Check if the latest message is a development request
