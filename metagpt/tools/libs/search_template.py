@@ -75,8 +75,12 @@ class SearchTemplate(BaseModel):
 
         run_coroutine_sync(self._ensure_initialized())
 
-    async def _init_rag_engine(self):
+    async def _init_rag_engine(self) -> bool:
         """Initialize the RAG engine and load the template description."""
+        if not self.templates:
+            logger.warning("No templates found, please check the template path")
+            return False
+
         template_objs = []
 
         # First, prepare all template documents and objects.
@@ -100,6 +104,7 @@ class SearchTemplate(BaseModel):
             retriever_configs=[FAISSRetrieverConfig(), BM25RetrieverConfig()],
             ranker_configs=[LLMRankerConfig()],
         )
+        return True
 
     async def set_engine(self, engine: SimpleEngine) -> None:
         """Set a pre-computed RAG engine.
@@ -127,11 +132,12 @@ class SearchTemplate(BaseModel):
     async def _ensure_initialized(self):
         """Ensure that the template and RAG engine have been initialized."""
         if not self._initialized:
+            init_tempalte_flag, init_rag_flag = False, False
             if not self.templates:
-                await self._init_templates()
-            if self._engine is None:
-                await self._init_rag_engine()
-            self._initialized = True
+                init_tempalte_flag = await self._init_templates()
+            if self._engine is None and init_tempalte_flag:
+                init_rag_flag = await self._init_rag_engine()
+            self._initialized = init_tempalte_flag and init_rag_flag
 
     def _get_template_structure(self, template: Path) -> str:
         """Get template directory structure"""
@@ -139,7 +145,8 @@ class SearchTemplate(BaseModel):
         return result.stdout
 
     async def _parse_template_config(self, template_dir: Path) -> Optional[TemplateInfo]:
-        """Parse the configuration files in the template directory; if the configuration does not exist, generate it using LLM."""
+        """Parse the configuration files in the template directory; if the configuration
+        does not exist, generate it using LLM."""
         config_path = template_dir / "template_config.json"
         style = template_dir.name
 
@@ -167,26 +174,28 @@ class SearchTemplate(BaseModel):
         dir_structure = self._get_template_structure(template_dir)
         readme_content = read_file(template_dir / "README.md")
 
-        prompt = f"""Please generate a template configuration based on the following template directory information:
-        Directory structure:
-        {dir_structure}
+        prompt = (
+            f"Please generate a template configuration based on the following template "
+            f"directory information:\n"
+            f"Directory structure:\n"
+            f"{dir_structure}\n\n"
+            f"README content:\n"
+            f"{readme_content}\n\n"
+            f"Please generate a configuration in JSON format that includes the following "
+            f"fields:\n"
+            f"1. description: Template description\n"
+            f"2. required_fields: List of required fields\n\n"
+            f"Please ensure that the generated configuration is in valid JSON format.\n"
+            f"```json\n"
+            f"{{\n"
+            f'    "style": "{style}",\n'
+            f'    "description": "the description of template",\n'
+            f'    "required_fields": ["name", "job", "email", "phone", "description", '
+            f'"mbti"]\n'
+            f"}}\n"
+            f"```"
+        )
 
-        README content:
-        {readme_content}
-
-        Please generate a configuration in JSON format that includes the following fields:
-        1. description: Template description
-        2. required_fields: List of required fields
-
-        Please ensure that the generated configuration is in valid JSON format.
-        ```json
-        {{
-            "style": "{style}",
-            "description": "the description of template",
-            "required_fields": ["name", "job", "email", "phone", "description", "mbti"]
-        }}
-        ```
-        """
         result = await self.llm.aask(prompt)
         result = OutputParser.parse_code(result, "json")
         config = json.loads(result)
@@ -211,11 +220,11 @@ class SearchTemplate(BaseModel):
                 required_fields=config["required_fields"],
             )
 
-    async def _init_templates(self) -> None:
+    async def _init_templates(self) -> bool:
         """Load all templates asynchronously from the template directory."""
         if not self.template_path.exists():
             logger.warning(f"The template base directory does not exist: {self.template_path}")
-            return
+            return False
 
         # Get all template directories
         template_dirs = [d for d in self.template_path.iterdir() if d.is_dir()]
@@ -230,6 +239,7 @@ class SearchTemplate(BaseModel):
             if template_info:
                 self.templates[template_info.style] = template_info
                 logger.info(f"Template loaded successfully:{template_info.style}")
+        return True
 
     @log_time
     async def search(self, requirement: str) -> Optional[Tuple[TemplateInfo, str]]:
