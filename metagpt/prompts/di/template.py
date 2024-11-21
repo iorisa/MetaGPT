@@ -133,3 +133,25 @@ VUE_APP_TEMPLATE_PROMPT = VUE_APP_TEMPLATE.format(
 )
 
 GENERAL_WEB_APP_TEMPLATE_PROMPT = "### Template Intro\n" + REACT_APP_TEMPLATE
+
+GENERATE_TEMPLATE_CONFIG_PROMPT = """
+Please generate a template configuration based on the following template 
+directory information:
+Directory structure:
+{dir_structure}
+README content:
+{readme_content}
+Please generate a configuration in JSON format that includes the following 
+fields:
+1. description: Template description
+2. required_fields: List of required fields
+
+Please ensure that the generated configuration is in valid JSON format.
+```json
+{
+    "style": "{style}",
+    "description": "the description of template",
+    "required_fields": ["name", "job", "email", "phone", "description", "mbti"]
+}
+```
+"""

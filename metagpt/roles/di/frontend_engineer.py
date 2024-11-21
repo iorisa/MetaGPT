@@ -6,10 +6,8 @@ from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE_PROMPT
 from metagpt.roles.di.engineer2 import Engineer2
 from metagpt.schema import UserMessage
 from metagpt.tools.libs.search_template import SearchTemplate, TemplateInfo
-from metagpt.tools.tool_registry import register_tool
 
 
-@register_tool(include_functions=["search_template"])
 class FrontendEngineer(Engineer2):
     use_search_template: bool = False
     instruction: str = FRONTEND_ENGINEER_PROMPT

@@ -12,7 +12,11 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 from metagpt.const import METAGPT_ROOT
 from metagpt.llm import LLM
 from metagpt.logs import logger
-from metagpt.prompts.di.template import VUE_APP_TEMPLATE, read_file
+from metagpt.prompts.di.template import (
+    GENERATE_TEMPLATE_CONFIG_PROMPT,
+    VUE_APP_TEMPLATE,
+    read_file,
+)
 from metagpt.rag.engines import SimpleEngine
 from metagpt.rag.schema import (
     BM25RetrieverConfig,
@@ -58,7 +62,7 @@ class SearchTemplate(BaseModel):
 
     templates: Dict[str, TemplateInfo] = Field(default_factory=dict)
     template_path: Path = Field(default=Path(METAGPT_ROOT) / "template" / "personal_business_card_templates")
-    llm: Optional[LLM] = Field(default=None)
+    llm: Optional[LLM] = Field(default=None, exclude=True)
     template_version: str = Field(default="1.0.0")
     deployment_config: Dict[str, Any] = Field(default_factory=dict)
     output_dir: Path = Field(default=Path(METAGPT_ROOT) / "workspace" / "template")
@@ -171,32 +175,10 @@ class SearchTemplate(BaseModel):
 
     async def _generate_config(self, template_dir: Path, style: str, config_path: Path) -> Optional[TemplateInfo]:
         """Generate new configurations through LLM"""
-        dir_structure = self._get_template_structure(template_dir)
-        readme_content = read_file(template_dir / "README.md")
+        self._get_template_structure(template_dir)
+        read_file(template_dir / "README.md")
 
-        prompt = (
-            f"Please generate a template configuration based on the following template "
-            f"directory information:\n"
-            f"Directory structure:\n"
-            f"{dir_structure}\n\n"
-            f"README content:\n"
-            f"{readme_content}\n\n"
-            f"Please generate a configuration in JSON format that includes the following "
-            f"fields:\n"
-            f"1. description: Template description\n"
-            f"2. required_fields: List of required fields\n\n"
-            f"Please ensure that the generated configuration is in valid JSON format.\n"
-            f"```json\n"
-            f"{{\n"
-            f'    "style": "{style}",\n'
-            f'    "description": "the description of template",\n'
-            f'    "required_fields": ["name", "job", "email", "phone", "description", '
-            f'"mbti"]\n'
-            f"}}\n"
-            f"```"
-        )
-
-        result = await self.llm.aask(prompt)
+        result = await self.llm.aask(GENERATE_TEMPLATE_CONFIG_PROMPT)
         result = OutputParser.parse_code(result, "json")
         config = json.loads(result)
 
