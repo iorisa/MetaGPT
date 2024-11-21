@@ -66,7 +66,7 @@ VUE_APP_TEMPLATE = """
 {CONFIG_CONTENT}
 """
 
-# REACT_TEMPLATE_PATH = REACT_TEMPLATE_PATH.resolve().absolute() if REACT_TEMPLATE_PATH.exists() else "N/A"
+REACT_TEMPLATE_PATH = REACT_TEMPLATE_PATH.resolve().absolute() if REACT_TEMPLATE_PATH.exists() else "N/A"
 REACT_TEMPLATE_STRUCTURE = (
     """
 react_template/
