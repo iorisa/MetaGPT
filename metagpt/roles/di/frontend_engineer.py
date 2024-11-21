@@ -1,10 +1,5 @@
-import os
-from importlib.util import find_spec
-from pathlib import Path
-
 from pydantic import model_validator
 
-from metagpt.const import METAGPT_ROOT
 from metagpt.logs import logger
 from metagpt.prompts.di.frontend_engineer import FE_EXAPMLE, FRONTEND_ENGINEER_PROMPT
 from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE_PROMPT
@@ -16,6 +11,7 @@ from metagpt.tools.tool_registry import register_tool
 
 @register_tool(include_functions=["search_template"])
 class FrontendEngineer(Engineer2):
+    use_search_template: bool = False
     instruction: str = FRONTEND_ENGINEER_PROMPT
     template_tool: SearchTemplate = None
     tools: list[str] = [
@@ -28,46 +24,13 @@ class FrontendEngineer(Engineer2):
         "Engineer2",
     ]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
+    @model_validator(mode="after")
     def set_search_template_tool(self):
-        is_not_empty_templates_path = (
-            os.path.exists(Path(METAGPT_ROOT) / self.config.frontend_engineer_config.templates_path)
-            and len(os.listdir(Path(METAGPT_ROOT) / self.config.frontend_engineer_config.templates_path)) > 0
-        )
-        is_installed_rag = self._check_rag_installed()
-
-        if (
-            self.config.frontend_engineer_config.enable_search_template
-            and is_not_empty_templates_path
-            and is_installed_rag
-        ):
-            self.template_tool = SearchTemplate(
-                template_path=Path(METAGPT_ROOT) / self.config.frontend_engineer_config.templates_path
-            )
+        if self.template_tool is None and self.use_search_template:
+            self.template_tool = SearchTemplate()
             logger.info("FrontendEngineer tools set")
         else:
             logger.warning("FrontendEngineer tools not set")
-
-    def _check_rag_installed(self) -> bool:
-        """Check if RAG dependencies are installed"""
-        return find_spec("llama_index") is not None
-
-    @model_validator(mode="after")
-    def _update_tool_execution(self) -> "FrontendEngineer":
-        super()._update_tool_execution()
-        self.tool_execution_map.update(
-            {
-                "FrontendEngineer.search_template": self.search_template,
-            }
-        )
-        if self.template_tool is None:
-            self.set_search_template_tool()
-
-        if self.template_tool is not None:
-            self.tools.append("FrontendEngineer")
-
         return self
 
     async def _think(self) -> bool:
