@@ -539,6 +539,7 @@ class Role(BaseRole, SerializationMixin, ContextMixin, BaseModel):
                 msg = Message(content="\n".join(with_message))
             if not msg.cause_by:
                 msg.cause_by = UserRequirement
+            msg.send_to.add(self.name)
             self.put_message(msg)
         if not await self._observe():
             # If there is no new information, suspend and wait
