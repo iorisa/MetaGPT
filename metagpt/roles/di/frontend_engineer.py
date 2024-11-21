@@ -33,10 +33,10 @@ class FrontendEngineer(Engineer2):
 
     async def _think(self) -> bool:
         # Check if the latest message is a development request
-        send_msg = self.rc.memory.get(-1)
+        send_msg = self.rc.memory.get()
 
         if self.is_first_dev_request and len(send_msg) > 0:
-            content = send_msg[0].content.replace("[Message] from Mike to Alex: ", "")
+            content = send_msg[0].content
             logger.info("First dev request, handle template")
             if self.template_tool:
                 result = await self.search_template(content)
