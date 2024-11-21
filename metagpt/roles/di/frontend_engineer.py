@@ -9,7 +9,7 @@ from metagpt.tools.libs.search_template import SearchTemplate, TemplateInfo
 
 
 class FrontendEngineer(Engineer2):
-    use_search_template: bool = False
+    use_search_template: bool = True
     instruction: str = FRONTEND_ENGINEER_PROMPT
     template_tool: SearchTemplate = None
     tools: list[str] = [
@@ -33,10 +33,10 @@ class FrontendEngineer(Engineer2):
 
     async def _think(self) -> bool:
         # Check if the latest message is a development request
-        send_msg = self.rc.memory.get(-1)[0]
+        send_msg = self.rc.memory.get(-1)
 
-        if self.is_first_dev_request:
-            content = send_msg.content.replace("[Message] from Mike to Alex: ", "")
+        if self.is_first_dev_request and len(send_msg) > 0:
+            content = send_msg[0].content.replace("[Message] from Mike to Alex: ", "")
             logger.info("First dev request, handle template")
             if self.template_tool:
                 result = await self.search_template(content)
