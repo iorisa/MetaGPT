@@ -87,7 +87,9 @@ class OpenAILLM(BaseLLM):
 
         return params
 
-    async def _achat_completion_stream(self, messages: list[dict], timeout=USE_CONFIG_TIMEOUT) -> str:
+    async def _achat_completion_stream(
+        self, messages: list[dict], timeout=USE_CONFIG_TIMEOUT, raise_if_empty: bool = True
+    ) -> str:
         response: AsyncStream[ChatCompletionChunk] = await self.aclient.chat.completions.create(
             **self._cons_kwargs(messages, timeout=self.get_timeout(timeout)), stream=True
         )
@@ -113,6 +115,8 @@ class OpenAILLM(BaseLLM):
 
         log_llm_stream("\n")
         full_reply_content = "".join(collected_messages)
+        if raise_if_empty and not full_reply_content:
+            raise ConnectionError("Response is empty.")
         if not usage:
             # Some services do not provide the usage attribute, such as OpenAI or OpenLLM
             usage = self._calc_usage(messages, full_reply_content)
@@ -134,28 +138,36 @@ class OpenAILLM(BaseLLM):
             kwargs.update(extra_kwargs)
         return kwargs
 
-    async def _achat_completion(self, messages: list[dict], timeout=USE_CONFIG_TIMEOUT) -> ChatCompletion:
+    async def _achat_completion(
+        self, messages: list[dict], timeout=USE_CONFIG_TIMEOUT, raise_if_empty: bool = True
+    ) -> ChatCompletion:
         kwargs = self._cons_kwargs(messages, timeout=self.get_timeout(timeout))
         rsp: ChatCompletion = await self.aclient.chat.completions.create(**kwargs)
+        if raise_if_empty and (not rsp or not rsp.choices or not "".join([i.message.content for i in rsp.choices])):
+            raise ConnectionError("Response is empty.")
         self._update_costs(rsp.usage)
         return rsp
 
-    async def acompletion(self, messages: list[dict], timeout=USE_CONFIG_TIMEOUT) -> ChatCompletion:
-        return await self._achat_completion(messages, timeout=self.get_timeout(timeout))
+    async def acompletion(
+        self, messages: list[dict], timeout=USE_CONFIG_TIMEOUT, raise_if_empty: bool = True
+    ) -> ChatCompletion:
+        return await self._achat_completion(messages, timeout=self.get_timeout(timeout), raise_if_empty=raise_if_empty)
 
     @retry(
         wait=wait_random_exponential(min=1, max=60),
         stop=stop_after_attempt(6),
         after=after_log(logger, logger.level("WARNING").name),
-        retry=retry_if_exception_type(APIConnectionError),
+        retry=retry_if_exception_type((APIConnectionError, ConnectionError)),
         retry_error_callback=log_and_reraise,
     )
-    async def acompletion_text(self, messages: list[dict], stream=False, timeout=USE_CONFIG_TIMEOUT) -> str:
+    async def acompletion_text(
+        self, messages: list[dict], stream=False, timeout=USE_CONFIG_TIMEOUT, raise_if_empty: bool = True
+    ) -> str:
         """when streaming, print each token in place."""
         if stream:
-            return await self._achat_completion_stream(messages, timeout=timeout)
+            return await self._achat_completion_stream(messages, timeout=timeout, raise_if_empty=raise_if_empty)
 
-        rsp = await self._achat_completion(messages, timeout=self.get_timeout(timeout))
+        rsp = await self._achat_completion(messages, timeout=self.get_timeout(timeout), raise_if_empty=raise_if_empty)
         return self.get_choice_text(rsp)
 
     async def _achat_completion_function(
