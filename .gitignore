@@ -192,7 +192,3 @@ cov.xml
 .python-version
 tests/data/requirements/*.jpg
 
-# template
-template/
-tests/metagpt/environment/mgx_env/run_mgx_env.py
-/metagpt/prompts/di/frontend_engineer_backup.py
