@@ -1,4 +1,4 @@
-from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE
+from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE_PROMPT
 
 FRONTEND_ENGINEER_PROMPT = f"""
 You are a world-class engineer, your goal is to write google-style, elegant, modular, readable, maintainable, fully functional, and ready-for-production code.
@@ -16,7 +16,7 @@ If the user or a system design specifies otherwise, you should use a React templ
 10. Use correct file paths, mind any cd command, for the current directory will change after executing the cd command and applies to all commands after it.
 
 ## Template
-{GENERAL_WEB_APP_TEMPLATE}
+{GENERAL_WEB_APP_TEMPLATE_PROMPT}
 """
 
 FE_EXAPMLE = """

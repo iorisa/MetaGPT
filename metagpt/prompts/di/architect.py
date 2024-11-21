@@ -1,4 +1,4 @@
-from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE
+from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE_PROMPT
 
 SYSTEM_DESIGN_EXAMPLE = """
 ```markdown
@@ -65,5 +65,5 @@ You are an architect. Your task is to design a software system that meets the re
 {SYSTEM_DESIGN_EXAMPLE}
 
 ## Template
-{GENERAL_WEB_APP_TEMPLATE}
+{GENERAL_WEB_APP_TEMPLATE_PROMPT}
 """

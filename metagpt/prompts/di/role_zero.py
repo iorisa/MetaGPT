@@ -205,6 +205,10 @@ Response Category: AMBIGUOUS.
 9. Request: "Change the color of the text to blue in styles.css, add a new button in web page, delete the old background image."
 Thought: The request is an incremental development task that requires modifying one or more files.
 Response Category: TASK.
+
+10. Request: "Help me make a personal business card."
+Thought: The user is requesting assistance in creating a personal business card, which involves design and layout tasks.
+Response Category: TASK
 """
 QUICK_RESPONSE_SYSTEM_PROMPT = """
 {role_info}
