@@ -182,12 +182,24 @@ class SearchTemplate(BaseModel):
 
     async def _generate_config(self, template_dir: Path, style: str, config_path: Path) -> Optional[TemplateInfo]:
         """Generate new configurations through LLM"""
-        self._get_template_structure(template_dir)
-        description = read_file(template_dir / "README.md")
-        prompt = GENERATE_TEMPLATE_CONFIG_PROMPT.format(style=style, description=description, directory=template_dir)
+        dir_structure = self._get_template_structure(template_dir)
+        readme_content = ""
+        for file in template_dir.iterdir():
+            if file.name.lower() == "readme.md":
+                readme_content = read_file(file)
+                break
+
+        # If no readme found, log warning but continue
+        if not readme_content:
+            logger.warning(f"No README file found in {template_dir}")
+        prompt = GENERATE_TEMPLATE_CONFIG_PROMPT.format(
+            dir_structure=dir_structure, readme_content=readme_content, style=style
+        )
         result = await self.llm.aask(prompt)
         result = OutputParser.parse_code(result, "json")
         config = json.loads(result)
+
+        config["description"] += "The following information is project's README file content: " + readme_content
 
         template_info = self._validate_config(config, config_path)
         if template_info:
