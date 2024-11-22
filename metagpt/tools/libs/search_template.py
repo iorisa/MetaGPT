@@ -186,20 +186,20 @@ class SearchTemplate(BaseModel):
         readme_content = ""
         for file in template_dir.iterdir():
             if file.name.lower() == "readme.md":
-                readme_content = read_file(file)
+                readme_content = read_file(file).content
                 break
 
         # If no readme found, log warning but continue
         if not readme_content:
             logger.warning(f"No README file found in {template_dir}")
-        prompt = GENERATE_TEMPLATE_CONFIG_PROMPT.format(
-            dir_structure=dir_structure, readme_content=readme_content, style=style
-        )
+        logger.info(style.strip())
+        prompt = GENERATE_TEMPLATE_CONFIG_PROMPT.format(dir_structure=dir_structure, readme_content=readme_content)
         result = await self.llm.aask(prompt)
         result = OutputParser.parse_code(result, "json")
         config = json.loads(result)
 
         config["description"] += "The following information is project's README file content: " + readme_content
+        config["style"] = style.strip()
 
         template_info = self._validate_config(config, config_path)
         if template_info:
