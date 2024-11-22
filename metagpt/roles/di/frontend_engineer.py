@@ -83,7 +83,6 @@ class FrontendEngineer(Engineer2):
 
         target_dir = await self.template_tool.copy_template(template)
 
-        # extra_info = f"Successfully copied {template.style} template to {target_dir}, {target_dir} is the project root path. If NO additional user information has been provided, you should directly deploy the retrieved template without any modifications. But, when the user specifies obtaining their personal information from a certain website(For example, the user has specified his personal website or provided his LinkedIn link) or file, you should consider using the appropriate tools to retrieve it. After completing the previous checks, you should rename the folder 'template' to the specific 'project_name'."
         extra_info = f"Copied the {template.style} template to the {target_dir} directory, which is the project root path. If no additional user information has been provided, you should directly deploy the retrieved template without any modifications. However, if the user specifies obtaining their personal information from a certain website (e.g., personal website or LinkedIn link) or file, use the appropriate tools (e.g., `web scraping`) to retrieve it. After completing these checks, rename the folder 'template' to the specific 'project_name' ,attention read the contents of the README file firstly."
         # update template info
         await self.set_template(template, extra_user_info, extra_info)
