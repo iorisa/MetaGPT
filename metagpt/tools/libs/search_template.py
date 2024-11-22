@@ -79,6 +79,13 @@ class SearchTemplate(BaseModel):
 
         run_coroutine_sync(self._ensure_initialized())
 
+    @property
+    def engine(self) -> SimpleEngine:
+        if self._engine is None:
+            logger.info("RAG engine not initialized, initializing...")
+            run_coroutine_sync(self._ensure_initialized())
+        return self._engine
+
     async def _init_rag_engine(self) -> bool:
         """Initialize the RAG engine and load the template description."""
         if not self.templates:
@@ -176,9 +183,9 @@ class SearchTemplate(BaseModel):
     async def _generate_config(self, template_dir: Path, style: str, config_path: Path) -> Optional[TemplateInfo]:
         """Generate new configurations through LLM"""
         self._get_template_structure(template_dir)
-        read_file(template_dir / "README.md")
-
-        result = await self.llm.aask(GENERATE_TEMPLATE_CONFIG_PROMPT)
+        description = read_file(template_dir / "README.md")
+        prompt = GENERATE_TEMPLATE_CONFIG_PROMPT.format(style=style, description=description, directory=template_dir)
+        result = await self.llm.aask(prompt)
         result = OutputParser.parse_code(result, "json")
         config = json.loads(result)
 
