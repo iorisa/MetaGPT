@@ -148,10 +148,9 @@ fields:
 
 Please ensure that the generated configuration is in valid JSON format.
 ```json
-{
-    "style": "{style}",
+{{
     "description": "the description of template",
     "required_fields": ["name", "job", "email", "phone", "description", "mbti"]
-}
+}}
 ```
 """

@@ -33,10 +33,11 @@ class FrontendEngineer(Engineer2):
 
     async def _think(self) -> bool:
         # Check if the latest message is a development request
-        send_msg = self.rc.memory.get(-1)
+        send_msg = self.rc.memory.get()
 
         if self.is_first_dev_request and len(send_msg) > 0:
-            content = send_msg[0].content.replace("[Message] from Mike to Alex: ", "")
+            content = "\n".join([msg.content for msg in send_msg])
+            content = content.replace("[Message] from Mike to Alex: ", "").replace("[Message] from User to Mike: ", "")
             logger.info("First dev request, handle template")
             if self.template_tool:
                 result = await self.search_template(content)
@@ -46,7 +47,6 @@ class FrontendEngineer(Engineer2):
 
             self.is_first_dev_request = False  # Update flag
 
-        await self._format_instruction()
         res = await super()._think()
         return res
 
@@ -83,7 +83,7 @@ class FrontendEngineer(Engineer2):
 
         target_dir = await self.template_tool.copy_template(template)
 
-        extra_info = f"Successfully copied {template.style} template to {target_dir}, next step is to rename the template folder to the project name. If NO additional user information has been provided, you should directly deploy the retrieved template without any modifications."
+        extra_info = f"Successfully copied {template.style} template to {target_dir}, {target_dir} is the project root path. next step is to rename the template folder to the project name. If NO additional user information has been provided, you should directly deploy the retrieved template without any modifications."
         # update template info
         await self.set_template(template, extra_user_info, extra_info)
 
