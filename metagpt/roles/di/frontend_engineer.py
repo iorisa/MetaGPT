@@ -20,6 +20,7 @@ class FrontendEngineer(Engineer2):
         "ImageGetter",
         "Deployer",
         "Engineer2",
+        "Browser",
     ]
 
     @model_validator(mode="after")
@@ -40,8 +41,7 @@ class FrontendEngineer(Engineer2):
             content = content.replace("[Message] from Mike to Alex: ", "").replace("[Message] from User to Mike: ", "")
             logger.info("First dev request, handle template")
             if self.template_tool:
-                result = await self.search_template(content)
-                logger.info(f"Template search result: {result}")
+                await self.search_template(content)
             else:
                 logger.warning("Template tool not found, skip template search")
 
@@ -60,10 +60,12 @@ class FrontendEngineer(Engineer2):
         # Update template part in instruction
         self.instruction = self.instruction.replace(GENERAL_WEB_APP_TEMPLATE_PROMPT, self._template_content)
 
-        content = f"{extra_info}\n\n{extra_user_info}"
+        content = extra_info
+        if extra_user_info:
+            content = f"Additional information provided by the user:{extra_user_info}\n\n{content}"
         # Update memory
         self.rc.memory.add(UserMessage(content=content))
-        logger.info(f"Template information, User info and extra info updated: \n{content}")
+        logger.info("Template information, User info and extra info updated")
 
     async def search_template(self, requirement: str) -> str:
         """Process template-related requirements
@@ -83,7 +85,7 @@ class FrontendEngineer(Engineer2):
 
         target_dir = await self.template_tool.copy_template(template)
 
-        extra_info = f"Successfully copied {template.style} template to {target_dir}, {target_dir} is the project root path. next step is to rename the template folder to the project name. If NO additional user information has been provided, you should directly deploy the retrieved template without any modifications."
+        extra_info = f"Copied the {template.style} template to the {target_dir} directory, which is the project root path. If no additional user information has been provided, you should directly deploy the retrieved template without any modifications. However, if the user specifies obtaining their personal information from a certain website (e.g., personal website or LinkedIn link) or file, use the appropriate tools (e.g., `web scraping`) to retrieve it. After completing these checks, rename the folder 'template' to the specific 'project_name' ,attention recall the contents of the README file firstly."
         # update template info
         await self.set_template(template, extra_user_info, extra_info)
 
