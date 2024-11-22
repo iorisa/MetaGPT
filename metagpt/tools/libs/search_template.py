@@ -17,12 +17,6 @@ from metagpt.prompts.di.template import (
     VUE_APP_TEMPLATE,
     read_file,
 )
-from metagpt.rag.engines import SimpleEngine
-from metagpt.rag.schema import (
-    BM25RetrieverConfig,
-    FAISSRetrieverConfig,
-    LLMRankerConfig,
-)
 from metagpt.tools.tool_registry import register_tool
 from metagpt.utils.async_helper import run_coroutine_sync
 from metagpt.utils.common import OutputParser, awrite, log_time
@@ -69,7 +63,7 @@ class SearchTemplate(BaseModel):
 
     rag_top_k: int = Field(default=3, description="RAG top k")
 
-    _engine: Optional[SimpleEngine] = PrivateAttr(default=None)
+    _engine: Any = PrivateAttr(default=None)
     _initialized: bool = PrivateAttr(default=False)
 
     def __init__(self, **kwargs):
@@ -80,44 +74,50 @@ class SearchTemplate(BaseModel):
         run_coroutine_sync(self._ensure_initialized())
 
     @property
-    def engine(self) -> SimpleEngine:
+    def engine(self) -> "SimpleEngine":
         if self._engine is None:
-            logger.info("RAG engine not initialized, initializing...")
-            run_coroutine_sync(self._ensure_initialized())
-        return self._engine
-
-    async def _init_rag_engine(self) -> bool:
-        """Initialize the RAG engine and load the template description."""
-        if not self.templates:
-            logger.warning("No templates found, please check the template path")
-            return False
-
-        template_objs = []
-
-        # First, prepare all template documents and objects.
-        for template in self.templates.values():
-            doc = f"""
-            Template Style: {template.style}
-            Description: {template.description}
-            Required Fields: {', '.join(template.required_fields)}
-            
-            Template Path:
-            {template.template_path}
-            """
-            template_objs.append(
-                TemplateRAGObject(content=doc, metadata={"type": "Business Card Template", "style": template.style})
+            from metagpt.rag.engines import SimpleEngine
+            from metagpt.rag.schema import (
+                BM25RetrieverConfig,
+                FAISSRetrieverConfig,
+                LLMRankerConfig,
             )
 
-        # Wrap synchronous operations as asynchronous using asyncio.to_thread.
-        self._engine = await asyncio.to_thread(
-            SimpleEngine.from_objs,
-            objs=template_objs,
-            retriever_configs=[FAISSRetrieverConfig(), BM25RetrieverConfig()],
-            ranker_configs=[LLMRankerConfig()],
-        )
-        return True
+            logger.info("RAG engine not initialized, initializing...")
+            """Initialize the RAG engine and load the template description."""
+            if not self.templates:
+                logger.warning("No templates found, please check the template path")
+                return False
 
-    async def set_engine(self, engine: SimpleEngine) -> None:
+            template_objs = []
+
+            # First, prepare all template documents and objects.
+            for template in self.templates.values():
+                doc = f"""
+                Template Style: {template.style}
+                Description: {template.description}
+                Required Fields: {', '.join(template.required_fields)}
+                
+                Template Path:
+                {template.template_path}
+                """
+                template_objs.append(
+                    TemplateRAGObject(content=doc, metadata={"type": "Business Card Template", "style": template.style})
+                )
+
+            self.engine = SimpleEngine.from_objs(
+                objs=template_objs,
+                retriever_configs=[FAISSRetrieverConfig(), BM25RetrieverConfig()],
+                ranker_configs=[LLMRankerConfig(top_n=self.rag_top_k)],
+            )
+            return True
+        return self._engine
+
+    @engine.setter
+    def engine(self, value):
+        self._engine = value
+
+    async def set_engine(self, value) -> None:
         """Set a pre-computed RAG engine.
 
         Args:
@@ -127,11 +127,8 @@ class SearchTemplate(BaseModel):
             1. The engine should contain vector representations for all templates
             2. Calling this method will skip the execution of _init_rag_engine
         """
-        if not isinstance(engine, SimpleEngine):
-            logger.error("Provided engine is not of type SimpleEngine")
-            return
 
-        self._engine = engine
+        self._engine = value
         logger.info("Successfully set pre-computed RAG engine")
 
     async def set_templates(self, templates: Dict[str, TemplateInfo]) -> None:
@@ -146,8 +143,8 @@ class SearchTemplate(BaseModel):
             init_tempalte_flag, init_rag_flag = False, False
             if not self.templates:
                 init_tempalte_flag = await self._init_templates()
-            if self._engine is None and init_tempalte_flag:
-                init_rag_flag = await self._init_rag_engine()
+            if self.engine is None and init_tempalte_flag:
+                init_rag_flag = True
             self._initialized = init_tempalte_flag and init_rag_flag
 
     def _get_template_structure(self, template: Path) -> str:
@@ -257,7 +254,7 @@ class SearchTemplate(BaseModel):
         """
 
         logger.info("Start searching for templates")
-        result = await self._engine.aretrieve(requirement)
+        result = await self.engine.aretrieve(requirement)
         if not result:
             logger.warning("No matching template found")
             return None, ""

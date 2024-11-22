@@ -134,7 +134,7 @@ VUE_APP_TEMPLATE_PROMPT = VUE_APP_TEMPLATE.format(
 
 GENERAL_WEB_APP_TEMPLATE_PROMPT = "### Template Intro\n" + REACT_APP_TEMPLATE
 
-GENERATE_TEMPLATE_CONFIG_PROMPT = GENERATE_TEMPLATE_CONFIG_PROMPT = """
+GENERATE_TEMPLATE_CONFIG_PROMPT = """
 Please generate a template configuration based on the following template 
 directory information:
 Directory structure:
