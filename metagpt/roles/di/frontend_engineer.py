@@ -60,7 +60,9 @@ class FrontendEngineer(Engineer2):
         # Update template part in instruction
         self.instruction = self.instruction.replace(GENERAL_WEB_APP_TEMPLATE_PROMPT, self._template_content)
 
-        content = f"{extra_info}\n\n{extra_user_info}"
+        content = extra_info
+        if extra_user_info:
+            content = f"Additional information provided by the user:{extra_user_info}\n\n{content}"
         # Update memory
         self.rc.memory.add(UserMessage(content=content))
         logger.info("Template information, User info and extra info updated")
@@ -83,7 +85,7 @@ class FrontendEngineer(Engineer2):
 
         target_dir = await self.template_tool.copy_template(template)
 
-        extra_info = f"Copied the {template.style} template to the {target_dir} directory, which is the project root path. If no additional user information has been provided, you should directly deploy the retrieved template without any modifications. However, if the user specifies obtaining their personal information from a certain website (e.g., personal website or LinkedIn link) or file, use the appropriate tools (e.g., `web scraping`) to retrieve it. After completing these checks, rename the folder 'template' to the specific 'project_name' ,attention read the contents of the README file firstly."
+        extra_info = f"Copied the {template.style} template to the {target_dir} directory, which is the project root path. If no additional user information has been provided, you should directly deploy the retrieved template without any modifications. However, if the user specifies obtaining their personal information from a certain website (e.g., personal website or LinkedIn link) or file, use the appropriate tools (e.g., `web scraping`) to retrieve it. After completing these checks, rename the folder 'template' to the specific 'project_name' ,attention recall the contents of the README file firstly."
         # update template info
         await self.set_template(template, extra_user_info, extra_info)
 
