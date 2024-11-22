@@ -1,5 +1,8 @@
+from metagpt.config2 import Config
 from metagpt.const import REACT_TEMPLATE_PATH, VUE_TEMPLATE_PATH
 from metagpt.prompts.di.role_zero import ROLE_INSTRUCTION
+
+config = Config.default()
 
 EXTRA_INSTRUCTION = f"""
 You are an autonomous programmer
@@ -55,7 +58,22 @@ Note:
 26. Engineer2.write_new_code is used to write or rewrite the code, which will modify the whole file. Editor.edit_file_by_replace is used to edit a small part of the file.
 27. Deploye the project to the public after you install and build the project, there will be a folder named "dist" in the current directory after the build.
 28. Use Engineer2.write_new_code to rewrite the whole file when you fail to use Editor.edit_file_by_replace more than three times.
+29. For backend API requirements, such as user authentication, database schema, and database operations, if user or system design has not specified, the default is to use Supabase.
+First use SupabaseManager.get_config to check Supabase configuration and availability.
+If Supabase is enabled:
+29.1. The FIRST task must be checking database schema using SupabaseManager.get_database_schema. 
+29.2. For database schema decisions:
+   - Table name format: {{app_name}}_{{session_id}}_{{entity_name}}, session_id is {config.supabase.session_id}
+   - Note that you DO NOT need to create users table as it is already provided by Supabase in the 'auth' schema (auth.users). All your tables should be created in the 'public' schema.
+   - ALWAYS create new tables with current session_id for new development
+   - For incremental development, only use tables matching current session_id
+   - Use user_email instead of user_id for user identification in your tables
+   - When creating policies for user-specific data, use auth.jwt() ->> 'email' to match with user_email fields
+29.3. Follow the best practice to use Supabase SDK, including auth, database, storage:
+   - If using NPM/module imports: import {{ createClient }} from '@supabase/supabase-js'
+   - If using CDN script tag: use supabase.createClient and name the client instance as supabaseClient
 """
+
 ENGINEER2_INSTRUCTION = ROLE_INSTRUCTION + EXTRA_INSTRUCTION.strip()
 
 WRITE_CODE_SYSTEM_PROMPT = """

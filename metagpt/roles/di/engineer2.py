@@ -16,6 +16,7 @@ from metagpt.tools.libs.deployer import Deployer
 from metagpt.tools.libs.editor import FileBlock
 from metagpt.tools.libs.git import git_create_pull
 from metagpt.tools.libs.image_getter import ImageGetter
+from metagpt.tools.libs.supabase_manager import SupabaseManager
 from metagpt.tools.libs.terminal import Terminal
 from metagpt.tools.tool_registry import register_tool
 from metagpt.utils.common import CodeParser, awrite
@@ -42,6 +43,7 @@ class Engineer2(RoleZero):
         "CodeReview",
         "ImageGetter",
         "Deployer",
+        "SupabaseManager",
     ]
     # SWE Agent parameter
     run_eval: bool = False
@@ -66,37 +68,34 @@ class Engineer2(RoleZero):
         self.cmd_prompt_current_state = f"current directory: {self.working_dir}"
 
     def _update_tool_execution(self):
-        # validate = ValidateAndRewriteCode()
         cr = CodeReview()
         image_getter = ImageGetter()
-        if self.run_eval is True:
-            # Evalute tool map
-            self.tool_execution_map.update(
+        supabase_manager = SupabaseManager()
+
+        tool_execution = {
+            "git_create_pull": git_create_pull,
+            "Engineer2.write_new_code": self.write_new_code,
+            "ImageGetter.get_image": image_getter.get_image,
+            "CodeReview.review": cr.review,
+            "CodeReview.fix": cr.fix,
+            "Terminal.run_command": self.terminal.run_command,
+            "Deployer.deploy_to_public": self._deploy_to_public,
+            "SupabaseManager.execute_sql": supabase_manager.execute_sql,
+            "SupabaseManager.get_database_schema": supabase_manager.get_database_schema,
+            "SupabaseManager.get_config": supabase_manager.get_config,
+        }
+
+        # Add additional tools only in evaluation mode
+        if self.run_eval:
+            tool_execution.update(
                 {
-                    "git_create_pull": git_create_pull,
-                    "Engineer2.write_new_code": self.write_new_code,
-                    "ImageGetter.get_image": image_getter.get_image,
-                    "CodeReview.review": cr.review,
-                    "CodeReview.fix": cr.fix,
-                    "Terminal.run_command": self._eval_terminal_run,
                     "RoleZero.ask_human": self._end,
                     "RoleZero.reply_to_human": self._end,
-                    "Deployer.deploy_to_public": self._deploy_to_public,
+                    "Terminal.run_command": self._eval_terminal_run,  # Override terminal command in eval mode
                 }
             )
-        else:
-            # Default tool map
-            self.tool_execution_map.update(
-                {
-                    "git_create_pull": git_create_pull,
-                    "Engineer2.write_new_code": self.write_new_code,
-                    "ImageGetter.get_image": image_getter.get_image,
-                    "CodeReview.review": cr.review,
-                    "CodeReview.fix": cr.fix,
-                    "Terminal.run_command": self.terminal.run_command,
-                    "Deployer.deploy_to_public": self._deploy_to_public,
-                }
-            )
+
+        self.tool_execution_map.update(tool_execution)
 
     def _retrieve_experience(self) -> str:
         return ENGINEER_EXAMPLE

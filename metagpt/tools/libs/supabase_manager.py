@@ -1,0 +1,153 @@
+"""
+Supabase Manager
+
+Supabase only provides a [SDK](https://github.com/supabase/supabase-py) for [REST API](https://supabase.com/docs/guides/api) which is used for table queries, but lacks management capabilities like creating tables and executing SQL.
+
+Therefore, a management SDK is needed to wrap the [Management API](https://supabase.com/docs/reference/api/introduction).
+"""
+
+import httpx
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
+
+from metagpt.config2 import Config
+from metagpt.logs import logger
+from metagpt.tools.tool_registry import register_tool
+
+config = Config.default()
+
+
+@register_tool(include_functions=["get_config", "get_database_schema_from_supabase", "execute_sql_from_supabase"])
+class SupabaseManager(BaseModel):
+    access_token: str = Field(default=config.supabase.access_token, description="Supabase access token")
+    management_base_url: str = Field(
+        default=config.supabase.management_base_url, description="Supabase management base URL"
+    )
+
+    _default_headers: dict[str, str] = PrivateAttr(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate(self) -> "SupabaseManager":
+        if not self.access_token:
+            logger.warning("Supabase access token is required, but not provided.")
+
+        self._default_headers = {"Authorization": f"Bearer {self.access_token}", "Content-Type": "application/json"}
+
+        return self
+
+    def get_config(self) -> dict:
+        """Get Supabase configuration settings.
+
+        Returns:
+            dict: A dictionary containing Supabase configuration settings:
+                - enable (bool): Whether to use Supabase as the backend service. When True, Supabase will be used;
+                  when False, alternative solutions will be used.
+                - project_url (str): The Supabase project URL in format 'https://<project>.supabase.co'.
+                  This is the endpoint URL for connecting to your specific Supabase project instance.
+                - project_key (str): The Supabase project API key. This is the anon/public key used for
+                  client API authentication, found in your project's API settings dashboard.
+                - project_ref (str): The unique reference ID of your Supabase project. This identifier is
+                  used for project-specific API operations and management.
+                - access_token (str): The service role API key for Supabase management API. This token
+                  provides elevated access for administrative operations and should be kept secure.
+                - management_base_url (str): The base URL for Supabase management API endpoints. Used for
+                  administrative operations like schema management and project configuration.
+                - session_id (str): A unique 5-character session identifier generated for each run. Used
+                  for creating isolated database tables and managing development environments.
+        """
+        return config.supabase.model_dump()
+
+    def get_database_schema(
+        self, project_ref: str = config.supabase.project_ref, db_name: str = "public", timeout: int = 10
+    ) -> list[dict[str, str]]:
+        """Get complete database schema information from Supabase including all tables and their columns.
+
+        Args:
+            project_ref: Supabase project ref, defaults to config.supabase.project_ref
+            db_name: Database schema name, defaults to 'public'
+            timeout: Request timeout in seconds, defaults to 10
+
+        Returns:
+            list: A list of tables with their column definitions.
+
+        Examples:
+            >>> schema = get_database_schema()
+            >>> print(schema)
+            [
+                {
+                    "table_name": "users",
+                    "columns": "id bigint NOT NULL\nemail text NOT NULL\ncreated_at timestamp"
+                }
+            ]
+        """
+
+        query = f"""
+        SELECT 
+            t.table_name,
+            string_agg(
+                c.column_name || ' ' || c.data_type || 
+                CASE WHEN c.is_nullable = 'NO' THEN ' NOT NULL' ELSE '' END,
+                E'\n'
+            ) as columns
+        FROM 
+            information_schema.tables t
+            JOIN information_schema.columns c 
+                ON t.table_name = c.table_name 
+                AND t.table_schema = c.table_schema
+        WHERE 
+            t.table_schema = '{db_name}'
+            AND t.table_type = 'BASE TABLE'
+        GROUP BY 
+            t.table_name
+        ORDER BY 
+            t.table_name;
+        """
+        url = f"{self.management_base_url}/projects/{project_ref}/database/query"
+
+        with httpx.Client(timeout=timeout) as client:
+            response = client.post(url, headers=self._default_headers, json={"query": query}, timeout=timeout)
+            response.raise_for_status()
+
+        return response.json()
+
+    def execute_sql(self, sql: str, project_ref: str = config.supabase.project_ref, timeout: int = 10) -> dict:
+        """Execute SQL query on Supabase database.
+
+        Args:
+            sql: SQL query to execute
+            project_ref: Supabase project ref, defaults to config.supabase.project_ref
+            timeout: Request timeout in seconds, defaults to 10
+
+        Returns:
+            dict: Response from the database query
+
+        Example:
+            # Create a table with indexes and RLS policies.
+            >>> sql = '''
+            ... -- Create scores table
+            ... CREATE TABLE IF NOT EXISTS scores (
+            ...     id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            ...     user_email TEXT NOT NULL,
+            ...     score INTEGER NOT NULL,
+            ...     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+            ... );
+            ...
+            ... -- Create indexes for query optimization
+            ... CREATE INDEX IF NOT EXISTS scores_user_email_idx ON scores(user_email);
+            ... CREATE INDEX IF NOT EXISTS scores_score_idx ON scores(score DESC);
+            ...
+            ... -- Setup Row Level Security (RLS)
+            ... ALTER TABLE scores ENABLE ROW LEVEL SECURITY;
+            ... CREATE POLICY "allow_read_all_scores" ON scores FOR SELECT USING (true);
+            ... CREATE POLICY "allow_insert_own_scores" ON scores
+            ...     FOR INSERT TO authenticated
+            ...     WITH CHECK (auth.jwt() ->> 'email' = user_email);
+            ... '''
+            >>> result = execute_sql(sql)
+        """
+        url = f"{self.management_base_url}/projects/{project_ref}/database/query"
+
+        with httpx.Client(timeout=timeout) as client:
+            response = client.post(url, headers=self._default_headers, json={"query": sql}, timeout=timeout)
+            response.raise_for_status()
+
+        return response.json()
