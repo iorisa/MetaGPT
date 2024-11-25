@@ -42,6 +42,7 @@ class TemplateInfo(BaseModel):
 
     # style: TemplateStyle
     style: str = Field(description="Template style")
+    type: str = Field(description="Template type")
     template_path: Path = Field(description="Template path")
     description: str = Field(description="Template description")
     required_fields: List[str] = Field(description="Required field list")
@@ -55,7 +56,10 @@ class SearchTemplate(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     templates: Dict[str, TemplateInfo] = Field(default_factory=dict)
-    template_path: Path = Field(default=Path(METAGPT_ROOT) / "template" / "personal_business_card_templates")
+    template_path: Path = Field(default=Path(METAGPT_ROOT) / "template")
+    template_types: List[str] = Field(
+        default=["Personal Business Card Template", "Content Building Tool Template", "Personal Demonstration Template"]
+    )
     llm: Optional[LLM] = Field(default=None, exclude=True)
     template_version: str = Field(default="1.0.0")
     deployment_config: Dict[str, Any] = Field(default_factory=dict)
@@ -95,6 +99,7 @@ class SearchTemplate(BaseModel):
             for template in self.templates.values():
                 doc = f"""
                 Template Style: {template.style}
+                Template Type: {template.type}
                 Description: {template.description}
                 Required Fields: {', '.join(template.required_fields)}
                 
@@ -102,9 +107,7 @@ class SearchTemplate(BaseModel):
                 {template.template_path}
                 """
                 template_objs.append(
-                    TemplateRAGObject(
-                        content=doc, metadata={"type": "Personal Business Card Template", "style": template.style}
-                    )
+                    TemplateRAGObject(content=doc, metadata={"type": template.type, "style": template.style})
                 )
 
             self.engine = SimpleEngine.from_objs(
@@ -199,6 +202,8 @@ class SearchTemplate(BaseModel):
 
         config["description"] += "The following information is project's README file content: " + readme_content
         config["style"] = style.strip()
+        # Update the template type
+        config["type"] = config_path.parent.parent.name
 
         template_info = self._validate_config(config, config_path)
         if template_info:
@@ -215,6 +220,7 @@ class SearchTemplate(BaseModel):
         else:
             return TemplateInfo(
                 style=config["style"],
+                type=config["type"],
                 template_path=config_path.parent,
                 description=config["description"],
                 required_fields=config["required_fields"],
@@ -227,7 +233,8 @@ class SearchTemplate(BaseModel):
             return False
 
         # Get all template directories
-        template_dirs = [d for d in self.template_path.iterdir() if d.is_dir()]
+        template_type_dirs = [d for d in self.template_path.iterdir() if d.is_dir() and d.name in self.template_types]
+        template_dirs = [d for dirs in template_type_dirs for d in dirs.iterdir() if d.is_dir()]
 
         # Use asyncio.gather to concurrently process all templates.
         template_infos = await asyncio.gather(
