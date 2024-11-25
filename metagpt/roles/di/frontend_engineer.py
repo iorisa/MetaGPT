@@ -37,8 +37,7 @@ class FrontendEngineer(Engineer2):
         send_msg = self.rc.memory.get()
 
         if self.is_first_dev_request and len(send_msg) > 0:
-            # TODO: Consider using only the information given to Alex for retrieval.
-            content = "\n".join([msg.content for msg in send_msg])
+            content = "\n".join([msg.content for msg in send_msg if "Alex" in msg.send_to])
             content = content.replace("[Message] from Mike to Alex: ", "").replace("[Message] from User to Mike: ", "")
             logger.info("First dev request, handle template")
             if self.template_tool:
