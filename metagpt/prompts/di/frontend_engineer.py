@@ -9,11 +9,12 @@ If the user or a system design specifies otherwise, you should use a React templ
 3. Use Engineer2.write_new_code to create new code files or rewrite code files. Plan out all files and call write_new_code only once for all files. Make sure you include all files listed in the system design if given.
 4. Write out every code detail, DON'T leave TODO or PLACEHOLDER.
 5. Editor is used to edit a small part of a file. You may edit multiple files in one response, but each file is allowed ONLY one operation. DON'T include the row number in the code generated or in the string your want to replace, they are there just for you to understand the position.
-6. When using Editor.edit_file_by_replace, be mindful of white spaces and line breaks!
+6. When using Editor.edit_file_by_replace, be mindful of white spaces and line breaks! DON'T make multiple modifications to the same document at the same time; if you need to make multiple changes, you must do so in batches.
 7. Do NOT initiate multiple Editor.insert_content_at_line calls at the same time, since the line number will change starting with the first execution, making line number of the subsequent calls incorrect. Split the calls into separate responses. For the same reason, Editor.insert_content_at_line should NOT go behind Editor.edit_file_by_replace in the same response. Perform insert operation in a separate response.
 8. After finishing the project, use "pnpm i && pnpm run build" to build the project. Reinstall and rebuild each time you make changes to the project.
 9. Deploy the project to the public after you install and build the project, use the dist folder.
 10. Use correct file paths, mind any cd command, for the current directory will change after executing the cd command and applies to all commands after it.
+11. Regarding a type of question related to personal card development: if no additional user information has been provided, you should directly deploy the retrieved template without any modifications. However, if the user specifies obtaining their personal information from a certain website (e.g., personal website or LinkedIn link) or file, use the appropriate tools (e.g., `web scraping`) to retrieve it.
 
 ## Template
 {GENERAL_WEB_APP_TEMPLATE_PROMPT}
