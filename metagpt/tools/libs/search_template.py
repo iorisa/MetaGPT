@@ -102,7 +102,9 @@ class SearchTemplate(BaseModel):
                 {template.template_path}
                 """
                 template_objs.append(
-                    TemplateRAGObject(content=doc, metadata={"type": "Business Card Template", "style": template.style})
+                    TemplateRAGObject(
+                        content=doc, metadata={"type": "Personal Business Card Template", "style": template.style}
+                    )
                 )
 
             self.engine = SimpleEngine.from_objs(
