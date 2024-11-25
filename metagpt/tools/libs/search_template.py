@@ -284,7 +284,7 @@ class SearchTemplate(BaseModel):
         target_dir = self.output_dir
 
         shutil.copytree(template.template_path, target_dir, dirs_exist_ok=True)
-        logger.info(f"Template copied: {template.style} -> {target_dir}")
+        logger.info(f"Template copied: {template.style}")
         return target_dir
 
     async def __aenter__(self):
