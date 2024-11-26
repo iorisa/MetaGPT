@@ -48,6 +48,7 @@ class TemplateInfo(BaseModel):
     required_fields: List[str] = Field(description="Required field list")
     required_files: List[str] = Field(description="Required file list")
     lang: str = Field(description="Template language")
+    framework: str = Field(description="Template framework")
 
 
 @register_tool(
@@ -103,6 +104,7 @@ class SearchTemplate(BaseModel):
                 Template Scene: {template.scene}
                 Template Description: {template.description}
                 Template Language: {template.lang}
+                Template Framework: {template.framework}
                 Template Style: {template.style}
                 """
                 template_objs.append(TemplateRAGObject(content=doc, metadata={"idx": idx}))
@@ -237,6 +239,7 @@ class SearchTemplate(BaseModel):
                 required_fields=config["required_fields"],
                 required_files=config["required_files"],
                 lang=config["lang"],
+                framework=config["framework"],
             )
 
     async def _init_templates(self) -> bool:

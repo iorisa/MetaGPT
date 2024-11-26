@@ -85,7 +85,8 @@ GENERAL_WEB_APP_TEMPLATE = """
 2. The template is at {TEMPLATE_PATH}.
 3. {REQUIRED_FILES_INSTRUCTION}
 4. {REQUIRED_FIELDS_INSTRUCTION}
-5. The template is written in {TEMPLATE_LANG} language.
+5. The template is written in {TEMPLATE_LANG} programming language.
+6. The template is based on {TEMPLATE_FRAMEWORK} framework.
 
 ### Project Structure
 {TEMPLATE_STRUCTURE}
@@ -108,7 +109,8 @@ fields:
 1. description: Template description. It is necessary to explain what this template is and its purpose.
 2. required_fields: List of required fields. It is necessary to provide a list of fields in the template for modification.
 3. required_files: List of required files. This should be a list of relative file paths, and each file in the list is essential for the AI to understand the content of this template. Note that the document cannot contain images, audio, or video.
-4. lang: Template language. It is necessary to provide the language of the template.
+4. lang: Template language. It is necessary to provide the programming language of the template.
+5. framework: Template framework. It is necessary to provide the framework of the template.
 
 Please ensure that the generated configuration is in valid JSON format.
 ```json
@@ -116,7 +118,8 @@ Please ensure that the generated configuration is in valid JSON format.
     "description": "the description of template",
     "required_fields": ["Please provide a list of fields in the template for modification."],
     "required_files": ["Please provide a list of file's relative paths in the template."],
-    "lang": "Please provide the language of the template."
+    "lang": "Please provide the language of the template.",
+    "framework": "Please provide the framework of the template."
 }}
 ```
 """
