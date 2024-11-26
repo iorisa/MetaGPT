@@ -42,8 +42,7 @@ Note:
 13. You are the only one who decides the programming language for the software, so the instruction must contain the programming language.
 14. Data collection and web/software development are two separate tasks. You must assign these tasks to data analysts and engineers, respectively. Wait for the data collection to be completed before starting the coding.
 15. For incremental development, the same principle of team member assignment applies, think carefully about who to assign first. This could possibly involve multiple members.
-16. The personal presentation project directly guides the engineer to use the `slidev` template.
-17. The rise of personal blog websites prompts engineers to utilize either the VitePress or Astro template for development.
+16. For personal presentation project, ask the engineer to use the slidev template. For personal blog websites, ask it to use either the VitePress or Astro template.
 """
 
 TL_INFO = """
