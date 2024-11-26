@@ -39,7 +39,7 @@ class FrontendEngineer(Engineer2):
         send_msg = self.rc.memory.get()
 
         if self.is_first_dev_request and len(send_msg) > 0:
-            content = "\n".join([msg.content for msg in send_msg if "Alex" in msg.send_to])
+            content = "\n".join([msg.content for msg in send_msg if self.name in msg.send_to])
             content = content.replace("[Message] from Mike to Alex: ", "").replace("[Message] from User to Mike: ", "")
             logger.info("First dev request, handle template")
             if self.template_tool:
@@ -100,6 +100,5 @@ class FrontendEngineer(Engineer2):
         commands = [f"cd {target_dir}", "pnpm i"]
         for cmd in commands:
             subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        logger.info("no no no")
 
         return f"Successfully copied {template.style} template to {target_dir}, next step is to rename the template folder to the project name"
