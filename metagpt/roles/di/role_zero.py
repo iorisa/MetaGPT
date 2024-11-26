@@ -214,6 +214,7 @@ class RoleZero(Role):
             self.planner.plan.goal = self.get_memories()[-1].content
             detect_language_prompt = DETECT_LANGUAGE_PROMPT.format(requirement=self.planner.plan.goal)
             self.respond_language = await self.llm.aask(detect_language_prompt)
+
         ### 1. Experience ###
         example = self._retrieve_experience()
 
