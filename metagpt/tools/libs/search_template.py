@@ -42,7 +42,7 @@ class TemplateInfo(BaseModel):
 
     # style: TemplateStyle
     style: str = Field(description="Template style")
-    type: str = Field(description="Template type")
+    template_scene: str = Field(description="template_scene")
     template_path: Path = Field(description="Template path")
     description: str = Field(description="Template description")
     required_fields: List[str] = Field(description="Required field list")
@@ -57,7 +57,7 @@ class SearchTemplate(BaseModel):
 
     templates: Dict[str, TemplateInfo] = Field(default_factory=dict)
     template_path: Path = Field(default=Path(METAGPT_ROOT) / "template")
-    template_types: List[str] = Field(
+    template_scenes: List[str] = Field(
         default=["Personal Business Card Template", "Content Building Tool Template", "Personal Demonstration Template"]
     )
     llm: Optional[LLM] = Field(default=None, exclude=True)
@@ -99,7 +99,7 @@ class SearchTemplate(BaseModel):
             for template in self.templates.values():
                 doc = f"""
                 Template Style: {template.style}
-                Template Type: {template.type}
+                template_scene: {template.template_scene}
                 Description: {template.description}
                 Required Fields: {', '.join(template.required_fields)}
                 
@@ -107,7 +107,9 @@ class SearchTemplate(BaseModel):
                 {template.template_path}
                 """
                 template_objs.append(
-                    TemplateRAGObject(content=doc, metadata={"type": template.type, "style": template.style})
+                    TemplateRAGObject(
+                        content=doc, metadata={"template_scene": template.template_scene, "style": template.style}
+                    )
                 )
 
             self.engine = SimpleEngine.from_objs(
@@ -202,8 +204,8 @@ class SearchTemplate(BaseModel):
 
         config["description"] += "The following information is project's README file content: " + readme_content
         config["style"] = style.strip()
-        # Update the template type
-        config["type"] = config_path.parent.parent.name
+        # Update the template_scene
+        config["template_scene"] = config_path.parent.parent.name
 
         template_info = self._validate_config(config, config_path)
         if template_info:
@@ -220,7 +222,7 @@ class SearchTemplate(BaseModel):
         else:
             return TemplateInfo(
                 style=config["style"],
-                type=config["type"],
+                template_scene=config["template_scene"],
                 template_path=config_path.parent,
                 description=config["description"],
                 required_fields=config["required_fields"],
