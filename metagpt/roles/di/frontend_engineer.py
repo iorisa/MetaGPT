@@ -39,8 +39,11 @@ class FrontendEngineer(Engineer2):
         send_msg = self.rc.memory.get()
 
         if self.is_first_dev_request and len(send_msg) > 0:
-            content = "\n".join([msg.content for msg in send_msg if self.name in msg.send_to])
-            content = content.replace("[Message] from Mike to Alex: ", "").replace("[Message] from User to Mike: ", "")
+            content = "\n".join(
+                [msg.content for msg in send_msg if self.name in msg.send_to or "UserRequirement" in msg.cause_by]
+            )
+            # content = content.replace("[Message] from Mike to Alex: ", "").replace("[Message] from User to Mike: ", "")
+            content = content.replace("Mike", "Team Leader").replace("Alex", "Engineer")
             logger.info("First dev request, handle template")
             if self.template_tool:
                 await self.search_template(content)
