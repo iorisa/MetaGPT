@@ -106,11 +106,11 @@ README content:
 {readme_content}
 Please generate a configuration in JSON format that includes the following 
 fields:
-1. description: Template description. It is necessary to explain what this template is and its purpose.
-2. required_fields: List of required fields. It is necessary to provide a list of fields in the template for modification.
-3. required_files: List of required files. This should be a list of relative file paths, and each file in the list is essential for the AI to understand the content of this template. Note that the document cannot contain images, audio, or video.
-4. lang: Template language. It is necessary to provide the programming language of the template.
-5. framework: Template framework. It is necessary to provide the framework of the template.
+1. description (str): Template description. It is necessary to explain what this template is and its purpose.
+2. required_fields (list[str]): List of required fields. It is necessary to provide a list of fields in the template for modification.
+3. required_files (list[str]): List of required files. This should be a list of relative file paths, and each file in the list is essential for the AI to understand the content of this template. Note that the document cannot contain images, audio, or video.
+4. lang (str): Template language. It is necessary to provide the programming language of the template.
+5. framework (str): Template framework. It is necessary to provide the framework of the template.
 
 Please ensure that the generated configuration is in valid JSON format.
 ```json

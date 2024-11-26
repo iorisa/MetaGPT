@@ -390,4 +390,5 @@ class SearchTemplate(BaseModel):
                 REQUIRED_FIELDS_INSTRUCTION=required_field_instruction,
                 FILE_CONTENT=file_content,
                 TEMPLATE_LANG=template_info.lang,
+                TEMPLATE_FRAMEWORK=template_info.framework,
             )
