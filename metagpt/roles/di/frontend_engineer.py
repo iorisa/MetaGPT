@@ -81,6 +81,5 @@ class FrontendEngineer(Engineer2):
         commands = [f"cd {target_dir}", "pnpm i"]
         for cmd in commands:
             subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        logger.info("no no no")
 
         return f"Successfully copied {template.style} template to {target_dir}, next step is to rename the template folder to the project name"
