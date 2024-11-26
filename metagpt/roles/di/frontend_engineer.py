@@ -1,3 +1,5 @@
+import subprocess
+
 from pydantic import model_validator
 
 from metagpt.logs import logger
@@ -48,6 +50,7 @@ class FrontendEngineer(Engineer2):
             self.is_first_dev_request = False  # Update flag
 
         res = await super()._think()
+
         return res
 
     def _retrieve_experience(self) -> str:
@@ -86,10 +89,17 @@ class FrontendEngineer(Engineer2):
         target_dir = await self.template_tool.copy_template(template)
 
         extra_info = f"Successfully copied the {template.style} template to the {target_dir} directory.The project root path is {target_dir},read README.md document firstly.If user does not provide additional information, you need to deploy the project directly without updating any code. However, if the user specifies obtaining their personal information from a certain website (e.g., personal website or LinkedIn link) or file, use the appropriate tools (e.g., `web scraping`) to retrieve it, and then update the obtained information into the project.Note,If the code file that needs to be updated already exists, do not rewrite the corresponding content, but replace some of the code to update.Before updating the code, read the content of the code file and then think about how to update it. After completing these checks, rename the folder 'template' to the specific 'project_name'."
-        # update template info
-        await self.set_template(template, extra_user_info, extra_info)
 
         if not target_dir:
             return "Failed to copy template"
+
+        # update template info
+        await self.set_template(template, extra_user_info, extra_info)
+
+        # install dependencies in non-blocking way
+        commands = [f"cd {target_dir}", "pnpm i"]
+        for cmd in commands:
+            subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        logger.info("no no no")
 
         return f"Successfully copied {template.style} template to {target_dir}, next step is to rename the template folder to the project name"
