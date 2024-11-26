@@ -45,7 +45,6 @@ from metagpt.strategy.experience_retriever import DummyExpRetriever, ExpRetrieve
 from metagpt.strategy.planner import Planner
 from metagpt.tools.libs.browser import Browser
 from metagpt.tools.libs.editor import Editor
-from metagpt.tools.libs.search_template import TemplateInfo
 from metagpt.tools.tool_recommend import BM25ToolRecommender, ToolRecommender
 from metagpt.tools.tool_registry import register_tool
 from metagpt.utils.common import CodeParser, any_to_str, extract_and_encode_images
@@ -105,8 +104,6 @@ class RoleZero(Role):
     use_fixed_sop: bool = False
     respond_language: str = ""  # Language for responding humans and publishing messages.
     use_summary: bool = True  # whether to summarize at the end
-    use_search_template: bool = False
-    is_first_dev_request: bool = False
 
     @model_validator(mode="after")
     def set_plan_and_tool(self) -> "RoleZero":
@@ -217,20 +214,6 @@ class RoleZero(Role):
             self.planner.plan.goal = self.get_memories()[-1].content
             detect_language_prompt = DETECT_LANGUAGE_PROMPT.format(requirement=self.planner.plan.goal)
             self.respond_language = await self.llm.aask(detect_language_prompt)
-
-        # Check if the latest message is a development request
-        send_msg = self.rc.memory.get()
-
-        if self.is_first_dev_request and len(send_msg) > 0 and self.use_search_template:
-            content = "\n".join([msg.content for msg in send_msg if "Alex" in msg.send_to])
-            content = content.replace("[Message] from Mike to Alex: ", "").replace("[Message] from User to Mike: ", "")
-            logger.info("First dev request, handle template")
-            if self.template_tool:
-                await self.search_template(content)
-            else:
-                logger.warning("Template tool not found, skip template search")
-
-            self.is_first_dev_request = False  # Update flag
 
         ### 1. Experience ###
         example = self._retrieve_experience()
@@ -679,11 +662,3 @@ class RoleZero(Role):
                 await reporter.async_report({"type": "summary"})
                 outputs = await self.llm.aask(self.llm.format_msg(memory + [UserMessage(SUMMARY_PROMPT)]))
         return outputs
-
-    async def set_template(
-        self, template_info: TemplateInfo = None, extra_user_info: str = None, extra_info: str = None
-    ) -> None:
-        pass
-
-    async def search_template(self, requirement: str) -> str:
-        pass
