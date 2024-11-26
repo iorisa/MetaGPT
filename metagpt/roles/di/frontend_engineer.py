@@ -34,25 +34,6 @@ class FrontendEngineer(Engineer2):
             logger.warning("FrontendEngineer tools not set")
         return self
 
-    async def _think(self) -> bool:
-        # Check if the latest message is a development request
-        send_msg = self.rc.memory.get()
-
-        if self.is_first_dev_request and len(send_msg) > 0:
-            content = "\n".join([msg.content for msg in send_msg if "Alex" in msg.send_to])
-            content = content.replace("[Message] from Mike to Alex: ", "").replace("[Message] from User to Mike: ", "")
-            logger.info("First dev request, handle template")
-            if self.template_tool:
-                await self.search_template(content)
-            else:
-                logger.warning("Template tool not found, skip template search")
-
-            self.is_first_dev_request = False  # Update flag
-
-        res = await super()._think()
-
-        return res
-
     def _retrieve_experience(self) -> str:
         return FE_EXAPMLE
 
