@@ -13,8 +13,8 @@ from metagpt.const import METAGPT_ROOT
 from metagpt.llm import LLM
 from metagpt.logs import logger
 from metagpt.prompts.di.template import (
+    GENERAL_WEB_APP_TEMPLATE,
     GENERATE_TEMPLATE_CONFIG_PROMPT,
-    VUE_APP_TEMPLATE,
     read_file,
 )
 from metagpt.tools.tool_registry import register_tool
@@ -42,10 +42,13 @@ class TemplateInfo(BaseModel):
 
     # style: TemplateStyle
     style: str = Field(description="Template style")
-    template_scene: str = Field(description="template_scene")
+    scene: str = Field(description="Template Scene")
     template_path: Path = Field(description="Template path")
     description: str = Field(description="Template description")
     required_fields: List[str] = Field(description="Required field list")
+    required_files: List[str] = Field(description="Required file list")
+    lang: str = Field(description="Template language")
+    framework: str = Field(description="Template framework")
 
 
 @register_tool(
@@ -96,21 +99,15 @@ class SearchTemplate(BaseModel):
             template_objs = []
 
             # First, prepare all template documents and objects.
-            for template in self.templates.values():
+            for idx, template in self.templates.items():
                 doc = f"""
+                Template Scene: {template.scene}
+                Template Description: {template.description}
+                Template Language: {template.lang}
+                Template Framework: {template.framework}
                 Template Style: {template.style}
-                template_scene: {template.template_scene}
-                Description: {template.description}
-                Required Fields: {', '.join(template.required_fields)}
-                
-                Template Path:
-                {template.template_path}
                 """
-                template_objs.append(
-                    TemplateRAGObject(
-                        content=doc, metadata={"template_scene": template.template_scene, "style": template.style}
-                    )
-                )
+                template_objs.append(TemplateRAGObject(content=doc, metadata={"idx": idx}))
 
             self.engine = SimpleEngine.from_objs(
                 objs=template_objs,
@@ -156,7 +153,7 @@ class SearchTemplate(BaseModel):
 
     def _get_template_structure(self, template: Path) -> str:
         """Get template directory structure"""
-        result = subprocess.run(["tree", template], capture_output=True, text=True)
+        result = subprocess.run(["tree", template], capture_output=True, shell=True, text=True)
         return result.stdout
 
     async def _parse_template_config(self, template_dir: Path) -> Optional[TemplateInfo]:
@@ -198,14 +195,28 @@ class SearchTemplate(BaseModel):
             logger.warning(f"No README file found in {template_dir}")
         logger.info(style.strip())
         prompt = GENERATE_TEMPLATE_CONFIG_PROMPT.format(dir_structure=dir_structure, readme_content=readme_content)
-        result = await self.llm.aask(prompt)
-        result = OutputParser.parse_code(result, "json")
-        config = json.loads(result)
+        retry_times = 3
+        success = False
+        for _ in range(retry_times):
+            try:
+                result = await self.llm.aask(prompt)
+                config = OutputParser.parse_code(result, "json")
+                config = json.loads(config)
+                if config:
+                    success = True
+                    break
+            except Exception as e:
+                logger.error(f"Failed to generate template configuration: {str(e)}; retry times: {retry_times - _}")
 
-        config["description"] += "The following information is project's README file content: " + readme_content
+        if not success:
+            raise Exception("Failed to generate template configuration")
+
+        config[
+            "description"
+        ] = f"{config['description']} The following information is project's README file content: {readme_content}"
         config["style"] = style.strip()
-        # Update the template_scene
-        config["template_scene"] = config_path.parent.parent.name
+        # Update the Template Scene
+        config["scene"] = config_path.parent.parent.name
 
         template_info = self._validate_config(config, config_path)
         if template_info:
@@ -215,17 +226,20 @@ class SearchTemplate(BaseModel):
 
     def _validate_config(self, config: dict, config_path: Path) -> Optional[TemplateInfo]:
         """Validate the configuration and create a TemplateInfo object."""
-        required_config_fields = {"style", "description", "required_fields"}
+        required_config_fields = {"style", "description", "required_fields", "required_files", "lang", "framework"}
         if not all(field in config for field in required_config_fields):
             logger.warning(f"The template configuration file is missing necessary fields: {config_path}")
             return None
         else:
             return TemplateInfo(
                 style=config["style"],
-                template_scene=config["template_scene"],
+                scene=config["scene"],
                 template_path=config_path.parent,
                 description=config["description"],
                 required_fields=config["required_fields"],
+                required_files=config["required_files"],
+                lang=config["lang"],
+                framework=config["framework"],
             )
 
     async def _init_templates(self) -> bool:
@@ -235,7 +249,7 @@ class SearchTemplate(BaseModel):
             return False
 
         # Get all template directories
-        template_type_dirs = [d for d in self.template_path.iterdir() if d.is_dir() and d.name in self.template_types]
+        template_type_dirs = [d for d in self.template_path.iterdir() if d.is_dir() and d.name in self.template_scenes]
         template_dirs = [d for dirs in template_type_dirs for d in dirs.iterdir() if d.is_dir()]
 
         # Use asyncio.gather to concurrently process all templates.
@@ -244,9 +258,9 @@ class SearchTemplate(BaseModel):
         )
 
         # Filter out None values and update the template dictionary
-        for template_info in template_infos:
+        for idx, template_info in enumerate(template_infos):
             if template_info:
-                self.templates[template_info.style] = template_info
+                self.templates[str(idx)] = template_info
                 logger.info(f"Template loaded successfully:{template_info.style}")
         return True
 
@@ -269,10 +283,10 @@ class SearchTemplate(BaseModel):
         if not result:
             logger.warning("No matching template found")
             return None, ""
-        template_name, extra_user_info = await self.select_from_candidates(result)
-        if template_name is None:
+        template_idx, extra_user_info = await self.select_from_candidates(result)
+        if template_idx is None:
             return None, ""
-        template = self.templates.get(template_name)
+        template = self.templates.get(template_idx)
         logger.info(f"Selected template: {template.style}")
         return template, extra_user_info
 
@@ -281,9 +295,8 @@ class SearchTemplate(BaseModel):
 
         # Take the top k templates with the highest scores from the results list.
         top_k_score_node = result[-self.rag_top_k :]
-        # template_infos = [self.templates.get(node.metadata['obj'].metadata['style']) for node in top_k_score_node]
-        selected_template_names = [node.metadata["obj"].metadata["style"] for node in top_k_score_node]
-        return selected_template_names[0], ""
+        selected_template_idxs = [node.metadata["obj"].metadata["idx"] for node in top_k_score_node]
+        return selected_template_idxs[0], ""
 
     # async def extract_user_info(self, )
 
@@ -358,13 +371,24 @@ class SearchTemplate(BaseModel):
         if template_info is None:
             return ""
         else:
-            return VUE_APP_TEMPLATE.format(
-                VUE_APP_TEMPLATE_DESCRIPTION=template_info.description,
-                TEMPLATE_PATH=f"{METAGPT_ROOT}/workspace/template",
-                TEMPLATE_STRUCTURE=self._get_template_structure(template_info.template_path),
-                INDEX_CONTENT=read_file(template_info.template_path / "index.html"),
-                MAIN_CONTENT=read_file(template_info.template_path / "src" / "main.js"),
-                APP_CONTENT=read_file(template_info.template_path / "src" / "App.vue"),
-                INDEX_CSS_CONTENT=read_file(template_info.template_path / "src" / "style.css"),
-                CONFIG_CONTENT=read_file(template_info.template_path / "vite.config.js"),
+            template_structure = self._get_template_structure(template_info.template_path)
+            required_file_instruction = (
+                f"The following files are required to be known: {', '.join(template_info.required_files)}"
+            )
+            required_field_instruction = (
+                f"The following fields are could be modified: {', '.join(template_info.required_fields)}"
+            )
+            file_content = ""
+            for required_file in template_info.required_files:
+                file_content = f"{file_content}\n{required_file}:\n{read_file(template_info.template_path / required_file).content}\n\n"
+            return GENERAL_WEB_APP_TEMPLATE.format(
+                TEMPLATE_NAME=template_info.scene,
+                TEMPLATE_DESCRIPTION=template_info.description,
+                TEMPLATE_STRUCTURE=template_structure,
+                TEMPLATE_PATH=template_info.template_path,
+                REQUIRED_FILES_INSTRUCTION=required_file_instruction,
+                REQUIRED_FIELDS_INSTRUCTION=required_field_instruction,
+                FILE_CONTENT=file_content,
+                TEMPLATE_LANG=template_info.lang,
+                TEMPLATE_FRAMEWORK=template_info.framework,
             )

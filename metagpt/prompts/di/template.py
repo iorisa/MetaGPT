@@ -1,70 +1,29 @@
-from metagpt.const import REACT_TEMPLATE_PATH, VUE_TEMPLATE_PATH
+from pathlib import Path
+from typing import Union
+
+from metagpt.const import REACT_TEMPLATE_PATH
 from metagpt.tools.libs.editor import FileBlock
 
 
-def read_file(file_path: str) -> str:
-    if not file_path.exists():
-        return ""
-    with open(file_path, "r") as file:
-        content = file.read()
-    return FileBlock(path=str(file_path), content=content)
+def read_file(file_path: Union[str, Path], encoding: str = "utf-8") -> FileBlock:
+    """Read a file and return its content as a FileBlock.
 
+    Args:
+        file_path: Path to the file (str or Path object)
+        encoding: File encoding (default: utf-8)
 
-VUE_TEMPLATE_PATH = VUE_TEMPLATE_PATH.resolve().absolute() if VUE_TEMPLATE_PATH.exists() else "N/A"
-VUE_TEMPLATE_STRUCTURE = (
+    Returns:
+        FileBlock with file path and content
     """
-vue_template/
-├── README.md
-├── index.html
-├── package.json
-├── pnpm-lock.yaml
-├── postcss.config.js
-├── public
-│   └── vite.svg
-├── src
-│    ├── App.vue
-│    ├── main.js
-│    └── style.css
-├── tailwind.config.js
-└── vite.config.js
-"""
-    if VUE_TEMPLATE_PATH != "N/A"
-    else ""
-)
-VUE_INDEX_CONTENT = read_file(VUE_TEMPLATE_PATH.resolve().absolute() / "index.html")
-VUE_MAIN_CONTENT = read_file(VUE_TEMPLATE_PATH.resolve().absolute() / "src/main.js")
-VUE_APP_CONTENT = read_file(VUE_TEMPLATE_PATH.resolve().absolute() / "src/App.vue")
-VUE_INDEX_CSS_CONTENT = read_file(VUE_TEMPLATE_PATH.resolve().absolute() / "src/style.css")
-VUE_CONFIG_CONTENT = read_file(VUE_TEMPLATE_PATH.resolve().absolute() / "vite.config.js")
+    path = Path(file_path)
+    if not path.exists():
+        return FileBlock(path=str(path), content="")
 
-VUE_APP_TEMPLATE_DESCRIPTION = "general web app or game development. It is based on VUE framework with Tailwind CSS. The template includes the basic structure of a React project, including an index.html file and a src directory with an App.vue file."
+    with open(path, "r", encoding=encoding) as file:
+        content = file.read()
 
-VUE_APP_TEMPLATE = """
-#### VUE Template Intro
-1. This is a template for {VUE_APP_TEMPLATE_DESCRIPTION}
-2. The template is at {TEMPLATE_PATH}.
-3. Modify index.html, create new jsx files under src if needed, and rewrite src/App.vue to meet the user's requirements.
-4. Style your elements with Tailwind CSS classes directly in the vue files.
+    return FileBlock(path=str(path), content=content)
 
-### Project Structure
-{TEMPLATE_STRUCTURE}
-
-### File Content
-#### index.html (Modify the title)
-{INDEX_CONTENT}
-
-#### src/main.js (You should NOT modify it)
-{MAIN_CONTENT}
-
-#### src/App.vue (to be modified)
-{APP_CONTENT}
-
-#### src/style.css (You should NOT modify it)
-{INDEX_CSS_CONTENT}
-
-#### vite.config.js (only modify it if extra config is absolutely necessary)
-{CONFIG_CONTENT}
-"""
 
 REACT_TEMPLATE_PATH = REACT_TEMPLATE_PATH.resolve().absolute() if REACT_TEMPLATE_PATH.exists() else "N/A"
 REACT_TEMPLATE_STRUCTURE = (
@@ -120,17 +79,21 @@ REACT_APP_TEMPLATE = f"""
 {REACT_CONFIG_CONTENT}
 """
 
+GENERAL_WEB_APP_TEMPLATE = """
+#### {TEMPLATE_NAME} Template Intro
+1. This is a template for {TEMPLATE_DESCRIPTION}
+2. The template is at {TEMPLATE_PATH}.
+3. {REQUIRED_FILES_INSTRUCTION}
+4. {REQUIRED_FIELDS_INSTRUCTION}
+5. The template is written in {TEMPLATE_LANG} programming language.
+6. The template is based on {TEMPLATE_FRAMEWORK} framework.
 
-VUE_APP_TEMPLATE_PROMPT = VUE_APP_TEMPLATE.format(
-    VUE_APP_TEMPLATE_DESCRIPTION=VUE_APP_TEMPLATE_DESCRIPTION,
-    TEMPLATE_PATH=VUE_TEMPLATE_PATH,
-    TEMPLATE_STRUCTURE=VUE_TEMPLATE_STRUCTURE,
-    INDEX_CONTENT=VUE_INDEX_CONTENT,
-    MAIN_CONTENT=VUE_MAIN_CONTENT,
-    APP_CONTENT=VUE_APP_CONTENT,
-    INDEX_CSS_CONTENT=VUE_INDEX_CSS_CONTENT,
-    CONFIG_CONTENT=VUE_CONFIG_CONTENT,
-)
+### Project Structure
+{TEMPLATE_STRUCTURE}
+
+### File Content
+{FILE_CONTENT}
+"""
 
 GENERAL_WEB_APP_TEMPLATE_PROMPT = "### Template Intro\n" + REACT_APP_TEMPLATE
 
@@ -143,14 +106,20 @@ README content:
 {readme_content}
 Please generate a configuration in JSON format that includes the following 
 fields:
-1. description: Template description
-2. required_fields: List of required fields
+1. description (str): Template description. It is necessary to explain what this template is and its purpose.
+2. required_fields (list[str]): List of required fields. It is necessary to provide a list of fields in the template for modification.
+3. required_files (list[str]): List of required files. This should be a list of relative file paths, and each file in the list is essential for the AI to understand the content of this template. Note that the document cannot contain images, audio, or video.
+4. lang (str): Template language. It is necessary to provide the programming language of the template.
+5. framework (str): Template framework. It is necessary to provide the framework of the template.
 
 Please ensure that the generated configuration is in valid JSON format.
 ```json
 {{
     "description": "the description of template",
-    "required_fields": ["name", "job", "email", "phone", "description", "mbti"]
+    "required_fields": ["Please provide a list of fields in the template for modification."],
+    "required_files": ["Please provide a list of file's relative paths in the template."],
+    "lang": "Please provide the language of the template.",
+    "framework": "Please provide the framework of the template."
 }}
 ```
 """
