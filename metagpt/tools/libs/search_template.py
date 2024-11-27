@@ -153,7 +153,7 @@ class SearchTemplate(BaseModel):
 
     def _get_template_structure(self, template: Path) -> str:
         """Get template directory structure"""
-        result = subprocess.run(["tree", template], capture_output=True, text=True)
+        result = subprocess.run(["tree", template], capture_output=True, shell=True, text=True)
         return result.stdout
 
     async def _parse_template_config(self, template_dir: Path) -> Optional[TemplateInfo]:
@@ -226,7 +226,7 @@ class SearchTemplate(BaseModel):
 
     def _validate_config(self, config: dict, config_path: Path) -> Optional[TemplateInfo]:
         """Validate the configuration and create a TemplateInfo object."""
-        required_config_fields = {"style", "description", "required_fields", "required_files", "lang"}
+        required_config_fields = {"style", "description", "required_fields", "required_files", "lang", "framework"}
         if not all(field in config for field in required_config_fields):
             logger.warning(f"The template configuration file is missing necessary fields: {config_path}")
             return None
