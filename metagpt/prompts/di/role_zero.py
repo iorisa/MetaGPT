@@ -209,6 +209,10 @@ Response Category: TASK.
 10. Request: "Help me make a personal business card."
 Thought: The user is requesting assistance in creating a personal business card, which involves design and layout tasks.
 Response Category: TASK
+
+11. Request: "Help me develop a website."
+Thought: The user is requesting assistance in developing a website, which involves software development tasks.
+Response Category: TASK
 """
 QUICK_RESPONSE_SYSTEM_PROMPT = """
 {role_info}
