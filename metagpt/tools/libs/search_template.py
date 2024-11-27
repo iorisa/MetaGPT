@@ -61,14 +61,19 @@ class SearchTemplate(BaseModel):
     templates: Dict[str, TemplateInfo] = Field(default_factory=dict)
     template_path: Path = Field(default=Path(METAGPT_ROOT) / "template")
     template_scenes: List[str] = Field(
-        default=["Personal Business Card Template", "Content Building Tool Template", "Personal Demonstration Template"]
+        default=[
+            "personal_business_card_template",
+            "content_building_tool_template",
+            "personal_demonstration_template",
+            "default",
+        ]
     )
     llm: Optional[LLM] = Field(default=None, exclude=True)
     template_version: str = Field(default="1.0.0")
     deployment_config: Dict[str, Any] = Field(default_factory=dict)
     output_dir: Path = Field(default=Path(METAGPT_ROOT) / "workspace" / "template")
 
-    rag_top_k: int = Field(default=3, description="RAG top k")
+    rag_top_k: int = Field(default=5, description="RAG top k")
 
     _engine: Any = PrivateAttr(default=None)
     _initialized: bool = PrivateAttr(default=False)
