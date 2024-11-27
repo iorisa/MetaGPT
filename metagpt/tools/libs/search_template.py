@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
-from metagpt.const import METAGPT_ROOT
+from metagpt.const import METAGPT_ROOT, REACT_TEMPLATE_PATH
 from metagpt.llm import LLM
 from metagpt.logs import logger
 from metagpt.prompts.di.template import (
@@ -305,15 +305,17 @@ class SearchTemplate(BaseModel):
 
     # async def extract_user_info(self, )
 
-    async def copy_template(self, template: TemplateInfo) -> Path:
+    async def copy_template(
+        self, template_path: str = REACT_TEMPLATE_PATH, template_style: str = "react_template"
+    ) -> Path:
         """Copy the template to the target location."""
-        if not template.template_path.exists():
-            raise FileNotFoundError(f"Template path {template.template_path} does not exist")
+        if not template_path.exists():
+            raise FileNotFoundError(f"Template path {template_path} does not exist")
 
         target_dir = self.output_dir
 
-        shutil.copytree(template.template_path, target_dir, dirs_exist_ok=True)
-        logger.info(f"Template copied: {template.style}")
+        shutil.copytree(template_path, target_dir, dirs_exist_ok=True)
+        logger.info(f"Template copied: {template_style}")
         return target_dir
 
     async def __aenter__(self):

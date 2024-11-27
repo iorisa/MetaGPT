@@ -2,7 +2,6 @@ import subprocess
 
 from pydantic import model_validator
 
-from metagpt.const import REACT_TEMPLATE_PATH
 from metagpt.logs import logger
 from metagpt.prompts.di.frontend_engineer import FE_EXAPMLE, FRONTEND_ENGINEER_PROMPT
 from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE_PROMPT
@@ -48,8 +47,6 @@ class FrontendEngineer(Engineer2):
             logger.info("First dev request, handle template")
             if self.template_tool:
                 target_dir = await self.search_template(content)
-                if target_dir == "":
-                    target_dir = REACT_TEMPLATE_PATH.absolute()
                 # install dependencies in non-blocking way
                 commands = [f"cd {target_dir}", "pnpm i"]
                 for cmd in commands:
@@ -94,9 +91,10 @@ class FrontendEngineer(Engineer2):
         # 1. Search for matching template
         template, extra_user_info = await self.template_tool.search(requirement)
         if not template:
-            return ""
-
-        target_dir = await self.template_tool.copy_template(template)
+            target_dir = await self.template_tool.copy_template()
+            return target_dir  # default template
+        else:
+            target_dir = await self.template_tool.copy_template(template.template_path, template.style)
 
         extra_info = f"Successfully copied the {template.style} template to the {target_dir} directory.The project root path is {target_dir},read README.md document firstly.If user does not provide additional information, you need to deploy the project directly without updating any code. However, if the user specifies obtaining their personal information from a certain website (e.g., personal website or LinkedIn link) or file, use the appropriate tools (e.g., `web scraping`) to retrieve it, and then update the obtained information into the project.Note,If the code file that needs to be updated already exists, do not rewrite the corresponding content, but replace some of the code to update.Before updating the code, read the content of the code file and then think about how to update it. After completing these checks, rename the folder 'template' to the specific 'project_name'."
 
