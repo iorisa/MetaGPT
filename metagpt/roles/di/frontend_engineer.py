@@ -39,6 +39,7 @@ class FrontendEngineer(Engineer2):
         send_msg = self.rc.memory.get()
 
         if self.is_first_dev_request and len(send_msg) > 0:
+            self.is_first_dev_request = False  # Update flag
             content = "\n".join(
                 [msg.content for msg in send_msg if self.name in msg.send_to or "UserRequirement" in msg.cause_by]
             )
@@ -53,8 +54,6 @@ class FrontendEngineer(Engineer2):
                     subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             else:
                 logger.warning("Template tool not found, skip template search")
-
-            self.is_first_dev_request = False  # Update flag
 
         res = await super()._think()
 
