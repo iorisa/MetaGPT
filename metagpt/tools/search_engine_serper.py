@@ -99,7 +99,7 @@ class SerperWrapper(BaseModel):
             toret = res["sports_results"]["game_spotlight"]
         elif "knowledge_graph" in res.keys() and "description" in res["knowledge_graph"].keys():
             toret = res["knowledge_graph"]["description"]
-        elif "snippet" in res["organic"][0].keys():
+        elif res.get("organic") and "snippet" in res["organic"][0].keys():
             toret = res["organic"][0]["snippet"]
         else:
             toret = "No good search result found"
