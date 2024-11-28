@@ -104,7 +104,7 @@ class SearchTemplate(BaseModel):
             template_objs = []
 
             # First, prepare all template documents and objects.
-            for idx, template in self.templates.items():
+            for template in self.templates.values():
                 doc = f"""
                 Template Scene: {template.scene}
                 Template Description: {template.description}
@@ -112,7 +112,9 @@ class SearchTemplate(BaseModel):
                 Template Framework: {template.framework}
                 Template Style: {template.style}
                 """
-                template_objs.append(TemplateRAGObject(content=doc, metadata={"idx": idx}))
+                template_objs.append(
+                    TemplateRAGObject(content=doc, metadata={"style": template.style})
+                )  # Style is unique
 
             self.engine = SimpleEngine.from_objs(
                 objs=template_objs,
@@ -300,7 +302,7 @@ class SearchTemplate(BaseModel):
 
         # Take the top k templates with the highest scores from the results list.
         top_k_score_node = result[-self.rag_top_k :]
-        selected_template_idxs = [node.metadata["obj"].metadata["idx"] for node in top_k_score_node]
+        selected_template_idxs = [node.metadata["obj"].metadata["style"] for node in top_k_score_node]
         return selected_template_idxs[0], ""
 
     # async def extract_user_info(self, )
