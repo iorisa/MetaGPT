@@ -1,3 +1,4 @@
+import os
 import subprocess
 
 from pydantic import model_validator
@@ -47,11 +48,7 @@ class FrontendEngineer(Engineer2):
             content = content.replace("Mike", "Team Leader").replace("Alex", "Engineer")
             logger.info("First dev request, handle template")
             if self.template_tool:
-                target_dir = await self.search_template(content)
-                # install dependencies in non-blocking way
-                commands = [f"cd {target_dir}", "pnpm i"]
-                for cmd in commands:
-                    subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                await self.search_template(content)
             else:
                 logger.warning("Template tool not found, skip template search")
 
@@ -89,14 +86,37 @@ class FrontendEngineer(Engineer2):
 
         # 1. Search for matching template
         template, extra_user_info = await self.template_tool.search(requirement)
-        if not template:
-            target_dir = await self.template_tool.copy_template()
-            return target_dir  # default template
+        if template:
+            if template.style not in ["react_template", "vue_template"]:
+                target_dir = await self.template_tool.copy_template(template.template_path, template.style)
+                extra_info = f"Successfully copied the {template.style} template to the {target_dir} directory.The project root path is {target_dir},read README.md document firstly.If user does not provide additional information, you need to deploy the project directly without updating any code. However, if the user specifies obtaining their personal information from a certain website (e.g., personal website or LinkedIn link) or file, use the appropriate tools (e.g., `web scraping`) to retrieve it, and then update the obtained information into the project.Note,If the code file that needs to be updated already exists, do not rewrite the corresponding content, but replace some of the code to update.Before updating the code, read the content of the code file and then think about how to update it. After completing these checks, rename the folder 'template' to the specific 'project_name'."
+                # update template info
+                await self.set_template(template, extra_user_info, extra_info)
+            else:
+                target_dir = await self.template_tool.copy_template()
+
+            # install dependencies for JavaScript-based projects
+            if template.lang.lower() in ["javascript", "typescript"]:
+                # Check for existing package manager files
+                package_lock_exists = os.path.exists(f"{target_dir}/package-lock.json")
+                yarn_lock_exists = os.path.exists(f"{target_dir}/yarn.lock")
+                pnpm_lock_exists = os.path.exists(f"{target_dir}/pnpm-lock.yaml")
+
+                if package_lock_exists or yarn_lock_exists or pnpm_lock_exists:
+                    # Determine package manager based on lock files and availability
+                    try:
+                        if pnpm_lock_exists:
+                            cmd = f"cd {target_dir} && pnpm i"
+                        elif yarn_lock_exists:
+                            cmd = f"cd {target_dir} && yarn install"
+                        else:
+                            # Default to npm if no lock file exists or only package-lock.json exists
+                            cmd = f"cd {target_dir} && npm install"
+
+                        subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    except Exception as e:
+                        logger.warning(f"Failed to install dependencies: {str(e)}")
+
+            return target_dir
         else:
-            target_dir = await self.template_tool.copy_template(template.template_path, template.style)
-
-        extra_info = f"Successfully copied the {template.style} template to the {target_dir} directory.The project root path is {target_dir},read README.md document firstly.If user does not provide additional information, you need to deploy the project directly without updating any code. However, if the user specifies obtaining their personal information from a certain website (e.g., personal website or LinkedIn link) or file, use the appropriate tools (e.g., `web scraping`) to retrieve it, and then update the obtained information into the project.Note,If the code file that needs to be updated already exists, do not rewrite the corresponding content, but replace some of the code to update.Before updating the code, read the content of the code file and then think about how to update it. After completing these checks, rename the folder 'template' to the specific 'project_name'."
-        # update template info
-        await self.set_template(template, extra_user_info, extra_info)
-
-        return target_dir
+            return ""
