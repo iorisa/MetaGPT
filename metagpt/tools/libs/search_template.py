@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
-from metagpt.const import METAGPT_ROOT
+from metagpt.const import METAGPT_ROOT, REACT_TEMPLATE_PATH
 from metagpt.llm import LLM
 from metagpt.logs import logger
 from metagpt.prompts.di.template import (
@@ -61,14 +61,19 @@ class SearchTemplate(BaseModel):
     templates: Dict[str, TemplateInfo] = Field(default_factory=dict)
     template_path: Path = Field(default=Path(METAGPT_ROOT) / "template")
     template_scenes: List[str] = Field(
-        default=["Personal Business Card Template", "Content Building Tool Template", "Personal Demonstration Template"]
+        default=[
+            "personal_business_card_template",
+            "content_building_tool_template",
+            "personal_demonstration_template",
+            "default",
+        ]
     )
     llm: Optional[LLM] = Field(default=None, exclude=True)
     template_version: str = Field(default="1.0.0")
     deployment_config: Dict[str, Any] = Field(default_factory=dict)
     output_dir: Path = Field(default=Path(METAGPT_ROOT) / "workspace" / "template")
 
-    rag_top_k: int = Field(default=3, description="RAG top k")
+    rag_top_k: int = Field(default=5, description="RAG top k")
 
     _engine: Any = PrivateAttr(default=None)
     _initialized: bool = PrivateAttr(default=False)
@@ -99,7 +104,7 @@ class SearchTemplate(BaseModel):
             template_objs = []
 
             # First, prepare all template documents and objects.
-            for idx, template in self.templates.items():
+            for template in self.templates.values():
                 doc = f"""
                 Template Scene: {template.scene}
                 Template Description: {template.description}
@@ -107,7 +112,9 @@ class SearchTemplate(BaseModel):
                 Template Framework: {template.framework}
                 Template Style: {template.style}
                 """
-                template_objs.append(TemplateRAGObject(content=doc, metadata={"idx": idx}))
+                template_objs.append(
+                    TemplateRAGObject(content=doc, metadata={"style": template.style})
+                )  # Style is unique
 
             self.engine = SimpleEngine.from_objs(
                 objs=template_objs,
@@ -295,20 +302,22 @@ class SearchTemplate(BaseModel):
 
         # Take the top k templates with the highest scores from the results list.
         top_k_score_node = result[-self.rag_top_k :]
-        selected_template_idxs = [node.metadata["obj"].metadata["idx"] for node in top_k_score_node]
+        selected_template_idxs = [node.metadata["obj"].metadata["style"] for node in top_k_score_node]
         return selected_template_idxs[0], ""
 
     # async def extract_user_info(self, )
 
-    async def copy_template(self, template: TemplateInfo) -> Path:
+    async def copy_template(
+        self, template_path: str = REACT_TEMPLATE_PATH, template_style: str = "react_template"
+    ) -> Path:
         """Copy the template to the target location."""
-        if not template.template_path.exists():
-            raise FileNotFoundError(f"Template path {template.template_path} does not exist")
+        if not template_path.exists():
+            raise FileNotFoundError(f"Template path {template_path} does not exist")
 
         target_dir = self.output_dir
 
-        shutil.copytree(template.template_path, target_dir, dirs_exist_ok=True)
-        logger.info(f"Template copied: {template.style}")
+        shutil.copytree(template_path, target_dir, dirs_exist_ok=True)
+        logger.info(f"Template copied: {template_style}")
         return target_dir
 
     async def __aenter__(self):

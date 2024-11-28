@@ -46,7 +46,11 @@ class FrontendEngineer(Engineer2):
             content = content.replace("Mike", "Team Leader").replace("Alex", "Engineer")
             logger.info("First dev request, handle template")
             if self.template_tool:
-                await self.search_template(content)
+                target_dir = await self.search_template(content)
+                # install dependencies in non-blocking way
+                commands = [f"cd {target_dir}", "pnpm i"]
+                for cmd in commands:
+                    subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             else:
                 logger.warning("Template tool not found, skip template search")
 
@@ -87,21 +91,13 @@ class FrontendEngineer(Engineer2):
         # 1. Search for matching template
         template, extra_user_info = await self.template_tool.search(requirement)
         if not template:
-            return "Can't find a matching template"
-
-        target_dir = await self.template_tool.copy_template(template)
+            target_dir = await self.template_tool.copy_template()
+            return target_dir  # default template
+        else:
+            target_dir = await self.template_tool.copy_template(template.template_path, template.style)
 
         extra_info = f"Successfully copied the {template.style} template to the {target_dir} directory.The project root path is {target_dir},read README.md document firstly.If user does not provide additional information, you need to deploy the project directly without updating any code. However, if the user specifies obtaining their personal information from a certain website (e.g., personal website or LinkedIn link) or file, use the appropriate tools (e.g., `web scraping`) to retrieve it, and then update the obtained information into the project.Note,If the code file that needs to be updated already exists, do not rewrite the corresponding content, but replace some of the code to update.Before updating the code, read the content of the code file and then think about how to update it. After completing these checks, rename the folder 'template' to the specific 'project_name'."
-
-        if not target_dir:
-            return "Failed to copy template"
-
         # update template info
         await self.set_template(template, extra_user_info, extra_info)
 
-        # install dependencies in non-blocking way
-        commands = [f"cd {target_dir}", "pnpm i"]
-        for cmd in commands:
-            subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-        return f"Successfully copied {template.style} template to {target_dir}, next step is to rename the template folder to the project name"
+        return target_dir
