@@ -89,11 +89,7 @@ class SearchTemplate(BaseModel):
     def engine(self) -> "SimpleEngine":
         if self._engine is None:
             from metagpt.rag.engines import SimpleEngine
-            from metagpt.rag.schema import (
-                BM25RetrieverConfig,
-                FAISSRetrieverConfig,
-                LLMRankerConfig,
-            )
+            from metagpt.rag.schema import FAISSRetrieverConfig, LLMRankerConfig
 
             logger.info("RAG engine not initialized, initializing...")
             """Initialize the RAG engine and load the template description."""
@@ -118,7 +114,7 @@ class SearchTemplate(BaseModel):
 
             self.engine = SimpleEngine.from_objs(
                 objs=template_objs,
-                retriever_configs=[FAISSRetrieverConfig(), BM25RetrieverConfig()],
+                retriever_configs=[FAISSRetrieverConfig()],
                 ranker_configs=[LLMRankerConfig(top_n=self.rag_top_k)],
             )
             return True
@@ -267,7 +263,7 @@ class SearchTemplate(BaseModel):
         # Filter out None values and update the template dictionary
         for idx, template_info in enumerate(template_infos):
             if template_info:
-                self.templates[str(idx)] = template_info
+                self.templates[template_info.style] = template_info
                 logger.info(f"Template loaded successfully:{template_info.style}")
         return True
 
@@ -303,6 +299,7 @@ class SearchTemplate(BaseModel):
         # Take the top k templates with the highest scores from the results list.
         top_k_score_node = result[-self.rag_top_k :]
         selected_template_idxs = [node.metadata["obj"].metadata["style"] for node in top_k_score_node]
+        logger.info(f"Selected templates: {selected_template_idxs}")
         return selected_template_idxs[0], ""
 
     # async def extract_user_info(self, )
