@@ -286,11 +286,11 @@ class SearchTemplate(BaseModel):
         if not result:
             logger.warning("No matching template found")
             return None, ""
-        template_idx, extra_user_info = await self.select_from_candidates(result)
-        if template_idx is None:
+        template_name, extra_user_info = await self.select_from_candidates(result)
+        if template_name is None:
             return None, ""
-        template = self.templates.get(template_idx)
-        logger.info(f"Selected template: {template.style}")
+        template = self.templates.get(template_name)
+        # logger.info(f"Selected template: {template.style}")
         return template, extra_user_info
 
     async def select_from_candidates(self, result: List[Any]) -> Optional[Tuple[str, str]]:
@@ -298,9 +298,9 @@ class SearchTemplate(BaseModel):
 
         # Take the top k templates with the highest scores from the results list.
         top_k_score_node = result[-self.rag_top_k :]
-        selected_template_idxs = [node.metadata["obj"].metadata["style"] for node in top_k_score_node]
-        logger.info(f"Selected templates: {selected_template_idxs}")
-        return selected_template_idxs[0], ""
+        selected_template_styles = [node.metadata["obj"].metadata["style"] for node in top_k_score_node]
+        logger.info(f"Selected templates: {selected_template_styles}")
+        return selected_template_styles[0], ""
 
     # async def extract_user_info(self, )
 
