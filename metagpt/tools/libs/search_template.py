@@ -282,6 +282,7 @@ class SearchTemplate(BaseModel):
         """
 
         logger.info("Start searching for templates")
+        requirement = f"Please search for the most suitable template based on the following requirements: {requirement}\n\nNote: DON'T select completely irrelevant templates"
         result = await self.engine.aretrieve(requirement)
         if not result:
             logger.warning("No matching template found")
