@@ -95,20 +95,11 @@ class FrontendEngineer(Engineer2):
             if template.lang.lower() in ["javascript", "typescript"]:
                 # Check for existing package manager files
                 package_lock_exists = os.path.exists(f"{target_dir}/package-lock.json")
-                yarn_lock_exists = os.path.exists(f"{target_dir}/yarn.lock")
-                pnpm_lock_exists = os.path.exists(f"{target_dir}/pnpm-lock.yaml")
 
-                if package_lock_exists or yarn_lock_exists or pnpm_lock_exists:
+                if package_lock_exists:
                     # Determine package manager based on lock files and availability
                     try:
-                        if pnpm_lock_exists:
-                            cmd = f"cd {target_dir} && pnpm i"
-                        elif yarn_lock_exists:
-                            cmd = f"cd {target_dir} && yarn install"
-                        else:
-                            # Default to npm if no lock file exists or only package-lock.json exists
-                            cmd = f"cd {target_dir} && npm install"
-
+                        cmd = f"cd {target_dir} && pnpm i"
                         subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                     except Exception as e:
                         logger.warning(f"Failed to install dependencies: {str(e)}")
