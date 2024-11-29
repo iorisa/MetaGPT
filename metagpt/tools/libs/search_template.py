@@ -65,7 +65,7 @@ class SearchTemplate(BaseModel):
             "personal_business_card_template",
             "content_building_tool_template",
             "personal_demonstration_template",
-            "default",
+            "default_web_project",
         ]
     )
     llm: Optional[LLM] = Field(default=None, exclude=True)

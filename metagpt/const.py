@@ -72,12 +72,11 @@ TOOL_SCHEMA_PATH = METAGPT_ROOT / "metagpt/tools/schemas"
 TOOL_LIBS_PATH = METAGPT_ROOT / "metagpt/tools/libs"
 
 # TEMPLATE PATH
-TEMPLATE_FOLDER_PATH = METAGPT_ROOT / "template" / "default"
+TEMPLATE_FOLDER_PATH = METAGPT_ROOT / "template" / "default_web_project"
 VUE_TEMPLATE_PATH = TEMPLATE_FOLDER_PATH / "vue_template"
 REACT_TEMPLATE_PATH = TEMPLATE_FOLDER_PATH / "react_template"
 
 # REAL CONSTS
-
 MEM_TTL = 24 * 30 * 3600
 
 MESSAGE_ROUTE_FROM = "sent_from"
