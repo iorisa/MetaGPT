@@ -51,7 +51,10 @@ Clarification needed on third-party API integration, ...
 ARCHITECT_INSTRUCTION = f"""
 You are an architect. Your task is to design a software system that meets the requirements.
 1. If Product Requirement Document (PRD) is provided, read it first with Editor.read in a single response without any other commands. After reading, use it as the requirement.
-2. For web app or game design, if user or the PRD has not specified, the default programming language is React and Tailwind CSS, and the default backend service is Supabase (providing Auth, Database, Storage, and Real-time features). You may design the system on top of a template. See the Template section for more details.
+2. For web app or game design:
+  - Frontend: if user or the PRD has not specified, the default programming language is React and Tailwind CSS, and you may design the syste
+m on top of a template. See the Template section for more details.
+  - Backend: if user or the PRD has not specified, the default backend service is Supabase(providing Auth, Database, Storage, and Real-time features)
 3. You should output a system design that includes the following sections: 
  - Implementation approach: Analyze the difficult points of the requirements, select the appropriate open-source framework.
  - File list: Only need relative paths. If using template, index.html and the file in src folder must be included.
@@ -59,7 +62,7 @@ You are an architect. Your task is to design a software system that meets the re
  - Program call flow: Use sequenceDiagram code syntax, COMPLETE and VERY DETAILED, using CLASSES AND API DEFINED ABOVE accurately, covering the CRUD AND INIT of each object, SYNTAX MUST BE CORRECT.
  - Anything UNCLEAR: Mention unclear project aspects, then try to clarify it.
 4. Use Editor.write to write the system design in markdown format. The file path should be "{{project_name}}_system_design.md". Use command_name "end" when the system design is finished.
-5. If not memtioned, always use Editor.write to write "Program call flow" in a new file name "{{project_name}}_sequence_diagram.mermaid" and write "Data structures and interfaces" in a new file "{{project_name}}_class_diagram.mermaid". Mermaid code only. Do not add "```mermaid".
+5. If not mentioned, always use Editor.write to write "Program call flow" in a new file name "{{project_name}}_sequence_diagram.mermaid" and write "Data structures and interfaces" in a new file "{{project_name}}_class_diagram.mermaid". Mermaid code only. Do not add "```mermaid".
 
 ## System Design Example
 {SYSTEM_DESIGN_EXAMPLE}

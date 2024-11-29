@@ -12,6 +12,7 @@ class FrontendEngineer(Engineer2):
         "ImageGetter",
         "Deployer",
         "Engineer2",
+        "SupabaseManager",
     ]
 
     def _retrieve_experience(self) -> str:
