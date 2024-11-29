@@ -81,8 +81,6 @@ class SearchTemplate(BaseModel):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.llm = kwargs.get("llm") or LLM()
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-
         run_coroutine_sync(self._ensure_initialized())
 
     @property
@@ -313,7 +311,7 @@ class SearchTemplate(BaseModel):
             raise FileNotFoundError(f"Template path {template_path} does not exist")
 
         target_dir = self.output_dir
-
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         shutil.copytree(template_path, target_dir, dirs_exist_ok=True)
         logger.info(f"Template copied: {template_style}")
         return target_dir
