@@ -66,6 +66,7 @@ class SearchTemplate(BaseModel):
             "content_building_tool_template",
             "personal_demonstration_template",
             "default_web_project",
+            "default_python_project",
         ]
     )
     llm: Optional[LLM] = Field(default=None, exclude=True)
@@ -107,7 +108,12 @@ class SearchTemplate(BaseModel):
                 Template Style: {template.style}
                 """
                 template_objs.append(
-                    TemplateRAGObject(content=doc, metadata={"style": template.style})
+                    TemplateRAGObject(
+                        content=doc,
+                        metadata={
+                            "style": template.style,
+                        },
+                    )
                 )  # Style is unique
 
             self.engine = SimpleEngine.from_objs(
@@ -280,7 +286,7 @@ class SearchTemplate(BaseModel):
         """
 
         logger.info("Start searching for templates")
-        requirement = f"Please search for the most suitable template based on the following requirements: {requirement}\n\nNote: DON'T select completely irrelevant templates"
+        requirement = f"Please search for the most suitable template based on the following requirements: {requirement}\n\nNote: DON'T select completely irrelevant templates;"
         result = await self.engine.aretrieve(requirement)
         if not result:
             logger.warning("No matching template found")
