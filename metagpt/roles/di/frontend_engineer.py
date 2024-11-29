@@ -88,21 +88,13 @@ class FrontendEngineer(Engineer2):
         template, extra_user_info = await self.template_tool.search(requirement)
         if template:
             target_dir = await self.template_tool.copy_template(template.template_path, template.style)
-            extra_info = f"Successfully copied the {template.style} template to the {target_dir} directory.The project root path is {target_dir},read README.md document firstly. For business card project, if user does not provide additional information, you need to deploy the project directly without updating any code. However, if the user specifies obtaining their personal information from a certain website (e.g., personal website or LinkedIn link) or file, use the appropriate tools (e.g., `web scraping`) to retrieve it, and then update the obtained information into the project.Note,If the code file that needs to be updated already exists, do not rewrite the corresponding content, but replace some of the code to update.Before updating the code, read the content of the code file and then think about how to update it. After completing these checks, rename the folder 'template' to the specific 'project_name'."
-            # update template info
+            extra_info = f"Successfully copied the {template.style} template to the {target_dir} directory.The project root path is {target_dir},If project root path exists README.md document, read README.md document firstly. If user does not provide additional information, you need to deploy the project directly without updating any code. However, if the user specifies obtaining their information from a certain website or file, use the appropriate tools to retrieve it, and then update the obtained information into the project. Note,If the code file that needs to be updated already exists, do not rewrite the corresponding content, but replace some of the code to update. Before updating the code, read the content of the code file and then think about how to update it. After completing these checks, rename the folder 'template' to the specific 'project_name'."  # update template info
             await self.set_template(template, extra_user_info, extra_info)
             # install dependencies for JavaScript-based projects
             if template.lang.lower() in ["javascript", "typescript"]:
-                # Check for existing package manager files
-                package_lock_exists = os.path.exists(f"{target_dir}/package-lock.json")
-
-                if package_lock_exists:
-                    # Determine package manager based on lock files and availability
-                    try:
-                        cmd = f"cd {target_dir} && pnpm i"
-                        subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                    except Exception as e:
-                        logger.warning(f"Failed to install dependencies: {str(e)}")
+                if os.path.exists(f"{target_dir}/package.json"):
+                    cmd = f"cd {target_dir} && pnpm i"
+                    subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
             return target_dir
         else:
