@@ -17,6 +17,7 @@
 from typing import Optional
 
 from pydantic import BaseModel, Field
+from agentops import track_agent
 
 from metagpt.actions import DebugError, RunCode, UserRequirement, WriteTest
 from metagpt.actions.prepare_documents import PrepareDocuments
@@ -36,6 +37,7 @@ from metagpt.utils.project_repo import ProjectRepo
 from metagpt.utils.report import EditorReporter
 
 
+@track_agent("QaEngineer")
 class QaEngineer(Role):
     name: str = "Edward"
     profile: str = "QaEngineer"

@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from pydantic import Field
+from agentops import track_agent
 
 from metagpt.logs import logger
 
@@ -22,6 +23,7 @@ from metagpt.utils.common import CodeParser, awrite
 from metagpt.utils.report import EditorReporter
 
 
+@track_agent("Engineer2")
 @register_tool(include_functions=["write_new_code"])
 class Engineer2(RoleZero):
     name: str = "Alex"

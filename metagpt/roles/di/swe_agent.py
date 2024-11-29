@@ -1,6 +1,7 @@
 import json
 
 from pydantic import Field
+from agentops import track_agent
 
 from metagpt.logs import logger
 from metagpt.prompts.di.swe_agent import (
@@ -14,6 +15,7 @@ from metagpt.tools.libs.git import git_create_pull
 from metagpt.tools.libs.terminal import Bash
 
 
+@track_agent("SWEAgent")
 class SWEAgent(RoleZero):
     name: str = "Swen"
     profile: str = "Issue Solver"

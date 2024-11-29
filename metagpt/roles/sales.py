@@ -9,12 +9,14 @@
 from typing import Optional
 
 from pydantic import Field, model_validator
+from agentops import track_agent
 
 from metagpt.actions import SearchAndSummarize, UserRequirement
 from metagpt.roles import Role
 from metagpt.tools.search_engine import SearchEngine
 
 
+@track_agent("Sales")
 class Sales(Role):
     name: str = "John Smith"
     profile: str = "Retail Sales Guide"

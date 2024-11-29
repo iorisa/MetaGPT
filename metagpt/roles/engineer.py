@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import List, Optional, Set
 
 from pydantic import BaseModel, Field
+from agentops import track_agent
 
 from metagpt.actions import WriteCode, WriteCodeReview, WriteTasks
 from metagpt.actions.fix_bug import FixBug
@@ -70,6 +71,7 @@ otherwise, answer 'YES' in JSON format.
 """
 
 
+@track_agent("Engineer")
 class Engineer(Role):
     """
     Represents an Engineer role responsible for writing and possibly reviewing code.

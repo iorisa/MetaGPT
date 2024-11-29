@@ -8,6 +8,7 @@
 
 from datetime import datetime
 from typing import Dict
+from agentops import track_agent
 
 from metagpt.actions.write_tutorial import WriteContent, WriteDirectory
 from metagpt.const import TUTORIAL_PATH
@@ -17,6 +18,7 @@ from metagpt.schema import Message
 from metagpt.utils.file import File
 
 
+@track_agent("TutorialAssistant")
 class TutorialAssistant(Role):
     """Tutorial assistant, input one sentence to generate a tutorial document in markup format.
 

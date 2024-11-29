@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Annotated
 
 from pydantic import Field
+from agentops import track_agent
 
 from metagpt.actions.di.run_command import RunCommand
 from metagpt.const import TEAMLEADER_NAME
@@ -18,6 +19,7 @@ from metagpt.strategy.experience_retriever import ExpRetriever, SimpleExpRetriev
 from metagpt.tools.tool_registry import register_tool
 
 
+@track_agent("TeamLeader")
 @register_tool(include_functions=["publish_team_message"])
 class TeamLeader(RoleZero):
     name: str = TEAMLEADER_NAME

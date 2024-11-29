@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Optional
 
 from pydantic import Field
+from agentops import track_agent
 
 from metagpt.actions.skill_action import ArgumentsParingAction, SkillAction
 from metagpt.actions.talk_action import TalkAction
@@ -34,6 +35,7 @@ class MessageType(Enum):
     Skill = "SKILL"
 
 
+@track_agent("Assistant")
 class Assistant(Role):
     """Assistant for solving common issues."""
 

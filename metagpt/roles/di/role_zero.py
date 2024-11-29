@@ -10,6 +10,7 @@ from typing import Annotated, Callable, Dict, List, Literal, Optional, Tuple
 
 import pytz
 from pydantic import Field, model_validator
+from agentops import track_agent
 
 from metagpt.actions import Action, UserRequirement
 from metagpt.actions.di.run_command import RunCommand
@@ -56,6 +57,7 @@ from metagpt.utils.repair_llm_raw_output import (
 from metagpt.utils.report import ThoughtReporter
 
 
+@track_agent("RoleZero")
 @register_tool(include_functions=["ask_human", "reply_to_human"])
 class RoleZero(Role):
     """A role who can think and act dynamically"""

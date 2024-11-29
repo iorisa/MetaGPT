@@ -4,6 +4,7 @@ import json
 from typing import Literal
 
 from pydantic import Field, model_validator
+from agentops import track_agent
 
 # from metagpt.actions.di.ask_review import ReviewConst
 from metagpt.actions.di.execute_nb_code import ExecuteNbCode
@@ -33,6 +34,7 @@ Output a json following the format:
 """
 
 
+@track_agent("DataInterpreter")
 class DataInterpreter(Role):
     name: str = "David"
     profile: str = "DataInterpreter"

@@ -9,6 +9,7 @@
 """
 
 from typing import Optional
+from agentops import track_agent
 
 from pydantic import Field, model_validator
 
@@ -21,6 +22,7 @@ from metagpt.schema import Message
 from metagpt.tools.search_engine import SearchEngine
 
 
+@track_agent("Searcher")
 class Searcher(Role):
     """
     Represents a Searcher role responsible for providing search services to users.
