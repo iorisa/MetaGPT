@@ -48,13 +48,4 @@ To replace a small piece of code in a file, you can use the following command. P
     }
 ]
 ```
-## Example 3
-To read a large file(e.g. PDF, DOCX, etc.), you can use the following command:
-```json
-[
-    {
-        "command_name": "Editor.similarity_search",
-        "args": {"query": "The problem to be analyzed from the document", "path": "path/to/the/document"}
-    }
-]
 """
