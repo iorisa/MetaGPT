@@ -76,10 +76,6 @@ WRITE_CODE_PROMPT = """
 
 # Instruction
 Your task is to write the files listed in Files to Write. You must ensure the code is complete, correct, and bug-free.
-When you need to use images in your code, you can embed the following tool call in your code:
-<img 
-    src={<tool_call ImageGetter.get_image(search_term="cute cartoon bird character transparent background", image_save_path="/root/code/TemplateRecommendation/MetaGPT/workspace/template/public/bird.png")>}
-/>
 
 # Output
 While some concise thoughts are helpful, code is absolutely required. DO NOT leave any TODO or placeholder.

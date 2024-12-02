@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import asyncio
-import re
 from pathlib import Path
 
 from pydantic import Field
@@ -113,106 +111,6 @@ class Engineer2(RoleZero):
             path = self.working_dir / path
         return path
 
-    async def _run_tool_call_commands(self, tool_call_commands: list[dict[str, str]]):
-        """Run the tool call commands concurrently."""
-        # Create list of coroutines from tool commands
-        logger.info("tool_call")
-        coroutines = [self.tool_execution_map[cmd["command_name"]](**cmd["parameters"]) for cmd in tool_call_commands]
-        # Run all commands concurrently and wait for them to complete
-        return await asyncio.gather(*coroutines)
-
-    def _parse_tool_call_command_parameters(self, tool_call_command: str) -> dict:
-        """Parse the tool call command parameters.
-        Args:
-            tool_call_command: The full command string (e.g. "ImageGetter.get_image(param1='value1', param2='value2')")
-
-        Returns:
-            Dictionary mapping parameter names to their values. For positional args,
-            keys will be arg0, arg1, etc.
-        """
-        tool_call_command = tool_call_command.strip()
-        # Extract parameters string between parentheses
-        param_start = tool_call_command.find("(")
-        param_end = tool_call_command.rfind(")")
-        if param_start == -1 or param_end == -1:
-            raise ValueError(f"Invalid command format: missing parentheses in '{tool_call_command}'")
-
-        params_str = tool_call_command[param_start + 1 : param_end].strip()
-        if not params_str:
-            return {}  # Empty parameter list
-
-        # Parse individual parameters
-        params = {}
-        pos_arg_counter = 0
-
-        # Split on commas that are not within quotes
-        in_quotes = False
-        quote_char = None
-        current_param = []
-        param_list = []
-
-        for char in params_str:
-            if char in "\"'":
-                if not in_quotes:
-                    in_quotes = True
-                    quote_char = char
-                elif char == quote_char:
-                    in_quotes = False
-                    quote_char = None
-            elif char == "," and not in_quotes:
-                param_list.append("".join(current_param).strip())
-                current_param = []
-                continue
-            current_param.append(char)
-
-        if current_param:
-            param_list.append("".join(current_param).strip())
-
-        # Process each parameter
-        for param in param_list:
-            param = param.strip()
-            if not param:
-                continue
-
-            if "=" in param:
-                # Named parameter
-                key, value = param.split("=", 1)
-                key = key.strip()
-                value = value.strip().strip("'\"")  # Remove quotes
-                params[key] = value
-            else:
-                # Positional parameter
-                value = param.strip().strip("'\"")  # Remove quotes
-                params[f"arg{pos_arg_counter}"] = value
-                pos_arg_counter += 1
-
-        return params
-
-    async def _tool_call(self, code: str):
-        """Replace the tool call with the actual tool call."""
-        # 1. find all the tool calls in the code
-
-        tool_calls = ["ImageGetter.get_image"]
-        for tool_call in tool_calls:
-            if tool_call in code:
-                # find all the tool call command
-                tool_call_match_pattern = rf"{tool_call}\(.*?\)"
-                tool_call_commands = re.findall(tool_call_match_pattern, code)
-                logger.info(tool_call_commands)
-                tool_call_commands_dicts = []
-                for tool_call_command in tool_call_commands:
-                    tool_call_commands_dicts.append(
-                        {
-                            "command_name": tool_call,
-                            "parameters": self._parse_tool_call_command_parameters(tool_call_command),
-                        }
-                    )
-                    logger.info(f"{tool_call_command}: {tool_call_commands_dicts}")
-                result = await self._run_tool_call_commands(tool_call_commands_dicts)
-                for i, tool_call_command in enumerate(tool_call_commands):
-                    code = code.replace(tool_call_command, result[i])
-        return code
-
     async def write_new_code(self, description: str, paths: list[str]) -> str:
         """Write one or more new code files.
 
@@ -239,7 +137,6 @@ class Engineer2(RoleZero):
                 logger.warning("The number of paths and code blocks do not match.")
                 output_msg += f"The number of paths and code blocks do not match. Only {paths} will be saved. If you want to save more code blocks, please call the function again with the remaining paths.\n"
             for path, code in zip(paths, code_by_files):
-                code = await self._tool_call(code)
                 await awrite(self._fix_path(path), code)
                 file_block = FileBlock(path=str(path), content=code)
                 output_msg += f"File created successfully with \n{file_block}\n"

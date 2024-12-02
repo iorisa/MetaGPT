@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from typing import Optional
 
 from playwright.async_api import Browser as Browser_
@@ -81,9 +80,6 @@ class ImageGetter(BaseModel):
         )
         if image_base64:
             image = decode_image(image_base64)
-            # Check image_save_path is exist
-            if not os.path.exists(image_save_path):
-                os.makedirs(image_save_path, exist_ok=True)
             image.save(image_save_path)
             return f"{search_term} found. The image is saved in {image_save_path}."
         return f"{search_term} not found. Please broaden the search term."
