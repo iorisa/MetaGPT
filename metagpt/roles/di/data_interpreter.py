@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Literal
 
-from agentops import track_agent
+# from agentops import track_agent
 from pydantic import Field, model_validator
 
 # from metagpt.actions.di.ask_review import ReviewConst
@@ -34,7 +34,7 @@ Output a json following the format:
 """
 
 
-@track_agent("DataInterpreter")
+# @track_agent("DataInterpreter")
 class DataInterpreter(Role):
     name: str = "David"
     profile: str = "DataInterpreter"

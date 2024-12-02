@@ -5,14 +5,14 @@
 @Author  : alexanderwu
 @File    : project_manager.py
 """
-from agentops import track_agent
+# from agentops import track_agent
 
 from metagpt.actions import WriteTasks
 from metagpt.actions.design_api import WriteDesign
 from metagpt.roles.di.role_zero import RoleZero
 
 
-@track_agent("ProjectManager")
+# @track_agent("ProjectManager")
 class ProjectManager(RoleZero):
     """
     Represents a Project Manager role responsible for overseeing project execution and team efficiency.

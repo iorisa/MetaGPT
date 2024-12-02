@@ -6,7 +6,7 @@
 @File    : product_manager.py
 @Modified By: liushaojie, 2024/10/17.
 """
-from agentops import track_agent
+# from agentops import track_agent
 
 from metagpt.actions import UserRequirement, WritePRD
 from metagpt.actions.prepare_documents import PrepareDocuments
@@ -19,7 +19,7 @@ from metagpt.utils.common import any_to_name, any_to_str, tool2name
 from metagpt.utils.git_repository import GitRepository
 
 
-@track_agent("ProductManager")
+# @track_agent("ProductManager")
 class ProductManager(RoleZero):
     """
     Represents a Product Manager role responsible for product development and management.
