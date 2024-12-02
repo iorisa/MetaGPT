@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
+from agentops import track_agent
 from pydantic import Field, model_validator
 
 from metagpt.actions.di.execute_nb_code import ExecuteNbCode
@@ -22,6 +23,7 @@ from metagpt.tools.tool_recommend import BM25ToolRecommender, ToolRecommender
 from metagpt.tools.tool_registry import register_tool
 
 
+@track_agent("DataAnalyst")
 @register_tool(include_functions=["write_and_exec_code"])
 class DataAnalyst(RoleZero):
     name: str = "David"

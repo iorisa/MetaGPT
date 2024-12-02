@@ -1,6 +1,7 @@
 import os
 import subprocess
 
+from agentops import track_agent
 from pydantic import model_validator
 
 from metagpt.logs import logger
@@ -11,6 +12,7 @@ from metagpt.schema import UserMessage
 from metagpt.tools.libs.search_template import SearchTemplate, TemplateInfo
 
 
+@track_agent("FrontendEngineer")
 class FrontendEngineer(Engineer2):
     use_search_template: bool = True
     instruction: str = FRONTEND_ENGINEER_PROMPT
