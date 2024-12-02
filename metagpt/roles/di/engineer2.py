@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import Field
 from agentops import track_agent
+from pydantic import Field
 
 from metagpt.logs import logger
 

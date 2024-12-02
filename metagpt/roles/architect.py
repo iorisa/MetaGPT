@@ -5,8 +5,8 @@
 @Author  : alexanderwu
 @File    : architect.py
 """
-from pydantic import Field
 from agentops import track_agent
+from pydantic import Field
 
 from metagpt.actions.design_api import WriteDesign
 from metagpt.actions.write_prd import WritePRD

@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 from typing import Literal
 
-from pydantic import Field, model_validator
 from agentops import track_agent
+from pydantic import Field, model_validator
 
 # from metagpt.actions.di.ask_review import ReviewConst
 from metagpt.actions.di.execute_nb_code import ExecuteNbCode

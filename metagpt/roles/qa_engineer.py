@@ -16,8 +16,8 @@
 """
 from typing import Optional
 
-from pydantic import BaseModel, Field
 from agentops import track_agent
+from pydantic import BaseModel, Field
 
 from metagpt.actions import DebugError, RunCode, UserRequirement, WriteTest
 from metagpt.actions.prepare_documents import PrepareDocuments

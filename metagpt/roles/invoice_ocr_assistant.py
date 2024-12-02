@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import Optional
 
 import pandas as pd
-from pydantic import BaseModel
 from agentops import track_agent
+from pydantic import BaseModel
 
 from metagpt.actions.invoice_ocr import GenerateTable, InvoiceOCR, ReplyQuestion
 from metagpt.prompts.invoice_ocr import INVOICE_OCR_SUCCESS

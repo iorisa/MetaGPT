@@ -8,8 +8,8 @@
 import asyncio
 import re
 
-from pydantic import BaseModel
 from agentops import track_agent
+from pydantic import BaseModel
 
 from metagpt.actions import Action, CollectLinks, ConductResearch, WebBrowseAndSummarize
 from metagpt.actions.research import get_research_system_text

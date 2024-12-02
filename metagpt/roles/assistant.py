@@ -18,8 +18,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from pydantic import Field
 from agentops import track_agent
+from pydantic import Field
 
 from metagpt.actions.skill_action import ArgumentsParingAction, SkillAction
 from metagpt.actions.talk_action import TalkAction

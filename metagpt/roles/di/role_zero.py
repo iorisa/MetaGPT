@@ -9,8 +9,8 @@ from datetime import datetime
 from typing import Annotated, Callable, Dict, List, Literal, Optional, Tuple
 
 import pytz
-from pydantic import Field, model_validator
 from agentops import track_agent
+from pydantic import Field, model_validator
 
 from metagpt.actions import Action, UserRequirement
 from metagpt.actions.di.run_command import RunCommand

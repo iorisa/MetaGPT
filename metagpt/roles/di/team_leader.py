@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from pydantic import Field
 from agentops import track_agent
+from pydantic import Field
 
 from metagpt.actions.di.run_command import RunCommand
 from metagpt.const import TEAMLEADER_NAME

@@ -8,8 +8,8 @@
         distribution feature for message filtering.
 """
 from typing import Any, Callable, Union
-from agentops import track_agent
 
+from agentops import track_agent
 from pydantic import Field
 from semantic_kernel import Kernel
 from semantic_kernel.planning import SequentialPlanner

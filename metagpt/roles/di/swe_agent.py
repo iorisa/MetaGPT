@@ -1,7 +1,7 @@
 import json
 
-from pydantic import Field
 from agentops import track_agent
+from pydantic import Field
 
 from metagpt.logs import logger
 from metagpt.prompts.di.swe_agent import (

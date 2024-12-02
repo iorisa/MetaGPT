@@ -1,8 +1,8 @@
 import os
 import subprocess
 
-from pydantic import model_validator
 from agentops import track_agent
+from pydantic import model_validator
 
 from metagpt.logs import logger
 from metagpt.prompts.di.frontend_engineer import FE_EXAPMLE, FRONTEND_ENGINEER_PROMPT

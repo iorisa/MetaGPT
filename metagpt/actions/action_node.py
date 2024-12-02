@@ -287,7 +287,9 @@ class ActionNode:
 
         # 如果没有提供格式化函数，则使用默认的格式化函数
         if format_func is None:
-            def format_func(node): return node.instruction
+
+            def format_func(node):
+                return node.instruction
 
         # 使用提供的格式化函数来格式化当前节点的值
         formatted_value = format_func(self)
@@ -351,7 +353,10 @@ class ActionNode:
 
     def compile_instruction(self, schema="markdown", mode="children", tag="", exclude=None) -> str:
         """compile to raw/json/markdown template with all/root/children nodes"""
-        def format_func(i): return f"{i.expected_type}  # {i.instruction}"
+
+        def format_func(i):
+            return f"{i.expected_type}  # {i.instruction}"
+
         return self._compile_f(schema, mode, tag, format_func, kv_sep=": ", exclude=exclude)
 
     def compile_example(self, schema="json", mode="children", tag="", exclude=None) -> str:
@@ -359,7 +364,9 @@ class ActionNode:
 
         # 这里不能使用f-string，因为转译为str后再json.dumps会额外加上引号，无法作为有效的example
         # 错误示例："File list": "['main.py', 'const.py', 'game.py']", 注意这里值不是list，而是str
-        def format_func(i): return i.example
+        def format_func(i):
+            return i.example
+
         return self._compile_f(schema, mode, tag, format_func, kv_sep="\n", exclude=exclude)
 
     def compile(self, context, schema="json", mode="children", template=SIMPLE_TEMPLATE, exclude=[]) -> str:

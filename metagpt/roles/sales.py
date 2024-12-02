@@ -8,8 +8,8 @@
 
 from typing import Optional
 
-from pydantic import Field, model_validator
 from agentops import track_agent
+from pydantic import Field, model_validator
 
 from metagpt.actions import SearchAndSummarize, UserRequirement
 from metagpt.roles import Role

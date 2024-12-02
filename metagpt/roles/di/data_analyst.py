@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from pydantic import Field, model_validator
 from agentops import track_agent
+from pydantic import Field, model_validator
 
 from metagpt.actions.di.execute_nb_code import ExecuteNbCode
 from metagpt.actions.di.write_analysis_code import CheckData, WriteAnalysisCode

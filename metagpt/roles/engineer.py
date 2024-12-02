@@ -24,8 +24,8 @@ from collections import defaultdict
 from pathlib import Path
 from typing import List, Optional, Set
 
-from pydantic import BaseModel, Field
 from agentops import track_agent
+from pydantic import BaseModel, Field
 
 from metagpt.actions import WriteCode, WriteCodeReview, WriteTasks
 from metagpt.actions.fix_bug import FixBug

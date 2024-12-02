@@ -9,8 +9,8 @@
 """
 
 from typing import Optional
-from agentops import track_agent
 
+from agentops import track_agent
 from pydantic import Field, model_validator
 
 from metagpt.actions import SearchAndSummarize
