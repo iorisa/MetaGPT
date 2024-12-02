@@ -84,6 +84,7 @@ class SearchTemplate(BaseModel):
             "default_rust_project",
             "default_scala_project",
             "default_vb_project",
+            "default_swift_project",
         ]
     )
     llm: Optional[LLM] = Field(default=None, exclude=True)
