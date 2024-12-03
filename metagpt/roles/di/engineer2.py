@@ -256,7 +256,7 @@ class Engineer2(RoleZero):
             if all_replaced_snipes:
                 replaced_msg = "The following tool calls have been replaced with the actual tool calls:\n"
                 replaced_msg += "\n".join([f"Replaced {old} with {new}" for old, new in all_replaced_snipes])
-                # 将系统自动替换的内容和自动执行了tool call这件事添加到记忆中
+                # Add the content that the system automatically replaces and the fact that the tool call was executed automatically to memory.
                 self.rc.memory.add(UserMessage(content=replaced_msg))
 
         return output_msg
