@@ -76,7 +76,7 @@ WRITE_CODE_PROMPT = """
 
 # Instruction
 Your task is to write the files listed in Files to Write. You must ensure the code is complete, correct, and bug-free.
-The ImageGetter.get_image tool simplifies image integration in your code. Embed the following pattern in your code where an image is needed:
+Embed the following pattern in your code where an image is needed:
 ```html
 <img 
     src={{<tool_call ImageGetter.get_image(search_term="The thing you want to search for.", image_save_path="/absolute_path/to/public/images/your_image_name.png")>}}

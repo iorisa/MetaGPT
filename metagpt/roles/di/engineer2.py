@@ -245,15 +245,19 @@ class Engineer2(RoleZero):
             if len(paths) != len(code_by_files):
                 logger.warning("The number of paths and code blocks do not match.")
                 output_msg += f"The number of paths and code blocks do not match. Only {paths} will be saved. If you want to save more code blocks, please call the function again with the remaining paths.\n"
+            all_replaced_snipes = []
             for path, code in zip(paths, code_by_files):
                 code, replaced_snipes = await self._tool_call(code)
                 await awrite(self._fix_path(path), code)
                 file_block = FileBlock(path=str(path), content=code)
                 output_msg = f"{output_msg}File created successfully with \n{file_block}\n"
                 if len(replaced_snipes) > 0:
-                    output_msg = f"{output_msg} The following tool calls were replaced and automatic execution in the background:\n"
-                    for replaced_snipe in replaced_snipes:
-                        output_msg = f"{output_msg}Replaced {replaced_snipe[0]} with {replaced_snipe[1]}\n"
+                    all_replaced_snipes.extend(replaced_snipes)
+            if all_replaced_snipes:
+                replaced_msg = "The following tool calls have been replaced with the actual tool calls:\n"
+                replaced_msg += "\n".join([f"Replaced {old} with {new}" for old, new in all_replaced_snipes])
+                # 将系统自动替换的内容和自动执行了tool call这件事添加到记忆中
+                self.rc.memory.add(UserMessage(content=replaced_msg))
 
         return output_msg
 
