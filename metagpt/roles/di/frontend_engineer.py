@@ -28,6 +28,8 @@ class FrontendEngineer(Engineer2):
         "Browser",
     ]
 
+    is_first_dev_request: bool = True
+
     @model_validator(mode="after")
     def set_search_template_tool(self):
         if self.template_tool is None and self.use_search_template:
