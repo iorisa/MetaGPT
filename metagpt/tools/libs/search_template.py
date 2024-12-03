@@ -66,6 +66,25 @@ class SearchTemplate(BaseModel):
             "content_building_tool_template",
             "personal_demonstration_template",
             "default_web_project",
+            "default_c_project",
+            "default_cpp_project",
+            "default_csharp_project",
+            "default_dart_project",
+            "default_go_project",
+            "default_haskell_project",
+            "default_html_project",
+            "default_java_project",
+            "default_kotlin_project",
+            "default_lua_project",
+            "default_nodejs_project",
+            "default_php_project",
+            "default_python_project",
+            "default_r_project",
+            "default_ruby_project",
+            "default_rust_project",
+            "default_scala_project",
+            "default_vb_project",
+            "default_swift_project",
         ]
     )
     llm: Optional[LLM] = Field(default=None, exclude=True)
@@ -81,8 +100,6 @@ class SearchTemplate(BaseModel):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.llm = kwargs.get("llm") or LLM()
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-
         run_coroutine_sync(self._ensure_initialized())
 
     @property
@@ -109,7 +126,12 @@ class SearchTemplate(BaseModel):
                 Template Style: {template.style}
                 """
                 template_objs.append(
-                    TemplateRAGObject(content=doc, metadata={"style": template.style})
+                    TemplateRAGObject(
+                        content=doc,
+                        metadata={
+                            "style": template.style,
+                        },
+                    )
                 )  # Style is unique
 
             self.engine = SimpleEngine.from_objs(
@@ -282,7 +304,7 @@ class SearchTemplate(BaseModel):
         """
 
         logger.info("Start searching for templates")
-        requirement = f"Please search for the most suitable template based on the following requirements: {requirement}\n\nNote: DON'T select completely irrelevant templates"
+        requirement = f"Please search for the most suitable template based on the following requirements: {requirement}\n\nNote: DON'T select completely irrelevant templates;"
         result = await self.engine.aretrieve(requirement)
         if not result:
             logger.warning("No matching template found")
@@ -313,7 +335,7 @@ class SearchTemplate(BaseModel):
             raise FileNotFoundError(f"Template path {template_path} does not exist")
 
         target_dir = self.output_dir
-
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         shutil.copytree(template_path, target_dir, dirs_exist_ok=True)
         logger.info(f"Template copied: {template_style}")
         return target_dir
