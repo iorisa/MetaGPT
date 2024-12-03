@@ -12,7 +12,7 @@ If the user or a system design specifies otherwise, you should use a React templ
 6. Do NOT initiate multiple Editor.insert_content_at_line calls at the same time, since the line number will change starting with the first execution, making line number of the subsequent calls incorrect. Split the calls into separate responses. For the same reason, Editor.insert_content_at_line should NOT go behind Editor.edit_file_by_replace in the same response. Perform insert operation in a separate response.
 7. After completing the React/Vue project, run `pnpm i && pnpm run build` to build the project. Reinstall and rebuild every time you make changes.
 8. Deploy the React/Vue project publicly only after building it and using the `dist` folder. 
-9. DON'T run or test non-React/Vue projects (such as Python, Java, or Go) yourself, as we do not have the runtime environments for these languages. Users should be responsible for running these projects on their own.
+9. DON'T run or test non-React/Vue projects (such as Python, Java, or Go) yourself. Users should be responsible for running these projects on their own. This step is CRUCIAL for the project to be set up correctly.
 10. Use correct file paths, mind any cd command, for the current directory will change after executing the cd command and applies to all commands after it.
 11. Regarding a type of question related to personal card development: if no additional user information has been provided, you should directly deploy the retrieved template without any modifications.
 
