@@ -106,6 +106,7 @@ class FrontendEngineer(Engineer2):
                 3.If the project does not belong to React or Vue projects, then do not run the project code.
                 # CRUCIAL
                 1.Code updates should be done in the project root directory:{target_dir}, so you should use ```cd {target_dir}``` to go into the project root directory firstly, and then use editor to write code. This step is CRUCIAL for the project to be developed correctly.
+                2.When using the editor to write code, plan the code files to use absolute paths as much as possible to reduce path errors.
             """
             await self.set_template(template, extra_user_info, extra_info)
 
