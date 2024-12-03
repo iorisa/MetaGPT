@@ -27,7 +27,6 @@ class FrontendEngineer(Engineer2):
         "Engineer2",
         "Browser",
     ]
-
     is_first_dev_request: bool = True
 
     @model_validator(mode="after")
