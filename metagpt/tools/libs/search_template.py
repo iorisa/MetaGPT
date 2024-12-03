@@ -17,7 +17,6 @@ from metagpt.prompts.di.template import (
     GENERATE_TEMPLATE_CONFIG_PROMPT,
     read_file,
 )
-from metagpt.tools.tool_registry import register_tool
 from metagpt.utils.async_helper import run_coroutine_sync
 from metagpt.utils.common import OutputParser, awrite, log_time
 
@@ -51,15 +50,77 @@ class TemplateInfo(BaseModel):
     framework: str = Field(description="Template framework")
 
 
-@register_tool(
-    tags=["template", "search"],
-    include_functions=["search"],
-)
-class SearchTemplate(BaseModel):
+class BaseSearchTemplate(BaseModel):
+    """Base class for template searching, specifying common attributes, methods, or interfaces."""
+
+    template_path: Path = Field(default=Path(METAGPT_ROOT) / "template")
+    output_dir: Path = Path(METAGPT_ROOT) / "workspace" / "template"
+
+    async def search(self, requirement: str) -> Optional[Tuple[TemplateInfo, str]]:
+        """Search for matching template and provide user information."""
+        raise NotImplementedError
+
+    async def copy_template(
+        self, template_path: str = REACT_TEMPLATE_PATH, template_style: str = "react_template"
+    ) -> Path:
+        """Copy the template to the target location."""
+        if not template_path.exists():
+            raise FileNotFoundError(f"Template path {template_path} does not exist")
+
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(template_path, self.output_dir, dirs_exist_ok=True)
+        logger.info(f"Template copied: {template_style}")
+        return self.output_dir
+
+    def _get_template_structure(self, template: Path) -> str:
+        """Get template directory structure"""
+        result = subprocess.run(["tree", template], capture_output=True, text=True)
+        return result.stdout.replace("\xa0", " ")  # Replace non-breaking spaces with regular spaces
+
+    async def get_template_info(self, template_info: TemplateInfo = None) -> str:
+        """Get the template information for the given template style"""
+        if template_info is None:
+            return ""
+        else:
+            template_structure = self._get_template_structure(template_info.template_path)
+            required_file_instruction = (
+                f"The following files are required to be known: {', '.join(template_info.required_files)}"
+            )
+            required_field_instruction = (
+                f"The following fields could be modified: {', '.join(template_info.required_fields)}"
+            )
+            file_content = ""
+            for required_file in template_info.required_files:
+                file_content += f"{required_file}:\n{read_file(template_info.template_path / required_file).content}\n"
+            return GENERAL_WEB_APP_TEMPLATE.format(
+                TEMPLATE_NAME=template_info.scene,
+                TEMPLATE_DESCRIPTION=template_info.description,
+                TEMPLATE_STRUCTURE=template_structure,
+                TEMPLATE_PATH=template_info.template_path,
+                REQUIRED_FILES_INSTRUCTION=required_file_instruction,
+                REQUIRED_FIELDS_INSTRUCTION=required_field_instruction,
+                FILE_CONTENT=file_content,
+                TEMPLATE_LANG=template_info.lang,
+                TEMPLATE_FRAMEWORK=template_info.framework,
+            )
+
+
+class FixedSearchTemplate(BaseSearchTemplate):
+    """Providing fixed template for stable performance. Also useful for development and testing."""
+
+    template_path: Path = REACT_TEMPLATE_PATH
+
+    async def search(self, requirement: str) -> Optional[Tuple[TemplateInfo, str]]:
+        with open(self.template_path / "template_config.json", "r", encoding="utf-8") as f:
+            config = json.load(f)
+        template_info = TemplateInfo(template_path=self.template_path, **config)
+        return template_info, ""
+
+
+class SearchTemplate(BaseSearchTemplate):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     templates: Dict[str, TemplateInfo] = Field(default_factory=dict)
-    template_path: Path = Field(default=Path(METAGPT_ROOT) / "template")
     template_scenes: List[str] = Field(
         default=[
             "personal_business_card_template",
@@ -90,7 +151,6 @@ class SearchTemplate(BaseModel):
     llm: Optional[LLM] = Field(default=None, exclude=True)
     template_version: str = Field(default="1.0.0")
     deployment_config: Dict[str, Any] = Field(default_factory=dict)
-    output_dir: Path = Field(default=Path(METAGPT_ROOT) / "workspace" / "template")
 
     rag_top_k: int = Field(default=5, description="RAG top k")
 
@@ -176,11 +236,6 @@ class SearchTemplate(BaseModel):
                 init_rag_flag = True
             self._initialized = init_tempalte_flag and init_rag_flag
 
-    def _get_template_structure(self, template: Path) -> str:
-        """Get template directory structure"""
-        result = subprocess.run(["tree", template], capture_output=True, shell=True, text=True)
-        return result.stdout
-
     async def _parse_template_config(self, template_dir: Path) -> Optional[TemplateInfo]:
         """Parse the configuration files in the template directory; if the configuration
         does not exist, generate it using LLM."""
@@ -189,22 +244,13 @@ class SearchTemplate(BaseModel):
 
         # Try to read the existing configuration.
         if config_path.exists():
-            template_info = await self._read_existing_config(config_path)
-            if template_info:
-                return template_info
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+            template_info = TemplateInfo(template_path=template_dir, **config)
+            return template_info
 
         # Generate new configuration
         return await self._generate_config(template_dir, style, config_path)
-
-    async def _read_existing_config(self, config_path: Path) -> Optional[TemplateInfo]:
-        """Read and verify the existing configuration file."""
-        try:
-            with open(config_path, "r", encoding="utf-8") as f:
-                config = json.load(f)
-            return self._validate_config(config, config_path)
-        except Exception as e:
-            logger.error(f"Failed to parse the existing configuration file:{str(e)}")
-            return None
 
     async def _generate_config(self, template_dir: Path, style: str, config_path: Path) -> Optional[TemplateInfo]:
         """Generate new configurations through LLM"""
@@ -243,29 +289,11 @@ class SearchTemplate(BaseModel):
         # Update the Template Scene
         config["scene"] = config_path.parent.parent.name
 
-        template_info = self._validate_config(config, config_path)
+        template_info = TemplateInfo(template_path=template_dir, **config)
         if template_info:
             await awrite(config_path, json.dumps(config, indent=2, ensure_ascii=False))
             logger.info(f"The template configuration has been generated and saved.: {config_path}")
             return template_info
-
-    def _validate_config(self, config: dict, config_path: Path) -> Optional[TemplateInfo]:
-        """Validate the configuration and create a TemplateInfo object."""
-        required_config_fields = {"style", "description", "required_fields", "required_files", "lang", "framework"}
-        if not all(field in config for field in required_config_fields):
-            logger.warning(f"The template configuration file is missing necessary fields: {config_path}")
-            return None
-        else:
-            return TemplateInfo(
-                style=config["style"],
-                scene=config["scene"],
-                template_path=config_path.parent,
-                description=config["description"],
-                required_fields=config["required_fields"],
-                required_files=config["required_files"],
-                lang=config["lang"],
-                framework=config["framework"],
-            )
 
     async def _init_templates(self) -> bool:
         """Load all templates asynchronously from the template directory."""
@@ -325,21 +353,6 @@ class SearchTemplate(BaseModel):
         logger.info(f"Selected templates: {selected_template_styles}")
         return selected_template_styles[0], ""
 
-    # async def extract_user_info(self, )
-
-    async def copy_template(
-        self, template_path: str = REACT_TEMPLATE_PATH, template_style: str = "react_template"
-    ) -> Path:
-        """Copy the template to the target location."""
-        if not template_path.exists():
-            raise FileNotFoundError(f"Template path {template_path} does not exist")
-
-        target_dir = self.output_dir
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(template_path, target_dir, dirs_exist_ok=True)
-        logger.info(f"Template copied: {template_style}")
-        return target_dir
-
     async def __aenter__(self):
         """Initialize templates and RAG engine when entering context"""
         await self._ensure_initialized()
@@ -394,30 +407,3 @@ class SearchTemplate(BaseModel):
     def get_required_fields(self) -> List[str]:
         """Get all required fields for the template"""
         return list(set([field for template in self.templates.values() for field in template.required_fields]))
-
-    async def get_template_info(self, template_info: TemplateInfo = None) -> str:
-        """Get the template information for the given template style"""
-        if template_info is None:
-            return ""
-        else:
-            template_structure = self._get_template_structure(template_info.template_path)
-            required_file_instruction = (
-                f"The following files are required to be known: {', '.join(template_info.required_files)}"
-            )
-            required_field_instruction = (
-                f"The following fields are could be modified: {', '.join(template_info.required_fields)}"
-            )
-            file_content = ""
-            for required_file in template_info.required_files:
-                file_content = f"{file_content}\n{required_file}:\n{read_file(template_info.template_path / required_file).content}\n\n"
-            return GENERAL_WEB_APP_TEMPLATE.format(
-                TEMPLATE_NAME=template_info.scene,
-                TEMPLATE_DESCRIPTION=template_info.description,
-                TEMPLATE_STRUCTURE=template_structure,
-                TEMPLATE_PATH=template_info.template_path,
-                REQUIRED_FILES_INSTRUCTION=required_file_instruction,
-                REQUIRED_FIELDS_INSTRUCTION=required_field_instruction,
-                FILE_CONTENT=file_content,
-                TEMPLATE_LANG=template_info.lang,
-                TEMPLATE_FRAMEWORK=template_info.framework,
-            )
