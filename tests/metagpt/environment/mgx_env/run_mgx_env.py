@@ -4,10 +4,12 @@ import re
 import threading
 import time
 
+import agentops
+
 from metagpt.environment.mgx.mgx_env import MGXEnv
 from metagpt.roles import Architect, Engineer, ProductManager, ProjectManager
 from metagpt.roles.di.data_analyst import DataAnalyst
-from metagpt.roles.di.frontend_engineer import FrontendEngineer
+from metagpt.roles.di.engineer2 import Engineer2
 from metagpt.roles.di.team_leader import TeamLeader
 from metagpt.schema import Message
 
@@ -16,7 +18,7 @@ async def main(requirement="", enable_human_input=False, use_fixed_sop=False, al
     if use_fixed_sop:
         engineer = Engineer(n_borg=5, use_code_review=False)
     else:
-        engineer = FrontendEngineer()
+        engineer = Engineer2()
 
     env = MGXEnv()
     env.add_roles(
@@ -160,11 +162,13 @@ TL_CHAT12 = "What can you do"
 CODING_REQ1 = "写一个java的hello world程序"
 CODING_REQ2 = "python里的装饰器是什么"
 CODING_REQ3 = "python里的装饰器是怎么用的，给我个例子"
-EXAMPLE_1 = "帮我设计一个个人名片，我喜欢明亮的风格"
+
 
 if __name__ == "__main__":
     # NOTE: Add access_token to test github issue fixing
     os.environ["access_token"] = "ghp_xxx"
     # NOTE: Change the requirement to the one you want to test
     #       Set enable_human_input to True if you want to simulate sending messages in chatbox
-    asyncio.run(main(requirement=EXAMPLE_1, enable_human_input=False, use_fixed_sop=False))
+    agentops.init(api_key="", auto_start_session=False, skip_auto_end_session=True)
+    session = agentops.start_session()
+    asyncio.run(main(requirement="写一个2048游戏", enable_human_input=False, use_fixed_sop=False))
