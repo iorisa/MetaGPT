@@ -9,7 +9,7 @@
 """
 from typing import Any, Callable, Union
 
-from agentops import track_agent
+# from agentops import track_agent
 from pydantic import Field
 from semantic_kernel import Kernel
 from semantic_kernel.planning import SequentialPlanner
@@ -24,7 +24,7 @@ from metagpt.schema import Message
 from metagpt.utils.make_sk_kernel import make_sk_kernel
 
 
-@track_agent("SkAgent")
+# @track_agent("SkAgent")
 class SkAgent(Role):
     """
     Represents an SkAgent implemented using semantic kernel

@@ -5,7 +5,7 @@
 @Author  : alexanderwu
 @File    : architect.py
 """
-from agentops import track_agent
+# from agentops import track_agent
 from pydantic import Field
 
 from metagpt.actions.design_api import WriteDesign
@@ -15,7 +15,7 @@ from metagpt.roles.di.role_zero import RoleZero
 from metagpt.tools.libs.terminal import Terminal
 
 
-@track_agent("Architect")
+# @track_agent("Architect")
 class Architect(RoleZero):
     """
     Represents an Architect role in a software development process.

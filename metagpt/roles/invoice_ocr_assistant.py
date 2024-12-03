@@ -12,7 +12,8 @@ from pathlib import Path
 from typing import Optional
 
 import pandas as pd
-from agentops import track_agent
+
+# from agentops import track_agent
 from pydantic import BaseModel
 
 from metagpt.actions.invoice_ocr import GenerateTable, InvoiceOCR, ReplyQuestion
@@ -37,7 +38,7 @@ class ReplyData(BaseModel):
     content: str = ""
 
 
-@track_agent("InvoiceOCRAssistant")
+# @track_agent("InvoiceOCRAssistant")
 class InvoiceOCRAssistant(Role):
     """Invoice OCR assistant, support OCR text recognition of invoice PDF, png, jpg, and zip files,
     generate a table for the payee, city, total amount, and invoicing date of the invoice,

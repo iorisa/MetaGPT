@@ -18,7 +18,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from agentops import track_agent
+# from agentops import track_agent
 from pydantic import Field
 
 from metagpt.actions.skill_action import ArgumentsParingAction, SkillAction
@@ -35,7 +35,7 @@ class MessageType(Enum):
     Skill = "SKILL"
 
 
-@track_agent("Assistant")
+# @track_agent("Assistant")
 class Assistant(Role):
     """Assistant for solving common issues."""
 
