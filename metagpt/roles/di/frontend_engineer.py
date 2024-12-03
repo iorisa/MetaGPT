@@ -96,7 +96,16 @@ class FrontendEngineer(Engineer2):
                 subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
             extra_info = f"""
-                Successfully copied the {template.style} template to the {target_dir} directory. The project root path is {target_dir}, then you need to go into the project root path: {target_dir} firstly. And if the project root path exists README.md document, read README.md document firstly. If user does not provide additional information, you need to deploy the project directly without updating any code. However, if the user specifies obtaining their information from a certain website or file, use the appropriate tools to retrieve it, and then update the obtained information into the project. Note, if the code file that needs to be updated already exists, do not rewrite the corresponding content, but replace some of the code to update. Before updating the code at the project path, read the content of the code file and then think about how to update it at the project path. If the project does not belong to React or Vue projects, then do not run the project code."""
+                1.Successfully copied the {template.style} template to the {target_dir} directory. 
+                2.The project root directory is {target_dir}, you need to go into the project root directory: {target_dir} firstly. 
+                3.And if the project root directory exists README.md document, read README.md document firstly. 
+                4.If user does not provide additional information, you need to deploy the project directly without updating any code. However, if the user specifies obtaining their information from a certain website or file, use the appropriate tools to retrieve it, and then update the obtained information into the project. 
+                # Note
+                1.If the code file that needs to be updated already exists, do not rewrite the corresponding content, but replace some of the code to update. 
+                2.Before updating the code at the project path, read the content of the code file and then think about how to update it at the project path. 
+                3.If the project does not belong to React or Vue projects, then do not run the project code.
+                4.Code update must be in the project root directory:{target_dir}, you can use ```cd {target_dir}``` go into the project root directory, and then use editor to write code. This step is CRUCIAL for the project to be developed correctly.
+            """
             await self.set_template(template, extra_user_info, extra_info)
 
             return target_dir
