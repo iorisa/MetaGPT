@@ -90,14 +90,14 @@ class FrontendEngineer(Engineer2):
         template, extra_user_info = await self.template_tool.search(requirement)
         if template:
             target_dir = await self.template_tool.copy_template(template.template_path, template.style)
+            # install dependencies for JavaScript-based projects
+            if os.path.exists(f"{target_dir}/package.json"):
+                cmd = f"cd {target_dir} && pnpm i"
+                subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
             extra_info = f"Successfully copied the {template.style} template to the {target_dir} directory.Rename this {target_dir} path to the corresponding project name and the project root path is the new path renamed. Go into project root path. If project root path exists README.md document, read README.md document firstly. If user does not provide additional information, you need to deploy the project directly without updating any code. However, if the user specifies obtaining their information from a certain website or file, use the appropriate tools to retrieve it, and then update the obtained information into the project. Note, if the code file that needs to be updated already exists, do not rewrite the corresponding content, but replace some of the code to update. Before updating the code, read the content of the code file and then think about how to update it. "  # update template info
 
             await self.set_template(template, extra_user_info, extra_info)
-            # install dependencies for JavaScript-based projects
-            if template.lang.lower() in ["javascript", "typescript"]:
-                if os.path.exists(f"{target_dir}/package.json"):
-                    cmd = f"cd {target_dir} && pnpm i"
-                    subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
             return target_dir
         else:
