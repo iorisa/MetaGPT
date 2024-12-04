@@ -12,14 +12,18 @@ from metagpt.prompts.di.template import (
 )
 from metagpt.roles.di.engineer2 import Engineer2
 from metagpt.schema import UserMessage
-from metagpt.tools.libs.search_template import BaseSearchTemplate, SearchTemplate
+from metagpt.tools.libs.search_template import (
+    BaseSearchTemplate,
+    FixedSearchTemplate,
+    SearchTemplate,
+)
+
+_ = FixedSearchTemplate  # avoid pre-commit error
 
 
 # @track_agent("FrontendEngineer")
 class FrontendEngineer(Engineer2):
-    use_search_template: bool = True
     instruction: str = FRONTEND_ENGINEER_PROMPT
-    template_tool: BaseSearchTemplate = None
     tools: list[str] = [
         "Editor:read,write,edit_file_by_replace,insert_content_at_line,append_file",
         "RoleZero",
@@ -31,14 +35,20 @@ class FrontendEngineer(Engineer2):
         "Browser:click,goto,scroll",
     ]
 
+    # Regarding template use:
+    # 1. Set use_search_template to False to disable template
+    # 2. Set template_tool to FixedSearchTemplate() to skip RAG and use a fixed template
+    # 3. Set template_tool to None (unchanged) or SearchTemplate() to perform a full template search
+    use_search_template: bool = True
+    template_tool: BaseSearchTemplate = None
+
     @model_validator(mode="after")
     def set_search_template_tool(self):
         if self.template_tool is None and self.use_search_template:
             self.template_tool = SearchTemplate()
-            # self.template_tool = FixedSearchTemplate()  # for development
-            logger.info("FrontendEngineer tools set")
+            logger.info("SearchTemplate set")
         else:
-            logger.warning("FrontendEngineer tools not set")
+            logger.warning("SearchTemplate not set")
         return self
 
     async def _think(self) -> bool:

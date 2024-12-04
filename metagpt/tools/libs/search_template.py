@@ -9,7 +9,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
-from metagpt.const import METAGPT_ROOT, REACT_TEMPLATE_PATH
+from metagpt.const import (
+    DEFAULT_WORKSPACE_ROOT,
+    REACT_TEMPLATE_PATH,
+    TEMPLATE_FOLDER_PATH,
+)
 from metagpt.llm import LLM
 from metagpt.logs import logger
 from metagpt.prompts.di.template import (
@@ -53,24 +57,29 @@ class TemplateInfo(BaseModel):
 class BaseSearchTemplate(BaseModel):
     """Base class for template searching, specifying common attributes, methods, or interfaces."""
 
-    template_path: Path = Field(default=Path(METAGPT_ROOT) / "template")
-    output_dir: Path = Path(METAGPT_ROOT) / "workspace" / "template"
+    template_path: Path = Field(
+        default=TEMPLATE_FOLDER_PATH, description="Template folder path or a specific template path"
+    )
+    output_dir: Path = Field(
+        default=DEFAULT_WORKSPACE_ROOT, description="The directory to place a retrieved template folder"
+    )
 
     async def search(self, requirement: str) -> Optional[Tuple[TemplateInfo, str]]:
         """Search for matching template and provide user information."""
         raise NotImplementedError
 
     async def copy_template(
-        self, template_path: str = REACT_TEMPLATE_PATH, template_style: str = "react_template"
+        self, template_path: Path = REACT_TEMPLATE_PATH, template_style: str = "react_template"
     ) -> Path:
         """Copy the template to the target location."""
         if not template_path.exists():
             raise FileNotFoundError(f"Template path {template_path} does not exist")
 
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(template_path, self.output_dir, dirs_exist_ok=True)
-        logger.info(f"Template copied: {template_style}")
-        return self.output_dir
+        target_path = self.output_dir / template_path.name
+        target_path.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(template_path, target_path, dirs_exist_ok=True)
+        logger.info(f"Template copied to: {target_path}")
+        return target_path
 
     def _get_template_structure(self, template: Path) -> str:
         """Get template directory structure"""

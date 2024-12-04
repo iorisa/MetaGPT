@@ -137,7 +137,7 @@ class Engineer2(RoleZero):
             output_msg = ""
             if len(paths) != len(code_by_files):
                 logger.warning("The number of paths and code blocks do not match.")
-                output_msg += f"The number of paths and code blocks do not match. Only {paths} will be saved. If you want to save more code blocks, please call the function again with the remaining paths.\n"
+                output_msg += f"The number of paths and code blocks do not match. Only {paths[:len(code_by_files)]} will be saved. If you want to save more code blocks, please call the function again with the remaining paths.\n"
             for path, code in zip(paths, code_by_files):
                 await awrite(self._fix_path(path), code)
                 file_block = FileBlock(path=str(path), content=code)
