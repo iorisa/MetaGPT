@@ -16,7 +16,7 @@ from metagpt.tools.tool_registry import register_tool
 config = Config.default()
 
 
-@register_tool(include_functions=["get_config", "get_database_schema_from_supabase", "execute_sql_from_supabase"])
+@register_tool(include_functions=["get_config", "get_database_schemas", "execute_sql"])
 class SupabaseManager(BaseModel):
     access_token: str = Field(default=config.supabase.access_token, description="Supabase access token")
     management_base_url: str = Field(
@@ -51,31 +51,51 @@ class SupabaseManager(BaseModel):
                   provides elevated access for administrative operations and should be kept secure.
                 - management_base_url (str): The base URL for Supabase management API endpoints. Used for
                   administrative operations like schema management and project configuration.
-                - session_id (str): A unique 5-character session identifier generated for each run. Used
-                  for creating isolated database tables and managing development environments.
+                - session_id (str): A unique session identifier generated for each chat. Used for
+                  creating isolated database tables and managing development environments.
         """
         return config.supabase.model_dump()
 
-    def get_database_schema(
-        self, project_ref: str = config.supabase.project_ref, db_name: str = "public", timeout: int = 10
+    def get_database_schemas(
+        self,
+        project_ref: str = config.supabase.project_ref,
+        db_name: str = "public",
+        timeout: int = 10,
+        session_id: str = None,
     ) -> list[dict[str, str]]:
-        """Get complete database schema information from Supabase including all tables and their columns.
+        """Get complete database schema information from Supabase including table names and their columns.
 
         Args:
             project_ref: Supabase project ref, defaults to config.supabase.project_ref
             db_name: Database schema name, defaults to 'public'
             timeout: Request timeout in seconds, defaults to 10
+            session_id: A unique session identifier generated for each chat. Used for creating isolated database tables and managing development environments.
 
         Returns:
             list: A list of tables with their column definitions.
 
         Examples:
-            >>> schema = get_database_schema()
-            >>> print(schema)
+            # Get all tables
+            >>> schemas = get_database_schemas()
+            >>> print(schemas)
             [
                 {
                     "table_name": "users",
                     "columns": "id bigint NOT NULL\nemail text NOT NULL\ncreated_at timestamp"
+                }
+            ]
+
+            # Get tables for specific session_id
+            >>> session_schemas = get_database_schemas(session_id="abc12")
+            >>> print(session_schemas)
+            [
+                {
+                    "table_name": "todo_abc12_tasks",
+                    "columns": "id bigint NOT NULL\ntitle text NOT NULL\nuser_email text NOT NULL"
+                },
+                {
+                    "table_name": "notes_abc12_items",
+                    "columns": "id bigint NOT NULL\ncontent text\nuser_email text NOT NULL"
                 }
             ]
         """
@@ -107,7 +127,12 @@ class SupabaseManager(BaseModel):
             response = client.post(url, headers=self._default_headers, json={"query": query}, timeout=timeout)
             response.raise_for_status()
 
-        return response.json()
+        table_schemas = response.json()
+
+        if session_id:
+            table_schemas = [schema for schema in table_schemas if session_id in schema["table_name"]]
+
+        return table_schemas
 
     def execute_sql(self, sql: str, project_ref: str = config.supabase.project_ref, timeout: int = 10) -> dict:
         """Execute SQL query on Supabase database.
