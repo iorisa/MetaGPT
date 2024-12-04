@@ -70,7 +70,6 @@ class RoleZero(Role):
     system_msg: Optional[list[str]] = None  # Use None to conform to the default value at llm.aask
     system_prompt: str = SYSTEM_PROMPT  # Use None to conform to the default value at llm.aask
     cmd_prompt: str = CMD_PROMPT
-    cmd_prompt_current_state: str = ""
     instruction: str = ROLE_INSTRUCTION
     task_type_desc: Optional[str] = None
 
@@ -83,14 +82,14 @@ class RoleZero(Role):
     tool_recommender: Optional[ToolRecommender] = None
     tool_execution_map: Annotated[dict[str, Callable], Field(exclude=True)] = {}
     special_tool_commands: list[str] = ["Plan.finish_current_task", "end", "Terminal.run_command", "RoleZero.ask_human"]
-    # List of exclusive tool commands.
-    # If multiple instances of these commands appear, only the first occurrence will be retained.
-    exclusive_tool_commands: list[str] = [
-        # "Editor.edit_file_by_replace",
-        # "Editor.insert_content_at_line",
-        # "Editor.append_file",
-        # "Editor.open_file",
-    ]
+    # # List of exclusive tool commands. If multiple instances of these commands appear, only the first occurrence will be retained.
+    # exclusive_tool_commands: list[str] = [
+    #     "Editor.edit_file_by_replace",
+    #     "Editor.insert_content_at_line",
+    #     "Editor.append_file",
+    #     "Editor.open_file",
+    # ]
+
     # Equipped with three basic tools by default for optional use
     editor: Editor = Editor(window=50, enable_auto_lint=True)
     browser: Browser = Browser()
@@ -240,7 +239,7 @@ class RoleZero(Role):
 
         ### Make Decision Dynamically ###
         prompt = self.cmd_prompt.format(
-            current_state=self.cmd_prompt_current_state,
+            current_state=f"current directory: {self.working_dir}",
             plan_status=plan_status,
             current_task=current_task,
             respond_language=self.respond_language,
@@ -329,7 +328,7 @@ class RoleZero(Role):
             error_msg = commands
             self.rc.memory.add(UserMessage(content=error_msg, cause_by=RunCommand))
             return error_msg
-        logger.info(f"Commands: \n{commands}")
+        # logger.info(f"Commands: \n{commands}")
         outputs = await self._run_commands(commands)
         logger.info(f"Commands outputs: \n{outputs}")
         self.rc.memory.add(UserMessage(content=outputs, cause_by=RunCommand))
@@ -513,16 +512,16 @@ class RoleZero(Role):
         if isinstance(commands, dict):
             commands = commands["commands"] if "commands" in commands else [commands]
 
-        # Set the exclusive command flag to False.
-        command_flag = [command["command_name"] not in self.exclusive_tool_commands for command in commands]
-        if command_flag.count(False) > 1:
-            # Keep only the first exclusive command
-            index_of_first_exclusive = command_flag.index(False)
-            commands = commands[: index_of_first_exclusive + 1]
-            command_rsp = "```json\n" + json.dumps(commands, indent=4, ensure_ascii=False) + "\n```"
-            logger.info(
-                "exclusive command more than one in current command list. change the command list.\n" + command_rsp
-            )
+        # # Set the exclusive command flag to False.
+        # command_flag = [command["command_name"] not in self.exclusive_tool_commands for command in commands]
+        # if command_flag.count(False) > 1:
+        #     # Keep only the first exclusive command
+        #     index_of_first_exclusive = command_flag.index(False)
+        #     commands = commands[: index_of_first_exclusive + 1]
+        #     command_rsp = "```json\n" + json.dumps(commands, indent=4, ensure_ascii=False) + "\n```"
+        #     logger.info(
+        #         "exclusive command more than one in current command list. change the command list.\n" + command_rsp
+        #     )
         return commands, True, command_rsp
 
     async def _run_commands(self, commands) -> str:
@@ -545,9 +544,9 @@ class RoleZero(Role):
                     if tool_output:
                         output += f": {str(tool_output)}"
                     outputs.append(output)
-                except Exception as e:
+                except Exception:
                     tb = traceback.format_exc()
-                    logger.exception(str(e) + tb)
+                    # logger.exception(str(e) + tb)
                     outputs.append(output + f": {tb}")
                     break  # Stop executing if any command fails
             else:
