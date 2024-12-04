@@ -77,13 +77,13 @@ WRITE_CODE_PROMPT = """
 # Instruction
 Your task is to write the files listed in Files to Write. You must ensure the code is complete, correct, and bug-free.
 Embed the following pattern in your code where an image is needed:
-```html
+```
 <img 
     src={{<tool_call ImageGetter.get_image(search_term="The thing you want to search for.", image_save_path="/absolute_path/to/public/images/your_image_name.png")>}}
 />
 ```
 This code snippet, once embedded, will automatically call the ImageGetter.get_image tool in the background to retrieve the image you need and return the address where the image is saved.
-Note that the images should be saved in the public/images directory of the project. Please verify that all image-related code follows the exact HTML template structure shown above.
+Note that the images should be saved in the public/images directory of the project. Please verify that all image-related code follows the exact HTML template structure shown above. This step is CRUCIAL for the project to be set up correctly.
 
 # Output
 While some concise thoughts are helpful, code is absolutely required. DO NOT leave any TODO or placeholder.

@@ -43,6 +43,7 @@ class Engineer2(RoleZero):
         "Engineer2",
         "CodeReview",
         "Deployer",
+        "",
     ]
     # SWE Agent parameter
     run_eval: bool = False
@@ -53,8 +54,9 @@ class Engineer2(RoleZero):
 
     async def _think(self) -> bool:
         await self._format_instruction()
-        res = await super()._think()
-        return res
+
+        rsp = await super()._think()
+        return rsp
 
     async def _format_instruction(self):
         """

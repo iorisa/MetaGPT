@@ -84,15 +84,18 @@ class ImageGetter(BaseModel):
         # Wait until the image element is loaded
         try:
             await self.page.wait_for_selector(self.img_element_selector)
+            # Get the base64 code of the first  retrieved image
+            image_base64 = await self.page.evaluate(
+                DOWNLOAD_PICTURE_JAVASCRIPT.format(img_element_selector=self.img_element_selector)
+            )
+            if image_base64:
+                image = decode_image(image_base64)
+            else:
+                # Try creating a image with oas3_openai_text_to_image
+                images = await self.gen_image(model="dall-e-3", prompt=search_term)
+                image = images[0]
         except TimeoutError:
-            return f"{search_term} not found. Please broaden the search term."
-        # Get the base64 code of the first  retrieved image
-        image_base64 = await self.page.evaluate(
-            DOWNLOAD_PICTURE_JAVASCRIPT.format(img_element_selector=self.img_element_selector)
-        )
-        if image_base64:
-            image = decode_image(image_base64)
-        else:
+            # return f"{search_term} not found. Please broaden the search term."
             # Try creating a image with oas3_openai_text_to_image
             images = await self.gen_image(model="dall-e-3", prompt=search_term)
             image = images[0]
