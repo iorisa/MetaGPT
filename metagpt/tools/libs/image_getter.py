@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import os
-from typing import Optional
+from typing import Callable, Optional
 
 from playwright.async_api import Browser as Browser_
 from playwright.async_api import BrowserContext, Page, Playwright, async_playwright
 from pydantic import BaseModel, ConfigDict, Field
 
+from metagpt.config2 import Config
+from metagpt.provider.base_llm import BaseLLM
+from metagpt.provider.openai_api import OpenAILLM
 from metagpt.tools.tool_registry import register_tool
 from metagpt.utils.common import decode_image
 from metagpt.utils.proxy_env import get_proxy_from_env
@@ -29,6 +32,7 @@ async () => {{
     return null;
 }}
 """
+llm_config = Config.default().llm
 
 
 @register_tool(include_functions=["get_image"])
@@ -48,6 +52,13 @@ class ImageGetter(BaseModel):
     reporter: BrowserReporter = Field(default_factory=BrowserReporter)
     url: str = "https://unsplash.com/s/photos/{search_term}/"
     img_element_selector: str = ".zNNw1 > div > img:nth-of-type(2)"
+    # Add llm field to store instance
+    llm: BaseLLM = Field(default_factory=lambda: OpenAILLM(llm_config))
+
+    # Remove gen_image field and replace with property
+    @property
+    def gen_image(self) -> Callable:
+        return self.llm.gen_image
 
     async def start(self) -> None:
         """Starts Playwright and launches a browser"""
@@ -81,16 +92,19 @@ class ImageGetter(BaseModel):
         )
         if image_base64:
             image = decode_image(image_base64)
-            # Get the directory path from the full file path
-            save_dir = os.path.dirname(image_save_path)
-            # Create directory if it doesn't exist
-            if save_dir and not os.path.exists(save_dir):
-                os.makedirs(save_dir, exist_ok=True)
-            image.save(image_save_path)
-            print("Image saved at {}".format(image_save_path))
-            # Ensure both image_save_path and DEFAULT_WORKSPACE_ROOT are strings
-            if "public" in image_save_path:
-                image_save_path = image_save_path.split("public")[-1]
+        else:
+            # Try creating a image with oas3_openai_text_to_image
+            images = await self.gen_image(model="dall-e-3", prompt=search_term)
+            image = images[0]
+        # Get the directory path from the full file path
+        save_dir = os.path.dirname(image_save_path)
+        # Create directory if it doesn't exist
+        if save_dir and not os.path.exists(save_dir):
+            os.makedirs(save_dir, exist_ok=True)
+        image.save(image_save_path)
+        print("Image saved at {}".format(image_save_path))
+        # Ensure both image_save_path and DEFAULT_WORKSPACE_ROOT are strings
+        if "public" in image_save_path:
+            image_save_path = image_save_path.split("public")[-1]
 
-            return f'"{image_save_path}"'
-        return f"{search_term} not found. Please broaden the search term."
+        return f'"{image_save_path}"'
