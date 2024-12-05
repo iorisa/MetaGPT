@@ -56,7 +56,7 @@ When you need to acquire a image in your web code, you must refer to the given e
 import React from 'react';
 function App() {
 const backgroundStyle = {
-backgroundImage: 'url({<tool_call ImageGetter.get_image(search_term="a beautiful sunset", image_save_path="/absolute_path/to/public/images/sonnet-bj.png")>})',
+backgroundImage: 'url({<tool_call ImageGetter.get_image(search_term="a beautiful sunset", image_save_path="/absolute_path/to/public/images/sonnet-bj.png") />})',
 backgroundSize: 'cover',
 backgroundPosition: 'center',
 height: '100vh',
@@ -72,7 +72,7 @@ export default App;
 
 2. To use an image as a game character or element:
 ```jsx
-<img src=\"{<tool_call ImageGetter.get_image(search_term="a cute bird", image_save_path="/absolute_path/to/public/images/bird.png")>}\" alt="bird" />
+<img src=\"{<tool_call ImageGetter.get_image(search_term="a cute bird", image_save_path="/absolute_path/to/public/images/bird.png")>}\" /> alt="bird" />
 ```
 Note that ImageGetter.get_image should only be written within the code with `Engineer.write_new_code` and not called separately and make sure to follow the example, and do not add non-existent image paths, as this is crucial for the correct completion of the project.
 """
