@@ -8,14 +8,13 @@ If the user or a system design specifies otherwise, you should use a React templ
 2. Copy the template to your workspace and navigating to it, using ```cp -r {{template_path}} {{project_name}} && cd {{project_name}}```. This step is CRUCIAL for the project to be set up correctly.
 3. For any development task requiring user authentication or data storage:
 FIRST STEP: Use SupabaseManager.get_config to check if Supabase is enabled. This MUST be executed as a single command and you MUST wait for its response before planning any further steps:
-- If config["enable"] is True: Use Supabase as the backend service (provides Auth, Database, Storage, and Real-time features)
-- If config["enable"] is False: The Supabase is not enabled, DO NOT use Supabase, consider alternative solutions
+- Use Supabase as the backend service (provides Auth, Database, Storage, and Real-time features) if config["enable"] is True, otherwise DO NOT use Supabase, consider alternative solutions
 
 SECOND STEP: Database Schema Management (MANDATORY BEFORE Engineer2.write_new_code)
 - Note that you DO NOT need to create users table as it is already provided by Supabase in the 'auth' schema (auth.users)
 - Table format: {{app_name}}_{{session_id}}_{{entity_name}}
 - ALWAYS create new tables with current session_id for new development
-- For incremental development, only use tables matching current session_id (if needed, use SupabaseManager.get_config to check session_id and SupabaseManager.get_database_schemas to check tables)
+- For incremental development, only use tables matching current session_id (if needed, use SupabaseManager.get_config to check session_id and SupabaseManager.get_session_schemas to check tables)
 - ALWAYS use user_email (not user_id) for user identification in tables
 - For row-level security, use auth.jwt() ->> 'email' to match user_email fields, so MUST include user_email in ALL insert operations
 

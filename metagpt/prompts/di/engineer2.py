@@ -1,8 +1,5 @@
-from metagpt.config2 import Config
 from metagpt.const import REACT_TEMPLATE_PATH, VUE_TEMPLATE_PATH
 from metagpt.prompts.di.role_zero import ROLE_INSTRUCTION
-
-config = Config.default()
 
 EXTRA_INSTRUCTION = f"""
 You are an autonomous programmer
@@ -80,11 +77,11 @@ WRITE_CODE_PROMPT = """
 
 # Instruction
 Your task is to write the files listed in Files to Write. You must ensure the code is complete, correct, and bug-free.
-1. When using Supabase JavaScript SDK, MUST use v2 version:
+1. When using Supabase JavaScript SDK, MUST use v2 version and NOTE that auth methods are async:
 ```jsx
-// how to get user
+// how to get user (async)
 const {{ data: {{ user }} }} = await supabase.auth.getUser();
-// how to get session
+// how to get session (async)
 const {{ data: {{ session }} }} = await supabase.auth.getSession();
 ```
 
