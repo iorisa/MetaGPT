@@ -35,7 +35,7 @@ async () => {{
 llm_config = Config.default().llm
 
 
-@register_tool(include_functions=["get_image"])
+@register_tool(include_functions=["get_image", "create_image"])
 class ImageGetter(BaseModel):
     """
     A tool to get images.
@@ -68,6 +68,29 @@ class ImageGetter(BaseModel):
             browser_ctx = self.browser_ctx = await browser.new_context()
             self.page = await browser_ctx.new_page()
 
+    async def create_image(self, image_description: str, image_save_path: str) -> str:
+        """
+        Create an image with dall-e-3 based on the description.
+
+        Args:
+            image_description (str): The description of the image.
+            image_save_path (str): The file path where the image will be saved.
+        """
+        images = await self.gen_image(model="dall-e-3", prompt=image_description)
+        image = images[0]
+        # Get the directory path from the full file path
+        save_dir = os.path.dirname(image_save_path)
+        # Create directory if it doesn't exist
+        if save_dir and not os.path.exists(save_dir):
+            os.makedirs(save_dir, exist_ok=True)
+        image.save(image_save_path)
+        print("Image saved at {}".format(image_save_path))
+        # Ensure both image_save_path and DEFAULT_WORKSPACE_ROOT are strings
+        if "public" in image_save_path:
+            image_save_path = image_save_path.split("public")[-1]
+
+        return image_save_path
+
     async def get_image(self, search_term, image_save_path):
         """
         Get an image related to the search term.
@@ -77,12 +100,11 @@ class ImageGetter(BaseModel):
             image_save_path (str): The file path where the image will be saved.
         """
         # Search for images from https://unsplash.com/s/photos/
-
-        if self.page is None:
-            await self.start()
-        await self.page.goto(self.url.format(search_term=search_term), wait_until="domcontentloaded")
-        # Wait until the image element is loaded
         try:
+            if self.page is None:
+                await self.start()
+            await self.page.goto(self.url.format(search_term=search_term), wait_until="domcontentloaded")
+            # Wait until the image element is loaded
             await self.page.wait_for_selector(self.img_element_selector)
             # Get the base64 code of the first  retrieved image
             image_base64 = await self.page.evaluate(
@@ -110,4 +132,4 @@ class ImageGetter(BaseModel):
         if "public" in image_save_path:
             image_save_path = image_save_path.split("public")[-1]
 
-        return f'"{image_save_path}"'
+        return image_save_path

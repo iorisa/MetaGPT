@@ -23,6 +23,7 @@ class FrontendEngineer(Engineer2):
         "Deployer",
         "Engineer2",
         "Browser",
+        "ImageGetter",
     ]
 
     is_first_dev_request: bool = True

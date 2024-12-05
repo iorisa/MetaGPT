@@ -43,7 +43,7 @@ class Engineer2(RoleZero):
         "Engineer2",
         "CodeReview",
         "Deployer",
-        "",
+        "ImageGetter",
     ]
     # SWE Agent parameter
     run_eval: bool = False
@@ -77,6 +77,7 @@ class Engineer2(RoleZero):
         self.autocall_tool_execution_map.update(
             {
                 "ImageGetter.get_image": image_getter.get_image,
+                "ImageGetter.create_image": image_getter.create_image,
             }
         )
         if self.run_eval is True:
@@ -91,6 +92,8 @@ class Engineer2(RoleZero):
                     "RoleZero.ask_human": self._end,
                     "RoleZero.reply_to_human": self._end,
                     "Deployer.deploy_to_public": self._deploy_to_public,
+                    "ImageGetter.get_image": image_getter.get_image,
+                    "ImageGetter.create_image": image_getter.create_image,
                 }
             )
         else:
@@ -103,6 +106,8 @@ class Engineer2(RoleZero):
                     "CodeReview.fix": cr.fix,
                     "Terminal.run_command": self.terminal.run_command,
                     "Deployer.deploy_to_public": self._deploy_to_public,
+                    "ImageGetter.get_image": image_getter.get_image,
+                    "ImageGetter.create_image": image_getter.create_image,
                 }
             )
 
@@ -196,10 +201,8 @@ class Engineer2(RoleZero):
     async def _tool_call(self, code: str):
         """Replace the tool call with the actual tool call."""
         # 1. find all the tool calls in the code
-
-        tool_calls = ["ImageGetter.get_image"]
         replaced = []
-        for tool_call in tool_calls:
+        for tool_call in self.autocall_tool_execution_map.keys():
             if tool_call in code:
                 # find all the tool call command
                 tool_call_match_pattern = rf"{tool_call}\(.*?\)"
@@ -216,9 +219,7 @@ class Engineer2(RoleZero):
                     )
                 result = await self._run_auto_tool_call_commands(tool_call_commands_dicts)
                 for i, replace_match_command in enumerate(replace_match_commands):
-                    logger.info(f"before: \n{code}")
                     code = code.replace(replace_match_command, result[i])
-                    logger.info(f"after: \n{code}")
                     replaced.append((replace_match_command, result[i]))
         return code, replaced
 

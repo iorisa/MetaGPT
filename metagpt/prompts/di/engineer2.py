@@ -76,14 +76,32 @@ WRITE_CODE_PROMPT = """
 
 # Instruction
 Your task is to write the files listed in Files to Write. You must ensure the code is complete, correct, and bug-free.
-Embed the following pattern in your code where an image is needed:
+When you need to include images in your code, you can use ImageGetter.get_image tool. Here are examples:
+
+1. To set a background image (e.g., a sunset):
+```jsx
+import React from 'react';
+function App() {{
+const backgroundStyle = {{
+backgroundImage: 'url({{<tool_call ImageGetter.get_image(search_term="a beautiful sunset", image_save_path="/absolute_path/to/public/images/sonnet-bj.png")>}})',
+backgroundSize: 'cover',
+backgroundPosition: 'center',
+height: '100vh',
+}};
+return (
+<div style={{backgroundStyle}}>
+<h1>Welcome to my website</h1>
+</div>
+);
+}}
+export default App;
 ```
-<img 
-    src={{<tool_call ImageGetter.get_image(search_term="The thing you want to search for.", image_save_path="/absolute_path/to/public/images/your_image_name.png")>}}
-/>
+
+2. To use an image as a game character or element:
+```jsx
+<img src=\"{{<tool_call ImageGetter.get_image(search_term="a cute bird", image_save_path="/absolute_path/to/public/images/bird.png")>}}\" alt="bird" />
 ```
-This code snippet, once embedded, will automatically call the ImageGetter.get_image tool in the background to retrieve the image you need and return the address where the image is saved.
-Note that the images should be saved in the public/images directory of the project. Please verify that all image-related code follows the exact HTML template structure shown above. This step is CRUCIAL for the project to be set up correctly.
+Note that ImageGetter.get_image should only be written within the code and not called separately and make sure to follow the example, and do not add non-existent image paths, as this is crucial for the correct completion of the project.
 
 # Output
 While some concise thoughts are helpful, code is absolutely required. DO NOT leave any TODO or placeholder.
