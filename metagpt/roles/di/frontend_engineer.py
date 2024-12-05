@@ -25,7 +25,7 @@ _ = FixedSearchTemplate  # avoid pre-commit error
 class FrontendEngineer(Engineer2):
     instruction: str = FRONTEND_ENGINEER_PROMPT
     tools: list[str] = [
-        "Editor:read,write,edit_file_by_replace,insert_content_at_line,append_file",
+        "Editor:read,write,edit_file_by_replace,append_file",
         "RoleZero",
         "Terminal:run_command",
         "SearchEnhancedQA",

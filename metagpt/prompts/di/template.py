@@ -52,8 +52,7 @@ GENERAL_WEB_APP_TEMPLATE_PROMPT = """No template available"""
 EXRTA_INFO_PROMPT = """
 1. {template_style} template successfully copied to {target_dir}. Navigate to it before starting the project. 
 2. If the project root directory exists README.md, read it first.
-3. If user does not provide additional information, you should deploy the project directly without updating any code. However, if the user instructs obtaining their information from a certain website or file, use the appropriate tools to retrieve it, and then update the obtained information into the project.
-4. Make sure you have understood the content of the code file before updating or writing the code.
+3. Make sure you have understood the content of the code file before updating or writing the code.
 """
 
 GENERATE_TEMPLATE_CONFIG_PROMPT = """

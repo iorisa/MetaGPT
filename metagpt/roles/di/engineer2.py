@@ -53,11 +53,11 @@ class Engineer2(RoleZero):
     is_first_dev_request: bool = Field(default=True, exclude=False)
 
     async def _think(self) -> bool:
-        await self._format_instruction()
+        await self._update_workdir()
         res = await super()._think()
         return res
 
-    async def _format_instruction(self):
+    async def _update_workdir(self):
         """
         Display the current terminal and editor state.
         This information will be dynamically added to the command prompt.
@@ -67,7 +67,6 @@ class Engineer2(RoleZero):
             await self.terminal.set_initial_workdir(self.working_dir)
         self.working_dir = (await self.terminal.run_command("pwd")).strip()
         self.editor.set_workdir(self.working_dir)
-        self.cmd_prompt_current_state = f"current directory: {self.working_dir}"
 
     def _update_tool_execution(self):
         # validate = ValidateAndRewriteCode()
