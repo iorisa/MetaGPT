@@ -104,7 +104,10 @@ class FrontendEngineer(Engineer2):
                 1.If the code file that needs to be updated already exists, do not rewrite the corresponding content, but replace some of the code to update. 
                 2.Before updating the code at the project path, read the content of the code file and then think about how to update it at the project path. 
                 3.If the project does not belong to React or Vue projects, then do not run the project code.
-                4.Code update must be in the project root directory:{target_dir}, you can use ```cd {target_dir}``` go into the project root directory, and then use editor to write code. This step is CRUCIAL for the project to be developed correctly."""  # update template info
+                # CRUCIAL
+                1.Code updates should be done in the project root directory:{target_dir}, so you should use ```cd {target_dir}``` to go into the project root directory firstly, and then use editor to write code. This step is CRUCIAL for the project to be developed correctly.
+                2.When using the editor to write code, plan the code files to use absolute paths as much as possible to reduce path errors.
+            """
             await self.set_template(template, extra_user_info, extra_info)
 
             return target_dir
