@@ -1,7 +1,6 @@
 from pathlib import Path
 from typing import Union
 
-from metagpt.const import REACT_TEMPLATE_PATH
 from metagpt.tools.libs.editor import FileBlock
 
 
@@ -25,68 +24,21 @@ def read_file(file_path: Union[str, Path], encoding: str = "utf-8") -> FileBlock
     return FileBlock(path=str(path), content=content)
 
 
-REACT_TEMPLATE_PATH = REACT_TEMPLATE_PATH.resolve().absolute() if REACT_TEMPLATE_PATH.exists() else "N/A"
-REACT_TEMPLATE_STRUCTURE = (
-    """
-react_template/
-|-- eslint.config.js
-|-- index.html
-|-- package.json
-|-- pnpm-lock.yaml
-|-- postcss.config.js
-|-- public
-|-- src
-|   |-- App.jsx
-|   |-- index.css
-|   `-- main.jsx
-|-- tailwind.config.js
-`-- vite.config.js
-"""
-    if REACT_TEMPLATE_PATH != "N/A"
-    else ""
-)
-REACT_INDEX_CONTENT = read_file(REACT_TEMPLATE_PATH.resolve().absolute() / "index.html")
-REACT_MAIN_CONTENT = read_file(REACT_TEMPLATE_PATH.resolve().absolute() / "src/main.jsx")
-REACT_APP_CONTENT = read_file(REACT_TEMPLATE_PATH.resolve().absolute() / "src/App.jsx")
-REACT_INDEX_CSS_CONTENT = read_file(REACT_TEMPLATE_PATH.resolve().absolute() / "src/index.css")
-REACT_CONFIG_CONTENT = read_file(REACT_TEMPLATE_PATH.resolve().absolute() / "vite.config.js")
-
-
-REACT_APP_TEMPLATE = f"""
-#### REACT Template Intro
-1. This is a template for general web app or game development. It is based on React framework with Tailwind CSS. The template includes the basic structure of a React project, including an index.html file and a src directory with an App.jsx file.
-2. The template is at {REACT_TEMPLATE_PATH}.
-3. Modify index.html, create new jsx files under src if needed, and rewrite src/App.jsx to meet the user's requirements.
-4. Style your elements with Tailwind CSS classes directly in the jsx files.
-
-### Project Structure
-{REACT_TEMPLATE_STRUCTURE}
-
-### File Content
-#### index.html (Modify the title)
-{REACT_INDEX_CONTENT}
-
-#### src/main.jsx (You should NOT modify it)
-{REACT_MAIN_CONTENT}
-
-#### src/App.jsx (to be modified)
-{REACT_APP_CONTENT}
-
-#### src/index.css (You should NOT modify it)
-{REACT_INDEX_CSS_CONTENT}
-
-#### vite.config.js (only modify it if extra config is absolutely necessary)
-{REACT_CONFIG_CONTENT}
+# a backup desc for https://gitlab.deepwisdomai.com/metagpt/mgx_template/-/blob/main/templates/default_web_project/react_template/template_config.json
+REACT_APP_TEMPLATE_DESC = """
+ - This is a template for general web app or game development. It is based on React framework with Tailwind CSS. The template includes the basic structure of a React project, including an index.html file and a src directory with an App.jsx file.
+ - Modify index.html, create new jsx files under src if needed, and rewrite src/App.jsx to meet the user's requirements. You should NOT modify src/main.jsx and src/index.css. Modify vite.config.js only if extra config is absolutely necessary.
+ - Style your elements with Tailwind CSS classes directly in the jsx files.
 """
 
 GENERAL_WEB_APP_TEMPLATE = """
-#### {TEMPLATE_NAME} Template Intro
-1. This is a template for {TEMPLATE_DESCRIPTION}
+### {TEMPLATE_NAME} Template Intro
+1. {TEMPLATE_DESCRIPTION}
 2. The template is at {TEMPLATE_PATH}.
 3. {REQUIRED_FILES_INSTRUCTION}
 4. {REQUIRED_FIELDS_INSTRUCTION}
-5. The template is written in {TEMPLATE_LANG} programming language.
-6. The template is based on {TEMPLATE_FRAMEWORK} framework.
+5. The template is written in {TEMPLATE_LANG}.
+6. The template is based on {TEMPLATE_FRAMEWORK}.
 
 ### Project Structure
 {TEMPLATE_STRUCTURE}
@@ -95,7 +47,14 @@ GENERAL_WEB_APP_TEMPLATE = """
 {FILE_CONTENT}
 """
 
-GENERAL_WEB_APP_TEMPLATE_PROMPT = "### Template Intro\n" + REACT_APP_TEMPLATE
+GENERAL_WEB_APP_TEMPLATE_PROMPT = """No template available"""
+
+EXRTA_INFO_PROMPT = """
+1. {template_style} template successfully copied to {target_dir}. Navigate to it before starting the project. 
+2. If the project root directory exists README.md, read it first.
+3. If user does not provide additional information, you should deploy the project directly without updating any code. However, if the user instructs obtaining their information from a certain website or file, use the appropriate tools to retrieve it, and then update the obtained information into the project.
+4. Make sure you have understood the content of the code file before updating or writing the code.
+"""
 
 GENERATE_TEMPLATE_CONFIG_PROMPT = """
 Please generate a template configuration based on the following template 

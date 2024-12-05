@@ -6,17 +6,24 @@ from pydantic import model_validator
 
 from metagpt.logs import logger
 from metagpt.prompts.di.frontend_engineer import FE_EXAPMLE, FRONTEND_ENGINEER_PROMPT
-from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE_PROMPT
+from metagpt.prompts.di.template import (
+    EXRTA_INFO_PROMPT,
+    GENERAL_WEB_APP_TEMPLATE_PROMPT,
+)
 from metagpt.roles.di.engineer2 import Engineer2
 from metagpt.schema import UserMessage
-from metagpt.tools.libs.search_template import SearchTemplate, TemplateInfo
+from metagpt.tools.libs.search_template import (
+    BaseSearchTemplate,
+    FixedSearchTemplate,
+    SearchTemplate,
+)
+
+_ = FixedSearchTemplate  # avoid pre-commit error
 
 
 # @track_agent("FrontendEngineer")
 class FrontendEngineer(Engineer2):
-    use_search_template: bool = True
     instruction: str = FRONTEND_ENGINEER_PROMPT
-    template_tool: SearchTemplate = None
     tools: list[str] = [
         "Editor:read,write,edit_file_by_replace,insert_content_at_line,append_file",
         "RoleZero",
@@ -25,17 +32,23 @@ class FrontendEngineer(Engineer2):
         "ImageGetter",
         "Deployer",
         "Engineer2",
-        "Browser",
+        "Browser:click,goto,scroll",
     ]
-    is_first_dev_request: bool = True
+
+    # Regarding template use:
+    # 1. Set use_search_template to False to disable template
+    # 2. Set template_tool to FixedSearchTemplate() to skip RAG and use a fixed template
+    # 3. Set template_tool to None (unchanged) or SearchTemplate() to perform a full template search
+    use_search_template: bool = True
+    template_tool: BaseSearchTemplate = None
 
     @model_validator(mode="after")
     def set_search_template_tool(self):
         if self.template_tool is None and self.use_search_template:
             self.template_tool = SearchTemplate()
-            logger.info("FrontendEngineer tools set")
+            logger.info("SearchTemplate set")
         else:
-            logger.warning("FrontendEngineer tools not set")
+            logger.warning("SearchTemplate not set")
         return self
 
     async def _think(self) -> bool:
@@ -62,12 +75,9 @@ class FrontendEngineer(Engineer2):
     def _retrieve_experience(self) -> str:
         return FE_EXAPMLE
 
-    async def set_template(
-        self, template_info: TemplateInfo = None, extra_user_info: str = None, extra_info: str = None
-    ) -> None:
-        self._template_content = await self.template_tool.get_template_info(template_info)
+    async def set_template(self, template_info: str = "", extra_user_info: str = None, extra_info: str = None) -> None:
         # Update template part in instruction
-        self.instruction = self.instruction.replace(GENERAL_WEB_APP_TEMPLATE_PROMPT, self._template_content)
+        self.instruction = self.instruction.replace(GENERAL_WEB_APP_TEMPLATE_PROMPT, template_info)
 
         content = extra_info
         if extra_user_info:
@@ -96,20 +106,9 @@ class FrontendEngineer(Engineer2):
                 cmd = f"cd {target_dir} && pnpm i"
                 subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-            extra_info = f"""
-                1.Successfully copied the {template.style} template to the {target_dir} directory. 
-                2.The project root directory is {target_dir}, you need to go into the project root directory: {target_dir} firstly. 
-                3.And if the project root directory exists README.md document, read README.md document firstly. 
-                4.If user does not provide additional information, you need to deploy the project directly without updating any code. However, if the user specifies obtaining their information from a certain website or file, use the appropriate tools to retrieve it, and then update the obtained information into the project. 
-                # Note
-                1.If the code file that needs to be updated already exists, do not rewrite the corresponding content, but replace some of the code to update. 
-                2.Before updating the code at the project path, read the content of the code file and then think about how to update it at the project path. 
-                3.If the project does not belong to React or Vue projects, then do not run the project code.
-                # CRUCIAL
-                1.Code updates should be done in the project root directory:{target_dir}, so you should use ```cd {target_dir}``` to go into the project root directory firstly, and then use editor to write code. This step is CRUCIAL for the project to be developed correctly.
-                2.When using the editor to write code, plan the code files to use absolute paths as much as possible to reduce path errors.
-            """
-            await self.set_template(template, extra_user_info, extra_info)
+            template_info = await self.template_tool.get_template_info(template)
+            extra_info = EXRTA_INFO_PROMPT.format(template_style=template.style, target_dir=target_dir)
+            await self.set_template(template_info, extra_user_info, extra_info)
 
             return target_dir
         else:
