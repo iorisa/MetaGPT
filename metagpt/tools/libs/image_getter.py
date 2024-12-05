@@ -84,7 +84,6 @@ class ImageGetter(BaseModel):
         if save_dir and not os.path.exists(save_dir):
             os.makedirs(save_dir, exist_ok=True)
         image.save(image_save_path)
-        print("Image saved at {}".format(image_save_path))
         # Ensure both image_save_path and DEFAULT_WORKSPACE_ROOT are strings
         if "public" in image_save_path:
             image_save_path = image_save_path.split("public")[-1]
@@ -92,44 +91,64 @@ class ImageGetter(BaseModel):
         return image_save_path
 
     async def get_image(self, search_term, image_save_path):
-        """
-        Get an image related to the search term.
+        """Get an image related to the search term."""
+        browser_ctx = None
+        page = None
 
-        Args:
-            search_term (str): The term to search for the image. The search term must be in English. Using any other language may lead to a mismatch.
-            image_save_path (str): The file path where the image will be saved.
-        """
-        # Search for images from https://unsplash.com/s/photos/
         try:
-            if self.page is None:
+            if self.playwright is None:
                 await self.start()
-            await self.page.goto(self.url.format(search_term=search_term), wait_until="domcontentloaded")
-            # Wait until the image element is loaded
-            await self.page.wait_for_selector(self.img_element_selector)
-            # Get the base64 code of the first  retrieved image
-            image_base64 = await self.page.evaluate(
-                DOWNLOAD_PICTURE_JAVASCRIPT.format(img_element_selector=self.img_element_selector)
-            )
-            if image_base64:
-                image = decode_image(image_base64)
-            else:
-                # Try creating a image with oas3_openai_text_to_image
+
+            # Create new context and page for this request
+            browser_ctx = await self.browser_instance.new_context()
+            page = await browser_ctx.new_page()
+
+            encoded_term = search_term.replace(" ", "%20")
+            url = self.url.format(search_term=encoded_term)
+
+            try:
+                max_retries = 3
+                for attempt in range(max_retries):
+                    try:
+                        await page.goto(url, timeout=20000)
+                        break
+                    except Exception as e:
+                        if attempt == max_retries - 1:
+                            raise e
+                        continue
+
+                await page.wait_for_selector(self.img_element_selector)
+
+                image_base64 = await page.evaluate(
+                    DOWNLOAD_PICTURE_JAVASCRIPT.format(img_element_selector=self.img_element_selector)
+                )
+
+                if image_base64:
+                    image = decode_image(image_base64)
+                else:
+                    images = await self.gen_image(model="dall-e-3", prompt=search_term)
+                    image = images[0]
+
+            except Exception:
                 images = await self.gen_image(model="dall-e-3", prompt=search_term)
                 image = images[0]
-        except TimeoutError:
-            # return f"{search_term} not found. Please broaden the search term."
-            # Try creating a image with oas3_openai_text_to_image
-            images = await self.gen_image(model="dall-e-3", prompt=search_term)
-            image = images[0]
-        # Get the directory path from the full file path
-        save_dir = os.path.dirname(image_save_path)
-        # Create directory if it doesn't exist
-        if save_dir and not os.path.exists(save_dir):
-            os.makedirs(save_dir, exist_ok=True)
-        image.save(image_save_path)
-        print("Image saved at {}".format(image_save_path))
-        # Ensure both image_save_path and DEFAULT_WORKSPACE_ROOT are strings
-        if "public" in image_save_path:
-            image_save_path = image_save_path.split("public")[-1]
 
-        return image_save_path
+            save_dir = os.path.dirname(image_save_path)
+            if save_dir and not os.path.exists(save_dir):
+                os.makedirs(save_dir, exist_ok=True)
+            image.save(image_save_path)
+
+            if "public" in image_save_path:
+                image_save_path = image_save_path.split("public")[-1]
+
+            return image_save_path
+
+        except Exception as e:
+            raise Exception(f"Failed to get/save image: {str(e)}")
+
+        finally:
+            # Clean up resources
+            if page:
+                await page.close()
+            if browser_ctx:
+                await browser_ctx.close()

@@ -41,20 +41,19 @@ Note:
 18. Write only one code file each time and provide its full implementation.
 19. When the requirement is simple, you don't need to create a plan, just do it right away.
 20. When using the editor, pay attention to current directory. When you use editor tools, the paths must be either absolute or relative to the editor's current directory.
-21. When planning, consider whether images are needed. If you are developing a showcase website, start by using ImageGetter.get_image to obtain the necessary images.
-22. When planning, merge multiple tasks that operate on the same file into a single task. For example, create one task for writing unit tests for all functions in a class. Also in using the editor, merge multiple tasks that operate on the same file into a single task.
-23. When create unit tests for a code file, use Editor.read() to read the code file before planing. And create one plan to writing the unit test for the whole file.
-24. The priority to select technology stacks: Describe in Sytem Design and Project Schedule > Vite, React, MUI and Tailwind CSS > native HTML 
-24.1. The React template is in the "{REACT_TEMPLATE_PATH.resolve().absolute()}" and Vue template is in the "{VUE_TEMPLATE_PATH.resolve().absolute()}". 
-25. If use Vite, Vue/React, MUI, and Tailwind CSS as the programming language or no programming language is specified in document or user requirement, follow these steps:
-25.1. Create the project folder if no exists. Use cmd " mkdir -p {{project_name}} "
-25.2. Copy a Vue/React template to your project folder, move into it and list the file in it. Use cmd "cp -r {{template_folder}}/* {{workspace}}/{{project_name}}/ && cd {{workspace}}/{{project_name}} && pwd && tree ". This must be a single response without other commands.
-25.3. User Editor.read to read the content of files in the src and read the index.html in the project root before making a plan.
-25.4. List the files that you need to rewrite and create when making a plan. Indicate clearly what file to rewrite or create in each task. "index.html" and all files in the src folder always must be rewritten. Use Tailwind CSS for styling. Notice that you are in {{project_name}}.
-25.5. After finish the project. use "pnpm install && pnpm run build" to build the project and then deploy the project to the public using the dist folder which contains the built project.
-26. Engineer2.write_new_code is used to write or rewrite the code, which will modify the whole file. Editor.edit_file_by_replace is used to edit a small part of the file.
-27. Deploye the project to the public after you install and build the project, there will be a folder named "dist" in the current directory after the build.
-28. Use Engineer2.write_new_code to rewrite the whole file when you fail to use Editor.edit_file_by_replace more than three times.
+21. When planning, merge multiple tasks that operate on the same file into a single task. For example, create one task for writing unit tests for all functions in a class. Also in using the editor, merge multiple tasks that operate on the same file into a single task.
+22. When create unit tests for a code file, use Editor.read() to read the code file before planing. And create one plan to writing the unit test for the whole file.
+23. The priority to select technology stacks: Describe in Sytem Design and Project Schedule > Vite, React, MUI and Tailwind CSS > native HTML 
+23.1. The React template is in the "{REACT_TEMPLATE_PATH.resolve().absolute()}" and Vue template is in the "{VUE_TEMPLATE_PATH.resolve().absolute()}". 
+24. If use Vite, Vue/React, MUI, and Tailwind CSS as the programming language or no programming language is specified in document or user requirement, follow these steps:
+24.1. Create the project folder if no exists. Use cmd " mkdir -p {{project_name}} "
+24.2. Copy a Vue/React template to your project folder, move into it and list the file in it. Use cmd "cp -r {{template_folder}}/* {{workspace}}/{{project_name}}/ && cd {{workspace}}/{{project_name}} && pwd && tree ". This must be a single response without other commands.
+24.3. User Editor.read to read the content of files in the src and read the index.html in the project root before making a plan.
+24.4. List the files that you need to rewrite and create when making a plan. Indicate clearly what file to rewrite or create in each task. "index.html" and all files in the src folder always must be rewritten. Use Tailwind CSS for styling. Notice that you are in {{project_name}}.
+24.5. After finish the project. use "pnpm install && pnpm run build" to build the project and then deploy the project to the public using the dist folder which contains the built project.
+25. Engineer2.write_new_code is used to write or rewrite the code, which will modify the whole file. Editor.edit_file_by_replace is used to edit a small part of the file.
+26. Deploye the project to the public after you install and build the project, there will be a folder named "dist" in the current directory after the build.
+27. Use Engineer2.write_new_code to rewrite the whole file when you fail to use Editor.edit_file_by_replace more than three times.
 """
 ENGINEER2_INSTRUCTION = ROLE_INSTRUCTION + EXTRA_INSTRUCTION.strip()
 

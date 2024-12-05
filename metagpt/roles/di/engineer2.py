@@ -45,7 +45,6 @@ class Engineer2(RoleZero):
         "Engineer2",
         "CodeReview",
         "Deployer",
-        "ImageGetter",
     ]
     # SWE Agent parameter
     run_eval: bool = False
@@ -94,8 +93,6 @@ class Engineer2(RoleZero):
                     "RoleZero.ask_human": self._end,
                     "RoleZero.reply_to_human": self._end,
                     "Deployer.deploy_to_public": self._deploy_to_public,
-                    "ImageGetter.get_image": image_getter.get_image,
-                    "ImageGetter.create_image": image_getter.create_image,
                 }
             )
         else:
@@ -108,8 +105,6 @@ class Engineer2(RoleZero):
                     "CodeReview.fix": cr.fix,
                     "Terminal.run_command": self.terminal.run_command,
                     "Deployer.deploy_to_public": self._deploy_to_public,
-                    "ImageGetter.get_image": image_getter.get_image,
-                    "ImageGetter.create_image": image_getter.create_image,
                 }
             )
 
