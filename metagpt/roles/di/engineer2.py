@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import re
 from pathlib import Path
 
-# from agentops import track_agent
 from pydantic import Field
 
 from metagpt.logs import logger
@@ -120,8 +120,6 @@ class Engineer2(RoleZero):
 
     async def _tool_call(self, code: str):
         """Replace the tool call with the actual tool call."""
-        import asyncio
-
         # Find all tool calls using regex
         tool_call_pattern = r"(?:\$)?\{<tool_call[\s\S]*?[\s\S]/>(?:\})?"
         tool_calls = re.findall(tool_call_pattern, code)
