@@ -84,13 +84,15 @@ class ImageGetter(BaseModel):
             # Check if there is a project folder under the default workspace.
             project_folder = os.listdir(DEFAULT_WORKSPACE_ROOT)[0]
             save_dir = os.path.dirname(os.path.join(DEFAULT_WORKSPACE_ROOT, project_folder, image_save_path))
+            split_str = project_folder + "/"
         else:
             save_dir = os.path.dirname(image_save_path)
+            split_str = "public"
         if save_dir:
             os.makedirs(save_dir, exist_ok=True)
         image.save(os.path.join(save_dir, image_file_name))
 
-        if "public" in image_save_path:
+        if split_str in image_save_path:
             image_save_path = image_save_path.split("public")[-1]
         return image_save_path
 
