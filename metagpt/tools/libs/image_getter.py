@@ -8,6 +8,7 @@ from playwright.async_api import BrowserContext, Page, Playwright, async_playwri
 from pydantic import BaseModel, ConfigDict, Field
 
 from metagpt.config2 import Config
+from metagpt.const import DEFAULT_WORKSPACE_ROOT
 from metagpt.provider.base_llm import BaseLLM
 from metagpt.provider.openai_api import OpenAILLM
 from metagpt.tools.tool_registry import register_tool
@@ -78,10 +79,16 @@ class ImageGetter(BaseModel):
 
     async def _save_image(self, image, image_save_path: str) -> str:
         """Helper method to save image and process path"""
-        save_dir = os.path.dirname(image_save_path)
+        image_file_name = os.path.basename(image_save_path)
+        if not image_save_path.startswith("/"):
+            # Check if there is a project folder under the default workspace.
+            project_folder = os.listdir(DEFAULT_WORKSPACE_ROOT)[0]
+            save_dir = os.path.dirname(os.path.join(DEFAULT_WORKSPACE_ROOT, project_folder, image_save_path))
+        else:
+            save_dir = os.path.dirname(image_save_path)
         if save_dir:
             os.makedirs(save_dir, exist_ok=True)
-        image.save(image_save_path)
+        image.save(os.path.join(save_dir, image_file_name))
 
         if "public" in image_save_path:
             image_save_path = image_save_path.split("public")[-1]
