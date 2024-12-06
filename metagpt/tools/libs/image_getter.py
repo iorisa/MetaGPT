@@ -36,7 +36,7 @@ async () => {{
 llm_config = Config.default().llm
 
 
-@register_tool(include_functions=["get_image", "create_image"])
+@register_tool(include_functions=["get"])
 class ImageGetter(BaseModel):
     """
     A tool to get images.
@@ -80,7 +80,7 @@ class ImageGetter(BaseModel):
     async def _save_image(self, image, image_save_path: str) -> str:
         """Helper method to save image and process path"""
         image_file_name = os.path.basename(image_save_path)
-        if not image_save_path.startswith("/"):
+        if not image_save_path.startswith("/root"):
             # Check if there is a project folder under the default workspace.
             project_folder = os.listdir(DEFAULT_WORKSPACE_ROOT)[0]
             save_dir = os.path.dirname(os.path.join(DEFAULT_WORKSPACE_ROOT, project_folder, image_save_path))
@@ -166,3 +166,12 @@ class ImageGetter(BaseModel):
                 await page.close()
             if browser_ctx:
                 await browser_ctx.close()
+
+    async def get(self, search_term: str, image_save_path: str, mode="search") -> str:
+        """Get an image related to the search term."""
+        if mode == "search":
+            return await self.get_image(search_term, image_save_path)
+        elif mode == "create":
+            return await self.create_image(search_term, image_save_path)
+        else:
+            raise ValueError(f"Invalid mode: {mode}")

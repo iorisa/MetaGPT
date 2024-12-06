@@ -72,12 +72,7 @@ class Engineer2(RoleZero):
         # validate = ValidateAndRewriteCode()
         cr = CodeReview()
         image_getter = ImageGetter()
-        self.autocall_tool_execution_map.update(
-            {
-                "ImageGetter.get_image": image_getter.get_image,
-                "ImageGetter.create_image": image_getter.create_image,
-            }
-        )
+        self.autocall_tool_execution_map.update({"ImageGetter.get": image_getter.get})
         if self.run_eval is True:
             # Evalute tool map
             self.tool_execution_map.update(
@@ -124,7 +119,7 @@ class Engineer2(RoleZero):
         async def execute_tool(tool_call: str):
             try:
                 # Extract just the function call part
-                func_match = re.search(r"ImageGetter\.(get_image|create_image)\(.*?\)", tool_call)
+                func_match = re.search(r"ImageGetter\.get\(.*?\)", tool_call)
                 if not func_match:
                     return None
 
@@ -137,7 +132,7 @@ class Engineer2(RoleZero):
                         (),
                         {
                             name: self.autocall_tool_execution_map[f"ImageGetter.{name}"]
-                            for name in ["get_image", "create_image"]
+                            for name in ["get"]  # Add more methods here in the future
                         },
                     )()
                 }

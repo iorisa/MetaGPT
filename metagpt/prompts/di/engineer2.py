@@ -75,14 +75,14 @@ WRITE_CODE_PROMPT = """
 
 # Instruction
 Your task is to write the files listed in Files to Write. You must ensure the code is complete, correct, and bug-free.
-When you need to include images in your code, you can use ImageGetter.get_image tool. Here are examples:
+When you need to include images in your code, you can use ImageGetter.get tool. Here are examples:
 
 1. To set a background image (e.g., a sunset):
 ```jsx
 import React from 'react';
 function App() {{
 const backgroundStyle = {{
-backgroundImage: 'url({{<tool_call ImageGetter.get_image(search_term="a beautiful sunset", image_save_path="/absolute_path/to/public/images/sonnet-bj.png") />}})',
+backgroundImage: 'url({{<tool_call ImageGetter.get(search_term="a beautiful sunset", image_save_path="/absolute_path/to/public/images/sonnet-bj.png", mode="search") />}})',
 backgroundSize: 'cover',
 backgroundPosition: 'center',
 height: '100vh',
@@ -98,9 +98,15 @@ export default App;
 
 2. To use an image as a game character or element:
 ```jsx
-<img src=\"{{<tool_call ImageGetter.get_image(search_term="a cute bird", image_save_path="/absolute_path/to/public/images/bird.png") />}}\" alt="bird" />
+<img src=\"{{<tool_call ImageGetter.get(search_term="a cute bird", image_save_path="/absolute_path/to/public/images/bird.png", mode="search") />}}\" alt="bird" />
 ```
-Note that ImageGetter.get_image should only be written within the code and not called separately and make sure to follow the example, and do not add non-existent image paths, as this is crucial for the correct completion of the project.
+
+3. To create a image and use it in the code:
+```jsx
+<img src=\"{{<tool_call ImageGetter.get(search_term="a fly pig", image_save_path="/absolute_path/to/public/images/fly_pig.png", mode="create") />}}\" alt="pig" />
+```
+
+Note that ImageGetter.get should only be written within the code and not called separately and make sure to follow the example, and do not add non-existent image paths, as this is crucial for the correct completion of the project.
 
 # Output
 While some concise thoughts are helpful, code is absolutely required. DO NOT leave any TODO or placeholder.
