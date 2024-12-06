@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import re
 from pathlib import Path
 from typing import Any, Dict, Tuple
@@ -150,13 +149,6 @@ class Engineer2(RoleZero):
 
         except Exception as e:
             raise ValueError(f"Invalid tool call format: {e}")
-
-    async def _run_auto_tool_call_commands(self, tool_call_commands: list[dict[str, str]]):
-        """Run the tool call commands concurrently."""
-        coroutines = [
-            self.autocall_tool_execution_map[cmd["command_name"]](**cmd["parameters"]) for cmd in tool_call_commands
-        ]
-        return await asyncio.gather(*coroutines)
 
     async def _tool_call(self, code: str):
         """Replace the tool call with the actual tool call."""
