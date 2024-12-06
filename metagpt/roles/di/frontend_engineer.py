@@ -1,6 +1,7 @@
 import os
 import subprocess
 
+# from agentops import track_agent
 from pydantic import model_validator
 
 from metagpt.logs import logger
@@ -20,6 +21,7 @@ from metagpt.tools.libs.search_template import (
 _ = FixedSearchTemplate  # avoid pre-commit error
 
 
+# @track_agent("FrontendEngineer")
 class FrontendEngineer(Engineer2):
     instruction: str = FRONTEND_ENGINEER_PROMPT
     tools: list[str] = [
@@ -37,6 +39,7 @@ class FrontendEngineer(Engineer2):
     # 2. Set template_tool to FixedSearchTemplate() to skip RAG and use a fixed template
     # 3. Set template_tool to None (unchanged) or SearchTemplate() to perform a full template search
     use_search_template: bool = True
+    is_first_dev_request: bool = True
     template_tool: BaseSearchTemplate = None
 
     @model_validator(mode="after")

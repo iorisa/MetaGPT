@@ -117,47 +117,43 @@ class Engineer2(RoleZero):
         return path
 
     async def _tool_call(self, code: str):
-        """Replace the tool call with the actual tool call."""
-        # Find all tool calls using regex
+        """Execute tool calls in code and replace with results."""
         tool_call_pattern = r"(?:\$)?\{<tool_call[\s\S]*?[\s\S]/>(?:\})?"
         tool_calls = re.findall(tool_call_pattern, code)
 
-        class AsyncCallExecutor:
-            def __init__(self, tools):
-                self.tools = tools
-
-            def __getattr__(self, name):
-                async def _method(*args, **kwargs):
-                    # Get the full function name using ImageGetter as class name
-                    func_name = f"ImageGetter.{name}"
-                    if func_name not in self.tools:
-                        raise ValueError(f"Unknown tool call: {func_name}")
-                    # Execute the actual function directly
-                    return await self.tools[func_name](*args, **kwargs)
-
-                return _method
-
-        async def process_tool_call(tool_call):
+        async def execute_tool(tool_call: str):
             try:
-                # Extract the function call
-                auto_tool_func_name_pattern = "|".join(
-                    [tool_name.split(".")[1] for tool_name in self.autocall_tool_execution_map.keys()]
-                )
-                tool_call_func = re.search(rf"ImageGetter\.({auto_tool_func_name_pattern})\(.*?\)", tool_call).group(0)
+                # Extract just the function call part
+                func_match = re.search(r"ImageGetter\.(get_image|create_image)\(.*?\)", tool_call)
+                if not func_match:
+                    return None
 
-                # Execute the tool call directly
-                namespace = {"ImageGetter": AsyncCallExecutor(self.autocall_tool_execution_map)}
-                result = await eval(tool_call_func, {"__builtins__": {}}, namespace)
+                func_call = func_match.group(0)
+
+                # Create namespace with available tools
+                namespace = {
+                    "ImageGetter": type(
+                        "ImageGetter",
+                        (),
+                        {
+                            name: self.autocall_tool_execution_map[f"ImageGetter.{name}"]
+                            for name in ["get_image", "create_image"]
+                        },
+                    )()
+                }
+
+                # Execute the function call
+                result = await eval(func_call, {"__builtins__": {}}, namespace)
                 return tool_call, result
 
             except Exception as e:
                 logger.warning(f"Failed to execute tool call '{tool_call}': {e}")
                 return None
 
-        # Run all tool calls concurrently
-        results = await asyncio.gather(*[process_tool_call(tc) for tc in tool_calls])
+        # Process all tool calls concurrently
+        results = await asyncio.gather(*[execute_tool(tc) for tc in tool_calls])
 
-        # Filter out failed calls and do replacements
+        # Replace tool calls with results
         replaced = []
         for result in results:
             if result:

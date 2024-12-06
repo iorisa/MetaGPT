@@ -60,6 +60,43 @@ class ImageGetter(BaseModel):
     def gen_image(self) -> Callable:
         return self.llm.gen_image
 
+    async def __aenter__(self):
+        """Async context manager entry"""
+        await self.start()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit"""
+        if self.page:
+            await self.page.close()
+        if self.browser_ctx:
+            await self.browser_ctx.close()
+        if self.browser_instance:
+            await self.browser_instance.close()
+        if self.playwright:
+            await self.playwright.stop()
+
+    async def _save_image(self, image, image_save_path: str) -> str:
+        """Helper method to save image and process path"""
+        save_dir = os.path.dirname(image_save_path)
+        if save_dir:
+            os.makedirs(save_dir, exist_ok=True)
+        image.save(image_save_path)
+
+        if "public" in image_save_path:
+            image_save_path = image_save_path.split("public")[-1]
+        return image_save_path
+
+    async def _retry_goto(self, page: Page, url: str, max_retries: int = 3, timeout: int = 20000):
+        """Helper method for retrying page navigation"""
+        for attempt in range(max_retries):
+            try:
+                await page.goto(url, timeout=timeout)
+                return
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    raise RuntimeError(f"Failed to navigate to {url} after {max_retries} attempts") from e
+
     async def start(self) -> None:
         """Starts Playwright and launches a browser"""
         if self.playwright is None:
@@ -69,28 +106,11 @@ class ImageGetter(BaseModel):
             self.page = await browser_ctx.new_page()
 
     async def create_image(self, image_description: str, image_save_path: str) -> str:
-        """
-        Create an image with dall-e-3 based on the description.
-
-        Args:
-            image_description (str): The description of the image.
-            image_save_path (str): The file path where the image will be saved.
-        """
+        """Create an image with dall-e-3"""
         images = await self.gen_image(model="dall-e-3", prompt=image_description)
-        image = images[0]
-        # Get the directory path from the full file path
-        save_dir = os.path.dirname(image_save_path)
-        # Create directory if it doesn't exist
-        if save_dir and not os.path.exists(save_dir):
-            os.makedirs(save_dir, exist_ok=True)
-        image.save(image_save_path)
-        # Ensure both image_save_path and DEFAULT_WORKSPACE_ROOT are strings
-        if "public" in image_save_path:
-            image_save_path = image_save_path.split("public")[-1]
+        return await self._save_image(images[0], image_save_path)
 
-        return image_save_path
-
-    async def get_image(self, search_term, image_save_path):
+    async def get_image(self, search_term: str, image_save_path: str) -> str:
         """
         Get an image related to the search term.
 
@@ -98,61 +118,41 @@ class ImageGetter(BaseModel):
             search_term (str): The term to search for the image. The search term must be in English. Using any other language may lead to a mismatch.
             image_save_path (str): The file path where the image will be saved.
         """
+        if not self.playwright:
+            await self.start()
+
         browser_ctx = None
         page = None
-        try:
-            if self.playwright is None:
-                await self.start()
 
-            # Create new context and page for this request
+        try:
             browser_ctx = await self.browser_instance.new_context()
             page = await browser_ctx.new_page()
 
-            encoded_term = search_term.replace(" ", "%20")
-            url = self.url.format(search_term=encoded_term)
+            url = self.url.format(search_term=search_term.replace(" ", "%20"))
+            await self._retry_goto(page, url)
+            await page.wait_for_selector(self.img_element_selector)
 
-            try:
-                max_retries = 3
-                for attempt in range(max_retries):
-                    try:
-                        await page.goto(url, timeout=20000)
-                        break
-                    except Exception as e:
-                        if attempt == max_retries - 1:
-                            raise e
-                        continue
+            image_base64 = await page.evaluate(
+                DOWNLOAD_PICTURE_JAVASCRIPT.format(img_element_selector=self.img_element_selector)
+            )
 
-                await page.wait_for_selector(self.img_element_selector)
-
-                image_base64 = await page.evaluate(
-                    DOWNLOAD_PICTURE_JAVASCRIPT.format(img_element_selector=self.img_element_selector)
-                )
-
-                if image_base64:
-                    image = decode_image(image_base64)
-                else:
-                    images = await self.gen_image(model="dall-e-3", prompt=search_term)
-                    image = images[0]
-
-            except Exception:
+            if image_base64:
+                image = decode_image(image_base64)
+            else:
                 images = await self.gen_image(model="dall-e-3", prompt=search_term)
                 image = images[0]
 
-            save_dir = os.path.dirname(image_save_path)
-            if save_dir and not os.path.exists(save_dir):
-                os.makedirs(save_dir, exist_ok=True)
-            image.save(image_save_path)
-
-            if "public" in image_save_path:
-                image_save_path = image_save_path.split("public")[-1]
-
-            return image_save_path
+            return await self._save_image(image, image_save_path)
 
         except Exception as e:
-            raise Exception(f"Failed to get/save image: {str(e)}")
+            # Fallback to DALL-E if web scraping fails
+            try:
+                images = await self.gen_image(model="dall-e-3", prompt=search_term)
+                return await self._save_image(images[0], image_save_path)
+            except Exception as e2:
+                raise RuntimeError(f"Failed to get/save image: {str(e2)}") from e
 
         finally:
-            # Clean up resources
             if page:
                 await page.close()
             if browser_ctx:
