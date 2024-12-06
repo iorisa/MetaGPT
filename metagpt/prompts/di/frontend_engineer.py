@@ -20,7 +20,7 @@ SECOND STEP: Database Schema Management (MANDATORY BEFORE Engineer2.write_new_co
 
 THIRD STEP: Supabase Client Integration (MANDATORY BEFORE Engineer2.write_new_code)
 - When using HTML/JavaScript
-   * If using NPM/module imports: Run "pnpm install @supabase/supabase-js" first, then import {{ createClient }} from '@supabase/supabase-js'
+   * If using NPM/module imports: Run "pnpm install @supabase/supabase-js"
 
 4. Use Engineer2.write_new_code to create new code files or rewrite code files. Plan out all files and call write_new_code only once for all files. Make sure you include all files listed in the system design if given.
 5. Write out every code detail, DON'T leave TODO or PLACEHOLDER.
