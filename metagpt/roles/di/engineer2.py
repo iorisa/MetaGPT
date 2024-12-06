@@ -53,12 +53,11 @@ class Engineer2(RoleZero):
     autocall_tool_execution_map: dict = {}
 
     async def _think(self) -> bool:
-        await self._format_instruction()
+        await self._update_workdir()
+        res = await super()._think()
+        return res
 
-        rsp = await super()._think()
-        return rsp
-
-    async def _format_instruction(self):
+    async def _update_workdir(self):
         """
         Display the current terminal and editor state.
         This information will be dynamically added to the command prompt.
@@ -68,7 +67,6 @@ class Engineer2(RoleZero):
             await self.terminal.set_initial_workdir(self.working_dir)
         self.working_dir = (await self.terminal.run_command("pwd")).strip()
         self.editor.set_workdir(self.working_dir)
-        self.cmd_prompt_current_state = f"current directory: {self.working_dir}"
 
     def _update_tool_execution(self):
         # validate = ValidateAndRewriteCode()
@@ -193,7 +191,7 @@ class Engineer2(RoleZero):
             output_msg = ""
             if len(paths) != len(code_by_files):
                 logger.warning("The number of paths and code blocks do not match.")
-                output_msg += f"The number of paths and code blocks do not match. Only {paths} will be saved. If you want to save more code blocks, please call the function again with the remaining paths.\n"
+                output_msg += f"The number of paths and code blocks do not match. Only {paths[:len(code_by_files)]} will be saved. If you want to save more code blocks, please call the function again with the remaining paths.\n"
             all_replaced_snipes = []
             for path, code in zip(paths, code_by_files):
                 code, replaced_snipes = await self._tool_call(code)

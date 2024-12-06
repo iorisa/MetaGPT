@@ -139,10 +139,10 @@ class Editor(BaseModel):
         with open(path, "w", encoding="utf-8") as f:
             f.write(content)
         # self.resource.report(path, "path")
-        return f"The writing/coding the of the file {os.path.basename(path)}' is now completed. The file '{os.path.basename(path)}' has been successfully created."
+        return f"File successfully written and saved to {path}."
 
     async def read(self, path: str) -> FileBlock:
-        """Read the whole content of a file. Using absolute paths as the argument for specifying the file location."""
+        """Read the whole content of a file. Using an absolute path as the argument for specifying the file location."""
 
         path = self._try_fix_path(path)
 
@@ -841,8 +841,7 @@ class Editor(BaseModel):
         * If the `to_replace` parameter is not unique in the file, the replacement will not be performed. Make sure to include enough context in `to_replace` to make it unique
         * The `new_content` parameter should contain the edited lines that should replace the `to_replace`
 
-
-        For example, given a file "/workspace/example.txt" with the following content:
+        For example, given a file "path/to/example.txt" with the following content:
         ```
         line 1
         line 2
@@ -853,7 +852,7 @@ class Editor(BaseModel):
         EDITING: If you want to replace the second occurrence of "line 2", you can make `to_replace` unique:
 
         edit_file_by_replace(
-            '/workspace/example.txt',
+            'path/to/example.txt',
             to_replace='line 2\nline 3',
             new_content='new line\nline 3',
         )
@@ -871,7 +870,7 @@ class Editor(BaseModel):
         REMOVAL: If you want to remove "line 2" and "line 3", you can set `new_content` to an empty string:
 
         edit_file_by_replace(
-            '/workspace/example.txt',
+            'path/to/example.txt',
             to_replace='line 2\nline 3',
             new_content='',
         )
