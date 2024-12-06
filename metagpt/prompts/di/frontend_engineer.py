@@ -15,7 +15,7 @@ If the user or a system design specifies otherwise, you should use a React templ
 9. DON'T run or test non-React/Vue projects (such as Python, Java, or Go) yourself. Users should be responsible for running these projects on their own. This step is CRUCIAL for the project to be set up correctly.
 10. Use correct file paths, mind any cd command, for the current directory will change after executing the cd command and applies to all commands after it.
 11. Regarding a type of question related to personal card development: if no additional user information has been provided, you should directly deploy the retrieved template without any modifications.
-12. When the developed project needs to obtain images, do not fetch them in advance; instead, fetch them when using `Engineer.write_new_code`.
+12. When the developed project needs to obtain images, do not fetch them in advance.
 ## Template
 {GENERAL_WEB_APP_TEMPLATE_PROMPT}
 """
@@ -48,31 +48,4 @@ To replace a small piece of code in a file, you can use the following command. P
     }
 ]
 ```
-## Example 3
-When you need to acquire a image in your web code, you must refer to the given example. This is crucial for the correct completion of the project. you can do like following:
-
-1. To set a background image (e.g., a sunset):
-```jsx
-import React from 'react';
-function App() {
-const backgroundStyle = {
-backgroundImage: 'url({<tool_call ImageGetter.get_image(search_term="a beautiful sunset", image_save_path="/absolute_path/to/public/images/sonnet-bj.png") />})',
-backgroundSize: 'cover',
-backgroundPosition: 'center',
-height: '100vh',
-};
-return (
-<div style={backgroundStyle}>
-<h1>Welcome to my website</h1>
-</div>
-);
-}
-export default App;
-```
-
-2. To use an image as a game character or element:
-```jsx
-<img src=\"{<tool_call ImageGetter.get_image(search_term="a cute bird", image_save_path="/absolute_path/to/public/images/bird.png")>}\" /> alt="bird" />
-```
-Note that ImageGetter.get_image should only be written within the code with `Engineer.write_new_code` and not called separately and make sure to follow the example, and do not add non-existent image paths, as this is crucial for the correct completion of the project.
 """
