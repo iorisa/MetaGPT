@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any, Dict, Tuple
 
 # from agentops import track_agent
 from pydantic import Field
@@ -119,62 +118,56 @@ class Engineer2(RoleZero):
             path = self.working_dir / path
         return path
 
-    def parse_tool_call(self, tool_call: str) -> Tuple[str, Dict[str, Any]]:
-        """Parse a tool call string into function name and parameters using eval."""
-
-        class CallCatcher:
-            def __getattr__(self, name):
-                def _method(*args, **kwargs):
-                    _method.args = args
-                    _method.kwargs = kwargs
-                    return _method
-
-                _method.name = name
-                return _method
-
-        namespace = {"ImageGetter": CallCatcher()}
-
-        try:
-            mock_method = eval(tool_call, {"__builtins__": {}}, namespace)
-
-            if not hasattr(mock_method, "name"):
-                raise ValueError("Tool call was not captured correctly.")
-
-            func_name = f"{tool_call.split('.')[0]}.{mock_method.name}"
-
-            params = {f"arg{i}": arg for i, arg in enumerate(mock_method.args)}
-            params.update(mock_method.kwargs)
-
-            return func_name, params
-
-        except Exception as e:
-            raise ValueError(f"Invalid tool call format: {e}")
-
     async def _tool_call(self, code: str):
         """Replace the tool call with the actual tool call."""
-        replaced = []
+        import asyncio
 
         # Find all tool calls using regex
         tool_call_pattern = r"(?:\$)?\{<tool_call[\s\S]*?[\s\S]/>(?:\})?"
-        for tool_call in re.findall(tool_call_pattern, code):
-            # Extract the detail tool call function string with regex
-            auto_tool_func_name_pattern = "|".join([tool_name for tool_name in self.autocall_tool_execution_map.keys()])
-            tool_call_func = re.search(rf"({auto_tool_func_name_pattern})\(.*?\)", tool_call).group(0)
+        tool_calls = re.findall(tool_call_pattern, code)
 
+        class AsyncCallExecutor:
+            def __init__(self, tools):
+                self.tools = tools
+
+            def __getattr__(self, name):
+                async def _method(*args, **kwargs):
+                    # Get the full function name using ImageGetter as class name
+                    func_name = f"ImageGetter.{name}"
+                    if func_name not in self.tools:
+                        raise ValueError(f"Unknown tool call: {func_name}")
+                    # Execute the actual function directly
+                    return await self.tools[func_name](*args, **kwargs)
+
+                return _method
+
+        async def process_tool_call(tool_call):
             try:
-                # Parse the tool call
-                func_name, params = self.parse_tool_call(tool_call_func)
+                # Extract the function call
+                auto_tool_func_name_pattern = "|".join(
+                    [tool_name.split(".")[1] for tool_name in self.autocall_tool_execution_map.keys()]
+                )
+                tool_call_func = re.search(rf"ImageGetter\.({auto_tool_func_name_pattern})\(.*?\)", tool_call).group(0)
 
-                # Execute the tool
-                result = await self.autocall_tool_execution_map[func_name](**params)
+                # Execute the tool call directly
+                namespace = {"ImageGetter": AsyncCallExecutor(self.autocall_tool_execution_map)}
+                result = await eval(tool_call_func, {"__builtins__": {}}, namespace)
+                return tool_call, result
 
-                # Replace in the code
-                code = code.replace(tool_call, result)
-                replaced.append((tool_call, result))
+            except Exception as e:
+                logger.warning(f"Failed to execute tool call '{tool_call}': {e}")
+                return None
 
-            except ValueError as e:
-                logger.warning(f"Failed to parse tool call '{tool_call_func}': {e}")
-                continue
+        # Run all tool calls concurrently
+        results = await asyncio.gather(*[process_tool_call(tc) for tc in tool_calls])
+
+        # Filter out failed calls and do replacements
+        replaced = []
+        for result in results:
+            if result:
+                tool_call, replacement = result
+                code = code.replace(tool_call, replacement)
+                replaced.append((tool_call, replacement))
 
         return code, replaced
 

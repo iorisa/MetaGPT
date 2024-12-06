@@ -91,10 +91,15 @@ class ImageGetter(BaseModel):
         return image_save_path
 
     async def get_image(self, search_term, image_save_path):
-        """Get an image related to the search term."""
+        """
+        Get an image related to the search term.
+
+        Args:
+            search_term (str): The term to search for the image. The search term must be in English. Using any other language may lead to a mismatch.
+            image_save_path (str): The file path where the image will be saved.
+        """
         browser_ctx = None
         page = None
-
         try:
             if self.playwright is None:
                 await self.start()
