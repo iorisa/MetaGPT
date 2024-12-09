@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Callable, Optional
 
 from PIL import Image
@@ -78,11 +79,16 @@ class ImageGetter(BaseModel):
         if self.playwright:
             await self.playwright.stop()
 
-    async def _save_image(self, image, image_save_path: str) -> str:
+    async def _save_image(self, image: Image, image_save_path: str) -> str:
         """Helper method to save image and process path"""
+        # Save the image to the given path. Due to agent instability, we need to handle two cases:
+        # 1. If the path is relative, consider the project folder structure and save under the project folder.
+        # 2. If the path is absolute, save directly to the given path.
+        # TODO: Consider better approach to handle the image save path.
         image_file_name = os.path.basename(image_save_path)
-        if not image_save_path.startswith("/root"):
+        if not Path(image_save_path).is_absolute():
             # Check if there is a project folder under the default workspace.
+            # FIXME: use a hard rule for now, assume the first folder alphabetically is the project folder.
             project_folder = os.listdir(DEFAULT_WORKSPACE_ROOT)[0]
             save_dir = os.path.dirname(os.path.join(DEFAULT_WORKSPACE_ROOT, project_folder, image_save_path))
             split_str = project_folder + "/"
@@ -115,12 +121,12 @@ class ImageGetter(BaseModel):
             browser_ctx = self.browser_ctx = await browser.new_context()
             self.page = await browser_ctx.new_page()
 
-    async def create_image(self, image_description: str, image_save_path: str) -> str:
+    async def create_image(self, image_description: str, image_save_path: str) -> Image:
         """Create an image with dall-e-3"""
         images = await self.gen_image(model="dall-e-3", prompt=image_description)
-        return await self._save_image(images[0], image_save_path)
+        return images[0]
 
-    async def get_image(self, search_term: str, image_save_path: str) -> str:
+    async def search_image(self, search_term: str, image_save_path: str) -> str:
         """
         Get an image related to the search term.
 
@@ -134,48 +140,40 @@ class ImageGetter(BaseModel):
         browser_ctx = None
         page = None
 
-        try:
-            browser_ctx = await self.browser_instance.new_context()
-            page = await browser_ctx.new_page()
+        browser_ctx = await self.browser_instance.new_context()
+        page = await browser_ctx.new_page()
 
-            url = self.url.format(search_term=search_term.replace(" ", "%20"))
-            await self._retry_goto(page, url)
-            await page.wait_for_selector(self.img_element_selector)
+        url = self.url.format(search_term=search_term.replace(" ", "%20"))
+        await self._retry_goto(page, url)
+        await page.wait_for_selector(self.img_element_selector)
 
-            image_base64 = await page.evaluate(
-                DOWNLOAD_PICTURE_JAVASCRIPT.format(img_element_selector=self.img_element_selector)
-            )
+        image_base64 = await page.evaluate(
+            DOWNLOAD_PICTURE_JAVASCRIPT.format(img_element_selector=self.img_element_selector)
+        )
 
-            if image_base64:
-                image = decode_image(image_base64)
-            else:
-                images = await self.gen_image(model="dall-e-3", prompt=search_term)
-                image = images[0]
-
-            return await self._save_image(image, image_save_path)
-
-        except Exception as e:
-            # Fallback to DALL-E if web scraping fails
-            try:
-                images = await self.gen_image(model="dall-e-3", prompt=search_term)
-                return await self._save_image(images[0], image_save_path)
-            except Exception as e2:
-                raise RuntimeError(f"Failed to get/save image: {str(e2)}") from e
-
-        finally:
-            if page:
-                await page.close()
-            if browser_ctx:
-                await browser_ctx.close()
+        if image_base64:
+            image = decode_image(image_base64)
+        else:
+            images = await self.gen_image(model="dall-e-3", prompt=search_term)
+            image = images[0]
+        if page:
+            await page.close()  # Close the page to avoid memory leaks
+        if browser_ctx:
+            await browser_ctx.close()  # Close the context to avoid memory leaks
+        return image
 
     async def get(self, search_term: str, image_save_path: str, mode="search") -> str:
         """Get an image related to the search term."""
         if mode == "search":
-            return await self.get_image(search_term, image_save_path)
+            try:
+                image = await self.search_image(search_term, image_save_path)
+            except Exception:
+                image = await self.create_image(search_term, image_save_path)
         elif mode == "create":
-            return await self.create_image(search_term, image_save_path)
+            image = await self.create_image(search_term, image_save_path)
         else:
             raise ValueError(f"Invalid mode: {mode}")
+        return await self._save_image(image, image_save_path)
 
     async def rembg_image(self, image_path: str, image_save_path: str) -> str:
         try:

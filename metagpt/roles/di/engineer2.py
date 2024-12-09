@@ -19,7 +19,7 @@ from metagpt.tools.libs.editor import FileBlock
 from metagpt.tools.libs.git import git_create_pull
 from metagpt.tools.libs.image_getter import ImageGetter
 from metagpt.tools.libs.terminal import Terminal
-from metagpt.tools.tool_registry import register_tool
+from metagpt.tools.tool_registry import TOOL_REGISTRY, register_tool
 from metagpt.utils.common import CodeParser, awrite
 from metagpt.utils.report import EditorReporter
 
@@ -50,7 +50,10 @@ class Engineer2(RoleZero):
     output_diff: str = ""
     max_react_loop: int = 40
     # Add a tag to track whether this is the first time receiving software development requirements.
-    autocall_tool_execution_map: dict = {}
+    autocall_tool_execution_list: list = []
+    autocall_tool: list[str] = [
+        "ImageGetter",
+    ]
 
     async def _think(self) -> bool:
         await self._update_workdir()
@@ -71,12 +74,13 @@ class Engineer2(RoleZero):
     def _update_tool_execution(self):
         # validate = ValidateAndRewriteCode()
         cr = CodeReview()
-        image_getter = ImageGetter()
-        self.autocall_tool_execution_map.update(
-            {
-                "ImageGetter.get": image_getter.get,
-                "ImageGetter.process": image_getter.process,
-            }
+
+        self.autocall_tool_execution_list.extend(
+            [
+                f"{class_name}.{tool_name}"
+                for class_name in self.autocall_tool
+                for tool_name in TOOL_REGISTRY.get_tool(class_name).schemas["methods"]
+            ]
         )
         if self.run_eval is True:
             # Evalute tool map
@@ -117,13 +121,27 @@ class Engineer2(RoleZero):
         return path
 
     async def _tool_call(self, code: str):
-        """Execute tool calls in code and replace with results."""
+        """Execute tool calls in code and replace with results.
+
+        The regular expression pattern matches tool calls in the following format:
+        - Optional $ at start: (?:\$)?
+        - Optional { at start: (?:\{)?
+        - <tool_call followed by any characters (including newlines): <tool_call[\s\S]*?
+        - /> to close the tag: [\s\S]/>
+        - Optional } at end: (?:\})?
+
+        Examples of matching patterns:
+        - <tool_call method="foo" />
+        - {<tool_call method="foo" />}
+        - $<tool_call method="foo" />
+        - ${<tool_call method="foo" />}
+        """
         tool_call_pattern = r"(?:\$)?\{<tool_call[\s\S]*?[\s\S]/>(?:\})?"
         tool_calls = re.findall(tool_call_pattern, code)
 
         async def execute_tool(tool_call: str):
             # Extract just the function call part
-            tool_name_str = r"|".join(self.autocall_tool_execution_map.keys())
+            tool_name_str = r"|".join(self.autocall_tool_execution_list)
             func_match = re.search(rf"({tool_name_str})\(.*?\)", tool_call)
             if not func_match:
                 return None
@@ -131,16 +149,7 @@ class Engineer2(RoleZero):
             func_call = func_match.group(0)
 
             # Create namespace with available tools
-            namespace = {
-                "ImageGetter": type(
-                    "ImageGetter",
-                    (),
-                    {
-                        name: self.autocall_tool_execution_map[f"ImageGetter.{name}"]
-                        for name in ["get", "process"]  # Add more methods here in the future
-                    },
-                )()
-            }
+            namespace = {"ImageGetter": ImageGetter()}
 
             # Execute the function call
             result = await eval(func_call, {"__builtins__": {}}, namespace)
@@ -184,17 +193,17 @@ class Engineer2(RoleZero):
             if len(paths) != len(code_by_files):
                 logger.warning("The number of paths and code blocks do not match.")
                 output_msg += f"The number of paths and code blocks do not match. Only {paths[:len(code_by_files)]} will be saved. If you want to save more code blocks, please call the function again with the remaining paths.\n"
-            all_replaced_snipes = []
+            all_replaced_snippets = []
             for path, code in zip(paths, code_by_files):
-                code, replaced_snipes = await self._tool_call(code)
+                code, replaced_snippets = await self._tool_call(code)
                 await awrite(self._fix_path(path), code)
                 file_block = FileBlock(path=str(path), content=code)
                 output_msg = f"{output_msg}File created successfully with \n{file_block}\n"
-                if len(replaced_snipes) > 0:
-                    all_replaced_snipes.extend(replaced_snipes)
-            if all_replaced_snipes:
+                if len(replaced_snippets) > 0:
+                    all_replaced_snippets.extend(replaced_snippets)
+            if all_replaced_snippets:
                 replaced_msg = "The following tool calls have been replaced with the actual tool calls:\n"
-                replaced_msg += "\n".join([f"Replaced {old} with {new}" for old, new in all_replaced_snipes])
+                replaced_msg += "\n".join([f"Replaced {old} with {new}" for old, new in all_replaced_snippets])
                 # Add the content that the system automatically replaces and the fact that the tool call was executed automatically to memory.
                 self.rc.memory.add(UserMessage(content=replaced_msg))
 
