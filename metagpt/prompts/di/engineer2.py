@@ -83,7 +83,7 @@ When you need to include images in your code, you can use ImageGetter.get tool. 
 import React from 'react';
 function App() {{
 const backgroundStyle = {{
-backgroundImage: 'url({{<tool_call ImageGetter.get(search_term="a beautiful sunset", image_save_path="/absolute_path/to/public/images/sonnet-bj.png", mode="search") />}})',
+backgroundImage: 'url(<tool_call ImageGetter.get(search_term="a beautiful sunset", image_save_path="/absolute_path/to/public/images/sonnet-bj.png", mode="search") />)',
 backgroundSize: 'cover',
 backgroundPosition: 'center',
 height: '100vh',
@@ -99,18 +99,18 @@ export default App;
 
 2. To use an image as a game character or element:
 ```jsx
-<img src=\"{{<tool_call ImageGetter.get(search_term="a cute bird", image_save_path="/absolute_path/to/public/images/bird.png", mode="search") />}}\" alt="bird" />
+<img src=\"<tool_call ImageGetter.get(search_term="a cute bird", image_save_path="/absolute_path/to/public/images/bird.png", mode="search") />\" alt="bird" />
 ```
 
 3. To create a image and use it in the code:
 ```jsx
-<img src=\"{{<tool_call ImageGetter.get(search_term="a fly pig", image_save_path="/absolute_path/to/public/images/fly_pig.png", mode="create") />}}\" alt="pig" />
+<img src=\"<tool_call ImageGetter.get(search_term="a fly pig", image_save_path="/absolute_path/to/public/images/fly_pig.png", mode="create") />\" alt="pig" />
 ```
 
 When you want process the image, you can use the ImageGetter.process tool. Here are examples:
 1. To remove the background of an image:
 ```jsx
-<img src=\"{{<tool_call ImageGetter.process(image_path="/absolute_path/to/will/be/process/image.png", image_save_path="/absolute_path/to/public/images/image_rembg.png", mode="rembg") />}}\" alt="bird" />
+<img src=\"<tool_call ImageGetter.process(image_path="/absolute_path/to/will/be/process/image.png", image_save_path="/absolute_path/to/public/images/image_rembg.png", mode="rembg") />\" alt="bird" />
 ```
 
 Note that ImageGetter.get and ImageGetter.process should only be written within the code and not called separately and make sure to follow the example, and do not add non-existent image paths, as this is crucial for the correct completion of the project.

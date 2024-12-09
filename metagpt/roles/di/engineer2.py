@@ -125,10 +125,8 @@ class Engineer2(RoleZero):
 
         The regular expression pattern matches tool calls in the following format:
         - Optional $ at start: (?:\$)?
-        - Optional { at start: (?:\{)?
         - <tool_call followed by any characters (including newlines): <tool_call[\s\S]*?
         - /> to close the tag: [\s\S]/>
-        - Optional } at end: (?:\})?
 
         Examples of matching patterns:
         - <tool_call method="foo" />
@@ -136,7 +134,7 @@ class Engineer2(RoleZero):
         - $<tool_call method="foo" />
         - ${<tool_call method="foo" />}
         """
-        tool_call_pattern = r"(?:\$)?\{<tool_call[\s\S]*?[\s\S]/>(?:\})?"
+        tool_call_pattern = r"(?:\$)?<tool_call[\s\S]*?[\s\S]/>"
         tool_calls = re.findall(tool_call_pattern, code)
 
         async def execute_tool(tool_call: str):
