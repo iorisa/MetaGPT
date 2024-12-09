@@ -26,7 +26,7 @@ def read_file(file_path: Union[str, Path], encoding: str = "utf-8") -> FileBlock
 
 # a backup desc for https://gitlab.deepwisdomai.com/metagpt/mgx_template/-/blob/main/templates/default_web_project/react_template/template_config.json
 REACT_APP_TEMPLATE_DESC = """
- - This is a template for general web app or game development. It is based on React framework with Tailwind CSS. The template includes the basic structure of a React project, including an index.html file and a src directory with an App.jsx file.
+ - This is a template for general web app or game development. It is based on React framework with Tailwind CSS and JavaScript. The template includes the basic structure of a React project, including an index.html file and a src directory with an App.jsx file.
  - Modify index.html, create new jsx files under src if needed, and rewrite src/App.jsx to meet the user's requirements. You should NOT modify src/main.jsx and src/index.css. Modify vite.config.js only if extra config is absolutely necessary.
  - Style your elements with Tailwind CSS classes directly in the jsx files.
 """

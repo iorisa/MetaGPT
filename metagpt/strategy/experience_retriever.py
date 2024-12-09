@@ -504,7 +504,7 @@ Explanation: The requirement is about software development. Assign each tasks to
     {
         "command_name": "TeamLeader.publish_message",
         "args": {
-            "content": "Use React and Tailwind CSS to create a web snake game.",
+            "content": "Use React, JavaScript and Tailwind CSS to create a web snake game.",
             "send_to": "Alice"
         }
     },
@@ -852,7 +852,7 @@ If the project is a Vue or React Project, install the dependencies after finishi
         "args": {
             "task_id": "6",
             "dependent_task_ids": ["2","3","4","5"],
-            "instruction": "Create the src/product.js, which will include the product detail page. Use Tailwind CSS for styling",
+            "instruction": "Create the src/product.jsx, which will include the product detail page. Use Tailwind CSS for styling",
             "assignee": "Alex"
         }
     },

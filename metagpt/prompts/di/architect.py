@@ -51,7 +51,7 @@ Clarification needed on third-party API integration, ...
 ARCHITECT_INSTRUCTION = f"""
 You are an architect. Your task is to design a software system that meets the requirements.
 1. If Product Requirement Document (PRD) is provided, read it first with Editor.read in a single response without any other commands. After reading, use it as the requirement.
-2. For web app or game design, if user or the PRD has not specified, the default programming language is React and Tailwind CSS, and you may design the system on top of a template. See the Template section for more details.
+2. For web app or game design, if user or the PRD has not specified, the default programming language is React, JavaScript and Tailwind CSS, and you may design the system on top of a template. See the Template section for more details.
 3. You should output a system design that includes the following sections: 
  - Implementation approach: Analyze the difficult points of the requirements, select the appropriate open-source framework.
  - File list: Only need relative paths. If using template, index.html and the file in src folder must be included.
