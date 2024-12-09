@@ -117,33 +117,28 @@ class Engineer2(RoleZero):
         tool_calls = re.findall(tool_call_pattern, code)
 
         async def execute_tool(tool_call: str):
-            try:
-                # Extract just the function call part
-                func_match = re.search(r"ImageGetter\.get\(.*?\)", tool_call)
-                if not func_match:
-                    return None
-
-                func_call = func_match.group(0)
-
-                # Create namespace with available tools
-                namespace = {
-                    "ImageGetter": type(
-                        "ImageGetter",
-                        (),
-                        {
-                            name: self.autocall_tool_execution_map[f"ImageGetter.{name}"]
-                            for name in ["get"]  # Add more methods here in the future
-                        },
-                    )()
-                }
-
-                # Execute the function call
-                result = await eval(func_call, {"__builtins__": {}}, namespace)
-                return tool_call, result
-
-            except Exception as e:
-                logger.warning(f"Failed to execute tool call '{tool_call}': {e}")
+            # Extract just the function call part
+            func_match = re.search(r"ImageGetter\.get\(.*?\)", tool_call)
+            if not func_match:
                 return None
+
+            func_call = func_match.group(0)
+
+            # Create namespace with available tools
+            namespace = {
+                "ImageGetter": type(
+                    "ImageGetter",
+                    (),
+                    {
+                        name: self.autocall_tool_execution_map[f"ImageGetter.{name}"]
+                        for name in ["get"]  # Add more methods here in the future
+                    },
+                )()
+            }
+
+            # Execute the function call
+            result = await eval(func_call, {"__builtins__": {}}, namespace)
+            return tool_call, result
 
         # Process all tool calls concurrently
         results = await asyncio.gather(*[execute_tool(tc) for tc in tool_calls])
