@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from typing import Callable, Optional
 
+from PIL import Image
 from playwright.async_api import Browser as Browser_
 from playwright.async_api import BrowserContext, Page, Playwright, async_playwright
 from pydantic import BaseModel, ConfigDict, Field
@@ -36,7 +37,7 @@ async () => {{
 llm_config = Config.default().llm
 
 
-@register_tool(include_functions=["get"])
+@register_tool(include_functions=["get", "process"])
 class ImageGetter(BaseModel):
     """
     A tool to get images.
@@ -173,5 +174,22 @@ class ImageGetter(BaseModel):
             return await self.get_image(search_term, image_save_path)
         elif mode == "create":
             return await self.create_image(search_term, image_save_path)
+        else:
+            raise ValueError(f"Invalid mode: {mode}")
+
+    async def rembg_image(self, image_path: str, image_save_path: str) -> str:
+        try:
+            from rembg import remove
+        except ImportError:
+            raise ImportError("Please install rembg with `pip install rembg`.")
+
+        image = remove(Image.open(image_path))
+        image_save_path = await self._save_image(image, image_save_path)
+        return image_save_path
+
+    async def process(self, image_path: str, image_save_path: str, mode: str = "rembg") -> str:
+        """Process an image in various mode."""
+        if mode == "rembg":
+            return await self.rembg_image(image_path, image_save_path)
         else:
             raise ValueError(f"Invalid mode: {mode}")

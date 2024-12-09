@@ -75,6 +75,7 @@ WRITE_CODE_PROMPT = """
 
 # Instruction
 Your task is to write the files listed in Files to Write. You must ensure the code is complete, correct, and bug-free.
+# Extra Instruction
 When you need to include images in your code, you can use ImageGetter.get tool. Here are examples:
 
 1. To set a background image (e.g., a sunset):
@@ -106,7 +107,13 @@ export default App;
 <img src=\"{{<tool_call ImageGetter.get(search_term="a fly pig", image_save_path="/absolute_path/to/public/images/fly_pig.png", mode="create") />}}\" alt="pig" />
 ```
 
-Note that ImageGetter.get should only be written within the code and not called separately and make sure to follow the example, and do not add non-existent image paths, as this is crucial for the correct completion of the project.
+When you want process the image, you can use the ImageGetter.process tool. Here are examples:
+1. To remove the background of an image:
+```jsx
+<img src=\"{{<tool_call ImageGetter.process(image_path="/absolute_path/to/will/be/process/image.png", image_save_path="/absolute_path/to/public/images/image_rembg.png", mode="rembg") />}}\" alt="bird" />
+```
+
+Note that ImageGetter.get and ImageGetter.process should only be written within the code and not called separately and make sure to follow the example, and do not add non-existent image paths, as this is crucial for the correct completion of the project.
 
 # Output
 While some concise thoughts are helpful, code is absolutely required. DO NOT leave any TODO or placeholder.
