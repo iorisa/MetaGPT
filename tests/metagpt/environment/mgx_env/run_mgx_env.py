@@ -9,7 +9,7 @@ import agentops
 from metagpt.environment.mgx.mgx_env import MGXEnv
 from metagpt.roles import Architect, Engineer, ProductManager, ProjectManager
 from metagpt.roles.di.data_analyst import DataAnalyst
-from metagpt.roles.di.frontend_engineer import FrontendEngineer
+from metagpt.roles.di.engineer2 import Engineer2
 from metagpt.roles.di.team_leader import TeamLeader
 from metagpt.schema import Message
 
@@ -18,7 +18,7 @@ async def main(requirement="", enable_human_input=False, use_fixed_sop=False, al
     if use_fixed_sop:
         engineer = Engineer(n_borg=5, use_code_review=False)
     else:
-        engineer = FrontendEngineer()
+        engineer = Engineer2()
 
     env = MGXEnv()
     env.add_roles(
@@ -39,14 +39,9 @@ async def main(requirement="", enable_human_input=False, use_fixed_sop=False, al
         human_input_thread = send_human_input(env, stop_event)
 
     if requirement:
-        if "@Alex" in requirement:
-            user_defined_recipient = "Alex"
-            env.publish_message(
-                Message(content=requirement, send_to={user_defined_recipient}),
-                user_defined_recipient=user_defined_recipient,
-            )
-        else:
-            env.publish_message(Message(content=requirement))
+        env.publish_message(Message(content=requirement))
+        # user_defined_recipient = "Alex"
+        # env.publish_message(Message(content=requirement, send_to={user_defined_recipient}), user_defined_recipient=user_defined_recipient)
 
     allow_idle_time = allow_idle_time if enable_human_input else 1
     start_time = time.time()
@@ -168,8 +163,6 @@ CODING_REQ1 = "写一个java的hello world程序"
 CODING_REQ2 = "python里的装饰器是什么"
 CODING_REQ3 = "python里的装饰器是怎么用的，给我个例子"
 
-# EXAMPLE1 = "@Alex 用html帮我开发个仿Bilibili的网站(需要有菜单栏)，使用一个落日的图片作为网站的背景，对每一个视频卡片，都使用城市风光的图片作为背景（可以使用纽约，上海，北京，深圳，东京等城市的图片，且卡片大小应该小一点）"
-EXAMPLE1 = "@Alex 用react帮我做个五子棋小游戏，我需要你用一张去除了背景的大熊猫图片作为游戏的背景，这个是未去除背景的熊猫图片的路径：/root/code/TemplateRecommendation/MetaGPT/data/pics/panda.jpg"
 
 if __name__ == "__main__":
     # NOTE: Add access_token to test github issue fixing
@@ -178,4 +171,4 @@ if __name__ == "__main__":
     #       Set enable_human_input to True if you want to simulate sending messages in chatbox
     agentops.init(api_key="", auto_start_session=False, skip_auto_end_session=True)
     session = agentops.start_session()
-    asyncio.run(main(requirement=EXAMPLE1, enable_human_input=False, use_fixed_sop=False))
+    asyncio.run(main(requirement="写一个2048游戏", enable_human_input=False, use_fixed_sop=False))
