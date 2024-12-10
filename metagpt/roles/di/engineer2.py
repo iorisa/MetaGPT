@@ -20,7 +20,7 @@ from metagpt.tools.libs.git import git_create_pull
 from metagpt.tools.libs.image_getter import ImageGetter
 from metagpt.tools.libs.terminal import Terminal
 from metagpt.tools.tool_registry import TOOL_REGISTRY, register_tool
-from metagpt.utils.common import CodeParser, awrite
+from metagpt.utils.common import CodeParser, awrite, log_time
 from metagpt.utils.report import EditorReporter
 
 
@@ -128,6 +128,7 @@ class Engineer2(RoleZero):
         tool_call_pattern = r"(?:\$)?<tool_call[\s\S]*?[\s\S]/>"
         tool_calls = re.findall(tool_call_pattern, code)
 
+        @log_time
         async def execute_tool(tool_call: str):
             # Extract just the function call part
             tool_name_str = r"|".join(self.autocall_tool_execution_list)
