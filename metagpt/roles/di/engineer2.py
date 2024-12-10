@@ -120,6 +120,7 @@ class Engineer2(RoleZero):
             path = self.working_dir / path
         return path
 
+    @log_time
     async def _tool_call(self, code: str):
         """Execute tool calls in code and replace with results."""
         # Regex pattern to match tool call tags like <tool_call.../>
@@ -128,7 +129,6 @@ class Engineer2(RoleZero):
         tool_call_pattern = r"(?:\$)?<tool_call[\s\S]*?[\s\S]/>"
         tool_calls = re.findall(tool_call_pattern, code)
 
-        @log_time
         async def execute_tool(tool_call: str):
             # Extract just the function call part
             tool_name_str = r"|".join(self.autocall_tool_execution_list)
