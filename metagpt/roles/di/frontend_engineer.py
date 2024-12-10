@@ -12,7 +12,11 @@ from metagpt.prompts.di.template import (
 )
 from metagpt.roles.di.engineer2 import Engineer2
 from metagpt.schema import UserMessage
-from metagpt.tools.libs.search_template import BaseSearchTemplate, FixedSearchTemplate
+from metagpt.tools.libs.search_template import (
+    BaseSearchTemplate,
+    FixedSearchTemplate,
+    SearchTemplate,
+)
 
 _ = FixedSearchTemplate  # avoid pre-commit error
 
@@ -41,8 +45,7 @@ class FrontendEngineer(Engineer2):
     @model_validator(mode="after")
     def set_search_template_tool(self):
         if self.template_tool is None and self.use_search_template:
-            # self.template_tool = SearchTemplate()
-            self.template_tool = FixedSearchTemplate()
+            self.template_tool = SearchTemplate()
             logger.info("SearchTemplate set")
         else:
             logger.warning("SearchTemplate not set")

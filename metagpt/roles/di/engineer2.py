@@ -20,7 +20,7 @@ from metagpt.tools.libs.git import git_create_pull
 from metagpt.tools.libs.image_getter import ImageGetter
 from metagpt.tools.libs.terminal import Terminal
 from metagpt.tools.tool_registry import TOOL_REGISTRY, register_tool
-from metagpt.utils.common import CodeParser, awrite
+from metagpt.utils.common import CodeParser, awrite, log_time
 from metagpt.utils.report import EditorReporter
 
 
@@ -120,6 +120,7 @@ class Engineer2(RoleZero):
             path = self.working_dir / path
         return path
 
+    @log_time
     async def _tool_call(self, code: str):
         """Execute tool calls in code and replace with results."""
         # Regex pattern to match tool call tags like <tool_call.../>
