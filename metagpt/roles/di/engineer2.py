@@ -121,19 +121,10 @@ class Engineer2(RoleZero):
         return path
 
     async def _tool_call(self, code: str):
-        """Execute tool calls in code and replace with results.
-
-        The regular expression pattern matches tool calls in the following format:
-        - Optional $ at start: (?:\$)?
-        - <tool_call followed by any characters (including newlines): <tool_call[\s\S]*?
-        - /> to close the tag: [\s\S]/>
-
-        Examples of matching patterns:
-        - <tool_call method="foo" />
-        - {<tool_call method="foo" />}
-        - $<tool_call method="foo" />
-        - ${<tool_call method="foo" />}
-        """
+        """Execute tool calls in code and replace with results."""
+        # Regex pattern to match tool call tags like <tool_call.../>
+        # Uses [\s\S] for multi-line matching and non-greedy *? to avoid over-matching
+        # Supports optional $ prefix: $<tool_call.../>
         tool_call_pattern = r"(?:\$)?<tool_call[\s\S]*?[\s\S]/>"
         tool_calls = re.findall(tool_call_pattern, code)
 
@@ -200,7 +191,7 @@ class Engineer2(RoleZero):
                 if len(replaced_snippets) > 0:
                     all_replaced_snippets.extend(replaced_snippets)
             if all_replaced_snippets:
-                replaced_msg = "The following tool calls have been replaced with the actual tool calls:\n"
+                replaced_msg = "The following tool calls have been replaced with the call results:\n"
                 replaced_msg += "\n".join([f"Replaced {old} with {new}" for old, new in all_replaced_snippets])
                 # Add the content that the system automatically replaces and the fact that the tool call was executed automatically to memory.
                 self.rc.memory.add(UserMessage(content=replaced_msg))
