@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import asyncio
+import re
 from pathlib import Path
 
-# from agentops import track_agent
 from pydantic import Field
 
 from metagpt.logs import logger
@@ -18,7 +19,7 @@ from metagpt.tools.libs.editor import FileBlock
 from metagpt.tools.libs.git import git_create_pull
 from metagpt.tools.libs.image_getter import ImageGetter
 from metagpt.tools.libs.terminal import Terminal
-from metagpt.tools.tool_registry import register_tool
+from metagpt.tools.tool_registry import TOOL_REGISTRY, register_tool
 from metagpt.utils.common import CodeParser, awrite
 from metagpt.utils.report import EditorReporter
 
@@ -42,7 +43,6 @@ class Engineer2(RoleZero):
         "SearchEnhancedQA",
         "Engineer2",
         "CodeReview",
-        "ImageGetter",
         "Deployer",
     ]
     # SWE Agent parameter
@@ -50,7 +50,10 @@ class Engineer2(RoleZero):
     output_diff: str = ""
     max_react_loop: int = 40
     # Add a tag to track whether this is the first time receiving software development requirements.
-    is_first_dev_request: bool = Field(default=True, exclude=False)
+    autocall_tool_execution_list: list = []
+    autocall_tool: list[str] = [
+        "ImageGetter",
+    ]
 
     async def _think(self) -> bool:
         await self._update_workdir()
@@ -71,14 +74,20 @@ class Engineer2(RoleZero):
     def _update_tool_execution(self):
         # validate = ValidateAndRewriteCode()
         cr = CodeReview()
-        image_getter = ImageGetter()
+
+        self.autocall_tool_execution_list.extend(
+            [
+                f"{class_name}.{tool_name}"
+                for class_name in self.autocall_tool
+                for tool_name in TOOL_REGISTRY.get_tool(class_name).schemas["methods"]
+            ]
+        )
         if self.run_eval is True:
             # Evalute tool map
             self.tool_execution_map.update(
                 {
                     "git_create_pull": git_create_pull,
                     "Engineer2.write_new_code": self.write_new_code,
-                    "ImageGetter.get_image": image_getter.get_image,
                     "CodeReview.review": cr.review,
                     "CodeReview.fix": cr.fix,
                     "Terminal.run_command": self._eval_terminal_run,
@@ -93,7 +102,6 @@ class Engineer2(RoleZero):
                 {
                     "git_create_pull": git_create_pull,
                     "Engineer2.write_new_code": self.write_new_code,
-                    "ImageGetter.get_image": image_getter.get_image,
                     "CodeReview.review": cr.review,
                     "CodeReview.fix": cr.fix,
                     "Terminal.run_command": self.terminal.run_command,
@@ -112,12 +120,49 @@ class Engineer2(RoleZero):
             path = self.working_dir / path
         return path
 
+    async def _tool_call(self, code: str):
+        """Execute tool calls in code and replace with results."""
+        # Regex pattern to match tool call tags like <tool_call.../>
+        # Uses [\s\S] for multi-line matching and non-greedy *? to avoid over-matching
+        # Supports optional $ prefix: $<tool_call.../>
+        tool_call_pattern = r"(?:\$)?<tool_call[\s\S]*?[\s\S]/>"
+        tool_calls = re.findall(tool_call_pattern, code)
+
+        async def execute_tool(tool_call: str):
+            # Extract just the function call part
+            tool_name_str = r"|".join(self.autocall_tool_execution_list)
+            func_match = re.search(rf"({tool_name_str})\(.*?\)", tool_call)
+            if not func_match:
+                return None
+
+            func_call = func_match.group(0)
+
+            # Create namespace with available tools
+            namespace = {"ImageGetter": ImageGetter()}
+
+            # Execute the function call
+            result = await eval(func_call, {"__builtins__": {}}, namespace)
+            return tool_call, result
+
+        # Process all tool calls concurrently
+        results = await asyncio.gather(*[execute_tool(tc) for tc in tool_calls])
+
+        # Replace tool calls with results
+        replaced = []
+        for result in results:
+            if result:
+                tool_call, replacement = result
+                code = code.replace(tool_call, replacement)
+                replaced.append((tool_call, replacement))
+
+        return code, replaced
+
     async def write_new_code(self, description: str, paths: list[str]) -> str:
         """Write one or more new code files.
 
         Args:
             description (str): "Brief description and important notes of what and how to implement the files, including how they interact with each other if there will be multiple files.
-            path (list[str]): The paths of the files to be created.
+            paths (list[str]): The paths of the files to be created.
         """
         prompt = WRITE_CODE_PROMPT.format(
             file_path=paths,
@@ -137,10 +182,19 @@ class Engineer2(RoleZero):
             if len(paths) != len(code_by_files):
                 logger.warning("The number of paths and code blocks do not match.")
                 output_msg += f"The number of paths and code blocks do not match. Only {paths[:len(code_by_files)]} will be saved. If you want to save more code blocks, please call the function again with the remaining paths.\n"
+            all_replaced_snippets = []
             for path, code in zip(paths, code_by_files):
+                code, replaced_snippets = await self._tool_call(code)
                 await awrite(self._fix_path(path), code)
                 file_block = FileBlock(path=str(path), content=code)
-                output_msg += f"File created successfully with \n{file_block}\n"
+                output_msg = f"{output_msg}File created successfully with \n{file_block}\n"
+                if len(replaced_snippets) > 0:
+                    all_replaced_snippets.extend(replaced_snippets)
+            if all_replaced_snippets:
+                replaced_msg = "The following tool calls have been replaced with the call results:\n"
+                replaced_msg += "\n".join([f"Replaced {old} with {new}" for old, new in all_replaced_snippets])
+                # Add the content that the system automatically replaces and the fact that the tool call was executed automatically to memory.
+                self.rc.memory.add(UserMessage(content=replaced_msg))
 
         return output_msg
 

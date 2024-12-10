@@ -12,11 +12,7 @@ from metagpt.prompts.di.template import (
 )
 from metagpt.roles.di.engineer2 import Engineer2
 from metagpt.schema import UserMessage
-from metagpt.tools.libs.search_template import (
-    BaseSearchTemplate,
-    FixedSearchTemplate,
-    SearchTemplate,
-)
+from metagpt.tools.libs.search_template import BaseSearchTemplate, FixedSearchTemplate
 
 _ = FixedSearchTemplate  # avoid pre-commit error
 
@@ -29,7 +25,6 @@ class FrontendEngineer(Engineer2):
         "RoleZero",
         "Terminal:run_command",
         "SearchEnhancedQA",
-        "ImageGetter",
         "Deployer",
         "Engineer2",
         "Browser:click,goto,scroll",
@@ -40,12 +35,14 @@ class FrontendEngineer(Engineer2):
     # 2. Set template_tool to FixedSearchTemplate() to skip RAG and use a fixed template
     # 3. Set template_tool to None (unchanged) or SearchTemplate() to perform a full template search
     use_search_template: bool = True
+    is_first_dev_request: bool = True
     template_tool: BaseSearchTemplate = None
 
     @model_validator(mode="after")
     def set_search_template_tool(self):
         if self.template_tool is None and self.use_search_template:
-            self.template_tool = SearchTemplate()
+            # self.template_tool = SearchTemplate()
+            self.template_tool = FixedSearchTemplate()
             logger.info("SearchTemplate set")
         else:
             logger.warning("SearchTemplate not set")
