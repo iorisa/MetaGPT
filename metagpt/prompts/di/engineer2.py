@@ -101,8 +101,6 @@ When you want process the image, you can use the ImageGetter.process tool. Here 
 <img src=\"<tool_call ImageGetter.process(image_path="/absolute_path/to/will/be/process/image.png", image_save_path="/absolute_path/to/public/images/image_rembg.png", mode="rembg") />\" alt="bird" />
 ```
 
-Note that ImageGetter.get and ImageGetter.process should only be written within the code and not called separately and make sure to follow the example, and do not add non-existent image paths, as this is crucial for the correct completion of the project.
-
 # Output
 While some concise thoughts are helpful, code is absolutely required. DO NOT leave any TODO or placeholder.
 Make sure there are the same number of code blocks as the number of files listed in Files to Write and they are in the same order. No extra code blocks or bash commands are allowed.

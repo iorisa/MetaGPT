@@ -86,22 +86,20 @@ class ImageGetter(BaseModel):
         # 2. If the path is absolute, save directly to the given path.
         # TODO: Consider better approach to handle the image save path.
         image_file_name = os.path.basename(image_save_path)
+        project_folder = os.listdir(DEFAULT_WORKSPACE_ROOT)[0]
         if not Path(image_save_path).is_absolute():
             # Check if there is a project folder under the default workspace.
             # FIXME: use a hard rule for now, assume the first folder alphabetically is the project folder.
-            project_folder = os.listdir(DEFAULT_WORKSPACE_ROOT)[0]
             save_dir = os.path.dirname(os.path.join(DEFAULT_WORKSPACE_ROOT, project_folder, image_save_path))
-            split_str = project_folder + "/"
         else:
             save_dir = os.path.dirname(image_save_path)
-            split_str = "public"
+            image_save_path = (
+                Path(image_save_path).relative_to(os.path.join(DEFAULT_WORKSPACE_ROOT, project_folder)).__str__()
+            )
         if save_dir:
             os.makedirs(save_dir, exist_ok=True)
         image.save(os.path.join(save_dir, image_file_name))
-
-        if split_str in image_save_path:
-            image_save_path = image_save_path.split("public")[-1]
-        return image_save_path
+        return image_save_path.replace("public", "")
 
     async def _retry_goto(self, page: Page, url: str, max_retries: int = 3, timeout: int = 20000):
         """Helper method for retrying page navigation"""
