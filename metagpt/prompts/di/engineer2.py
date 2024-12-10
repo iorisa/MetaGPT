@@ -80,21 +80,9 @@ When you need to include images in your code, you can use ImageGetter.get tool. 
 
 1. To set a background image (e.g., a sunset):
 ```jsx
-import React from 'react';
-function App() {{
-const backgroundStyle = {{
+// Existing code
 backgroundImage: 'url(<tool_call ImageGetter.get(search_term="a beautiful sunset", image_save_path="/absolute_path/to/public/images/sonnet-bj.png", mode="search") />)',
-backgroundSize: 'cover',
-backgroundPosition: 'center',
-height: '100vh',
-}};
-return (
-<div style={{backgroundStyle}}>
-<h1>Welcome to my website</h1>
-</div>
-);
-}}
-export default App;
+// Existing code
 ```
 
 2. To use an image as a game character or element:
