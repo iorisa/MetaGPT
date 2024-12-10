@@ -43,19 +43,22 @@ If you finish current task, you will automatically take the next task in the exi
 Review the latest plan's outcome. If your completed task matches the current, consider it finished.
 In your response, include at least one command. If you want to stop, use {{"command_name":"end"}} command.
 
-# Your commands in a json array, in the following output format with correct command_name and args.
-Some text indicating your thoughts before JSON is required, such as what tasks have been completed, what tasks are next, how you should update the plan status, respond to inquiry, or seek for help. Then a json array of commands. You must output ONE and ONLY ONE json array. DON'T output multiple json arrays with thoughts between them.
-Output should adhere to the following format.
+# Output (a json array of commands)
+
+Some thoughts...
 ```json
 [
     {{
         "command_name": "ClassName.method_name" or "function_name",
         "args": {{"arg_name": arg_value, ...}}
     }},
+    {{
+        "command_name": "ClassName2.method_name2" or "function_name2",
+        "args": {{"arg_name2": arg_value2, ...}}
+    }},
     ...
 ]
 ```
-Notice: your output JSON data section must start with **```json [**
 """
 
 CMD_EXPERIENCE_MASK = f"""
@@ -78,7 +81,7 @@ CMD_PROMPT = (
 # Response Language
 you must respond in {respond_language}.
 
-Your commands (include at least one command. If you want to stop, use {{"command_name":"end"}} command):
+Your commands (output ONE and ONLY ONE command block, the block can contain one or more commands. If you want to stop, use {{"command_name":"end"}} command):
 """
 )
 
@@ -205,6 +208,10 @@ Response Category: AMBIGUOUS.
 9. Request: "Change the color of the text to blue in styles.css, add a new button in web page, delete the old background image."
 Thought: The request is an incremental development task that requires modifying one or more files.
 Response Category: TASK.
+
+10. Request: "Help me make a personal business card."
+Thought: The user is requesting assistance in creating a personal business card, which involves design and layout tasks.
+Response Category: TASK
 """
 QUICK_RESPONSE_SYSTEM_PROMPT = """
 {role_info}

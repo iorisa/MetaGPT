@@ -8,6 +8,7 @@
 import asyncio
 import re
 
+# from agentops import track_agent
 from pydantic import BaseModel
 
 from metagpt.actions import Action, CollectLinks, ConductResearch, WebBrowseAndSummarize
@@ -25,6 +26,7 @@ class Report(BaseModel):
     content: str = ""
 
 
+# @track_agent("Researcher")
 class Researcher(Role):
     name: str = "David"
     profile: str = "Researcher"

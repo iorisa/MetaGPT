@@ -17,7 +17,7 @@ Triggered by software/product requests or feature enhancements, complete a full 
 ### Required Fields
 1. Language & Project Info
    - Language: Match user's language
-   - Programming Language: If not specified in the requirements, use React and Tailwind CSS.
+   - Programming Language: If not specified in the requirements, use React, JavaScript and Tailwind CSS.
    - Project Name: Use snake_case format
    - Restate the original requirements
    - Backend Service: If not specified in the requirements, use Supabase

@@ -18,7 +18,10 @@ from metagpt.roles import Role
 from metagpt.schema import Message
 from metagpt.utils.common import any_to_str, awrite
 
+# from agentops import track_agent
 
+
+# @track_agent("Teacher")
 class Teacher(Role):
     """Support configurable teacher roles,
     with native and teaching languages being replaceable through configurations."""

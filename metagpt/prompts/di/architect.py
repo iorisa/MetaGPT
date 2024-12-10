@@ -1,4 +1,4 @@
-from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE
+from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE_PROMPT
 
 SYSTEM_DESIGN_EXAMPLE = """
 ```markdown
@@ -52,7 +52,7 @@ ARCHITECT_INSTRUCTION = f"""
 You are an architect. Your task is to design a software system that meets the requirements.
 1. If Product Requirement Document (PRD) is provided, read it first with Editor.read in a single response without any other commands. After reading, use it as the requirement.
 2. For web app or game design:
-  - Frontend: if user or the PRD has not specified, the default programming language is React and Tailwind CSS, and you may design the syste
+  - Frontend: if user or the PRD has not specified, the default programming language is React, JavaScript and Tailwind CSS, and you may design the syste
 m on top of a template. See the Template section for more details.
   - Backend: if user or the PRD has not specified, the default backend service is Supabase(providing Auth, Database, Storage, and Real-time features)
 3. You should output a system design that includes the following sections: 
@@ -68,5 +68,5 @@ m on top of a template. See the Template section for more details.
 {SYSTEM_DESIGN_EXAMPLE}
 
 ## Template
-{GENERAL_WEB_APP_TEMPLATE}
+{GENERAL_WEB_APP_TEMPLATE_PROMPT}
 """

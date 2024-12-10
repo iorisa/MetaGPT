@@ -31,6 +31,7 @@ class Terminal:
         #  The cmd in forbidden_terminal_commands will be replace by pass ana return the advise. example:{"cmd":"forbidden_reason/advice"}
         self.forbidden_commands = {
             "run dev": "Use Deployer.deploy_to_public instead.",
+            "run preview": "Use Deployer.deploy_to_public instead.",
             # serve cmd have a space behind it,
             "serve ": "Use Deployer.deploy_to_public instead.",
         }

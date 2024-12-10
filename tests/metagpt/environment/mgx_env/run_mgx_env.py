@@ -4,6 +4,8 @@ import re
 import threading
 import time
 
+import agentops
+
 from metagpt.environment.mgx.mgx_env import MGXEnv
 from metagpt.roles import Architect, Engineer, ProductManager, ProjectManager
 from metagpt.roles.di.data_analyst import DataAnalyst
@@ -167,4 +169,6 @@ if __name__ == "__main__":
     os.environ["access_token"] = "ghp_xxx"
     # NOTE: Change the requirement to the one you want to test
     #       Set enable_human_input to True if you want to simulate sending messages in chatbox
-    asyncio.run(main(requirement=GAME_REQ, enable_human_input=False, use_fixed_sop=False))
+    agentops.init(api_key="", auto_start_session=False, skip_auto_end_session=True)
+    session = agentops.start_session()
+    asyncio.run(main(requirement="写一个2048游戏", enable_human_input=False, use_fixed_sop=False))

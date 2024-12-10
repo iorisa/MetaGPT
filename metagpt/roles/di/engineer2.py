@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+# from agentops import track_agent
 from pydantic import Field
 
 from metagpt.logs import logger
@@ -23,6 +24,7 @@ from metagpt.utils.common import CodeParser, awrite
 from metagpt.utils.report import EditorReporter
 
 
+# @track_agent("Engineer2")
 @register_tool(include_functions=["write_new_code"])
 class Engineer2(RoleZero):
     name: str = "Alex"
@@ -49,13 +51,15 @@ class Engineer2(RoleZero):
     run_eval: bool = False
     output_diff: str = ""
     max_react_loop: int = 40
+    # Add a tag to track whether this is the first time receiving software development requirements.
+    is_first_dev_request: bool = Field(default=True, exclude=False)
 
     async def _think(self) -> bool:
-        await self._format_instruction()
+        await self._update_workdir()
         res = await super()._think()
         return res
 
-    async def _format_instruction(self):
+    async def _update_workdir(self):
         """
         Display the current terminal and editor state.
         This information will be dynamically added to the command prompt.
@@ -65,7 +69,6 @@ class Engineer2(RoleZero):
             await self.terminal.set_initial_workdir(self.working_dir)
         self.working_dir = (await self.terminal.run_command("pwd")).strip()
         self.editor.set_workdir(self.working_dir)
-        self.cmd_prompt_current_state = f"current directory: {self.working_dir}"
 
     def _update_tool_execution(self):
         cr = CodeReview()
@@ -132,7 +135,7 @@ class Engineer2(RoleZero):
             output_msg = ""
             if len(paths) != len(code_by_files):
                 logger.warning("The number of paths and code blocks do not match.")
-                output_msg += f"The number of paths and code blocks do not match. Only {paths} will be saved. If you want to save more code blocks, please call the function again with the remaining paths.\n"
+                output_msg += f"The number of paths and code blocks do not match. Only {paths[:len(code_by_files)]} will be saved. If you want to save more code blocks, please call the function again with the remaining paths.\n"
             for path, code in zip(paths, code_by_files):
                 await awrite(self._fix_path(path), code)
                 file_block = FileBlock(path=str(path), content=code)
