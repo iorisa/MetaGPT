@@ -161,7 +161,22 @@ class ImageGetter(BaseModel):
         return image
 
     async def get(self, search_term: str, image_save_path: str, mode="search") -> str:
-        """Get an image related to the search term."""
+        """Get an image either by searching online or generating with AI.
+
+        Args:
+            search_term (str): Search query or image description. Must be in English.
+            image_save_path (str): Path where the image will be saved. Must be a absolute path to the public folder.
+            mode (str): How to obtain the image:
+                - "search": Search online (falls back to AI generation if search fails)
+                - "create": Generate using DALL-E 3
+
+        Returns:
+            str: Relative path to the saved image (public/ prefix removed)
+
+        Raises:
+            ValueError: If an invalid mode is specified
+            RuntimeError: If image retrieval fails
+        """
         if mode == "search":
             try:
                 image = await self.search_image(search_term, image_save_path)
@@ -184,7 +199,21 @@ class ImageGetter(BaseModel):
         return image_save_path
 
     async def process(self, image_path: str, image_save_path: str, mode: str = "rembg") -> str:
-        """Process an image in various mode."""
+        """Process an existing image with various filters.
+
+        Args:
+            image_path (str): Path to the source image
+            image_save_path (str): Path where processed image will be saved. Must be a absolute path to the public folder.
+            mode (str): Processing mode to apply:
+                - "rembg": Remove image background
+
+        Returns:
+            str: Relative path to the processed image (public/ prefix removed)
+
+        Raises:
+            ValueError: If an invalid mode is specified
+            ImportError: If required processing libraries are not installed
+        """
         if mode == "rembg":
             return await self.rembg_image(image_path, image_save_path)
         else:

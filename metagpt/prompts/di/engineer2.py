@@ -75,31 +75,19 @@ WRITE_CODE_PROMPT = """
 
 # Instruction
 Your task is to write the files listed in Files to Write. You must ensure the code is complete, correct, and bug-free.
-# Extra Instruction
-When you need to include images in your code, you can use ImageGetter.get tool. Here are examples:
+# Tool Usage Guide
+When using tools, please adhere to the following guidelines:
 
-1. To set a background image (e.g., a sunset):
-```jsx
-// Existing code
-backgroundImage: 'url(<tool_call ImageGetter.get(search_term="a beautiful sunset", image_save_path="/absolute_path/to/public/images/sonnet-bj.png", mode="search") />)',
-// Existing code
-```
+1. **Tool Call Format:**
+    - Encapsulate each tool call within a `<tool_call>` tag.
+    - Use the format `tool_name.method_name(args)` for each call.
+2. **Code Blocks:** Place all tool calls within a code block(eg. ```jsx, ```html, ```css, ```js, ```python, etc.).
 
-2. To use an image as a game character or element:
-```jsx
-<img src=\"<tool_call ImageGetter.get(search_term="a cute bird", image_save_path="/absolute_path/to/public/images/bird.png", mode="search") />\" alt="bird" />
-```
+## Example: 
+{tool_usage_example}
 
-3. To create a image and use it in the code:
-```jsx
-<img src=\"<tool_call ImageGetter.get(search_term="a fly pig", image_save_path="/absolute_path/to/public/images/fly_pig.png", mode="create") />\" alt="pig" />
-```
-
-When you want process the image, you can use the ImageGetter.process tool. Here are examples:
-1. To remove the background of an image:
-```jsx
-<img src=\"<tool_call ImageGetter.process(image_path="/absolute_path/to/will/be/process/image.png", image_save_path="/absolute_path/to/public/images/image_rembg.png", mode="rembg") />\" alt="bird" />
-```
+## Available Tools
+{available_code_tools}
 
 # Output
 While some concise thoughts are helpful, code is absolutely required. DO NOT leave any TODO or placeholder.
