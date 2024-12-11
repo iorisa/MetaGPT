@@ -212,7 +212,7 @@ class SearchTemplate(BaseSearchTemplate):
             return True
         return self._engine
 
-    async def restore(self):
+    async def restore(self) -> bool:
         from metagpt.rag.engines import SimpleEngine
         from metagpt.rag.schema import (
             FAISSIndexConfig,
@@ -221,11 +221,11 @@ class SearchTemplate(BaseSearchTemplate):
         )
 
         if not self.persist_dir:
-            return
+            return False
 
         persist_dir = Path(self.persist_dir)
         if not persist_dir.exists():
-            return
+            return False
 
         index_persist_dir = persist_dir / "index"
         template_persist_path = persist_dir / "info" / "templates.json"
