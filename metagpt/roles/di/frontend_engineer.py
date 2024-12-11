@@ -29,7 +29,6 @@ class FrontendEngineer(Engineer2):
         "RoleZero",
         "Terminal:run_command",
         "SearchEnhancedQA",
-        "ImageGetter",
         "Deployer",
         "Engineer2",
         "SupabaseManager",
@@ -41,6 +40,7 @@ class FrontendEngineer(Engineer2):
     # 2. Set template_tool to FixedSearchTemplate() to skip RAG and use a fixed template
     # 3. Set template_tool to None (unchanged) or SearchTemplate() to perform a full template search
     use_search_template: bool = True
+    is_first_dev_request: bool = True
     template_tool: BaseSearchTemplate = None
 
     @model_validator(mode="after")

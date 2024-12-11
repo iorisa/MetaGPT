@@ -1042,21 +1042,6 @@ Thought: Now that the changes have been pushed to the remote repository, due to 
         }
 ]
 ```
-
-## example 14
-The requirement is to create a product website featuring goods such as caps, dresses, and T-shirts. 
-I believe pictures would improve the site, so I will get the images first.
-```json
-[
-    {
-        "command_name": "ImageGetter.get_image",
-        "args": {
-            "search_term": "cap",
-            "save_file_path": "/tmp/workspace/images/cap.png",
-        }
-    }
-]
-```
 """
 
 

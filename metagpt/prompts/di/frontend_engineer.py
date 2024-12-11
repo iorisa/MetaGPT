@@ -34,7 +34,7 @@ THIRD STEP: Supabase Client Integration (MANDATORY BEFORE Engineer2.write_new_co
 11. Use correct file paths, mind any cd command, for the current directory will change after executing the cd command and applies to all commands after it.
 12. Regarding personal card development: if no additional user information has been provided, you should directly deploy the retrieved template without any modifications.
 13. Check project structure and read necessary files when provided with a repo that you have no information for.
-
+14. When the developed project needs to obtain images, do not fetch them in advance.
 ## Template
 {GENERAL_WEB_APP_TEMPLATE_PROMPT}
 """

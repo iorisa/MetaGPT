@@ -191,4 +191,5 @@ cov.xml
 *.dot
 .python-version
 tests/data/requirements/*.jpg
+template/
 
