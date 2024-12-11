@@ -245,9 +245,9 @@ class SearchTemplate(BaseSearchTemplate):
         self.engine = engine
         return True
 
-    async def persist(self):
+    async def persist(self) -> bool:
         if not self.persist_dir:
-            return
+            return False
 
         persist_dir = Path(self.persist_dir)
         index_persist_dir = persist_dir / "index"
