@@ -86,29 +86,33 @@ Please ensure that the generated configuration is in valid JSON format.
 CODE_TOOL_USAGE_EXAMPLE = """
 1. Setting a Background Image:
 ```jsx
-// Existing code
+// example.jsx
+// existing code
 backgroundImage: 'url(<tool_call> ImageGetter.get(search_term="a beautiful sunset", image_save_path="/absolute_path/to/public/images/sonnet-bj.png", mode="search") </tool_call>)',
-// Existing code
+// existing code
 ```
 
 2. To use an image as a game character or element:
 ```jsx
-// Existing code
+// example.jsx
+// existing code
 <img src=\"<tool_call> ImageGetter.get(search_term="a cute bird", image_save_path="/absolute_path/to/public/images/bird.png", mode="search") </tool_call>\" alt="bird" />
-// Existing code
+// existing code
 ```
 
 3. To create a image and use it in the code:
 ```jsx
-// Existing code
+// example.jsx
+// existing code
 <img src=\"<tool_call> ImageGetter.get(search_term="a fly pig", image_save_path="/absolute_path/to/public/images/fly_pig.png", mode="create") </tool_call>\" alt="pig" />
-// Existing code
+// existing code
 ```
 
 4. To remove the background of an image:
 ```jsx
-// Existing code
+// example.jsx
+// existing code
 <img src=\"<tool_call> ImageGetter.process(image_path="/absolute_path/to/will/be/process/image.png", image_save_path="/absolute_path/to/public/images/image_rembg.png", mode="rembg") </tool_call>\" />
-// Existing code
+// existing code
 ```
 """
