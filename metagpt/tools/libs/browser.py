@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import time
 from typing import Literal, Optional
 
+from loguru import logger
 from playwright.async_api import Browser as Browser_
 from playwright.async_api import (
     BrowserContext,
@@ -12,7 +14,7 @@ from playwright.async_api import (
     Request,
     async_playwright,
 )
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
 
 from metagpt.tools.tool_registry import register_tool
 from metagpt.utils.a11y_tree import (
@@ -78,6 +80,39 @@ class Browser(BaseModel):
     proxy: Optional[dict] = Field(default_factory=get_proxy_from_env)
     is_empty_page: bool = Field(default=True)
     reporter: BrowserReporter = Field(default_factory=BrowserReporter)
+    url: Optional[str] = Field(default=None)
+
+    _recover_task: Optional[asyncio.Task] = PrivateAttr(None)
+
+    @model_validator(mode="after")
+    def valid_page(self):
+        if not self.is_empty_page:
+            if self.url:
+                loop = asyncio.get_running_loop()
+                task = self._recover_task = loop.create_task(self._recover())
+
+                def callback(task):
+                    self._recover_task = None
+
+                task.add_done_callback(callback)
+            else:
+                self.is_empty_page = True
+        return self
+
+    async def _recover(self):
+        try:
+            await self.start()
+            page = self.page
+            await page.goto(self.url)
+            await self._wait_until_page_idle(page)
+            self.accessibility_tree = await get_accessibility_tree(page)
+        except Exception:
+            logger.exception(f"fail to recover the page {self.url}")
+            self.is_empty_page = True
+
+    async def _check_recover(self):
+        if self._recover_task:
+            await self._recover_task
 
     async def start(self) -> None:
         """Starts Playwright and launches a browser"""
@@ -97,11 +132,13 @@ class Browser(BaseModel):
 
     async def click(self, element_id: int):
         """clicks on an element with a specific id on the webpage."""
+        await self._check_recover()
         await click_element(self.page, get_backend_node_id(element_id, self.accessibility_tree))
         return await self._wait_page()
 
     async def type(self, element_id: int, content: str, press_enter_after: bool = False):
         """Use this to type the content into the field with id."""
+        await self._check_recover()
         if press_enter_after:
             content += "\n"
         await click_element(self.page, get_backend_node_id(element_id, self.accessibility_tree))
@@ -110,54 +147,69 @@ class Browser(BaseModel):
 
     async def hover(self, element_id: int):
         """Hover over an element with id."""
+        await self._check_recover()
         await hover_element(self.page, get_backend_node_id(element_id, self.accessibility_tree))
         return await self._wait_page()
 
     async def press(self, key_comb: str):
         """Simulates the pressing of a key combination on the keyboard (e.g., Ctrl+v)."""
+        await self._check_recover()
         await key_press(self.page, key_comb)
         return await self._wait_page()
 
     async def scroll(self, direction: Literal["down", "up"]):
         """Scroll the page up or down."""
+        await self._check_recover()
         await scroll_page(self.page, direction)
         return await self._wait_page()
 
     async def goto(self, url: str, timeout: float = 90000):
         """Navigate to a specific URL."""
+        await self._check_recover()
         if self.page is None:
             await self.start()
         async with self.reporter as reporter:
             await reporter.async_report(url, "url")
             await self.page.goto(url, timeout=timeout)
             self.is_empty_page = False
+            self.url = self.page.url
             return await self._wait_page()
 
     async def go_back(self):
         """Navigate to the previously viewed page."""
+        await self._check_recover()
         await self.page.go_back()
         return await self._wait_page()
 
     async def go_forward(self):
         """Navigate to the next page (if a previous 'go_back' action was performed)."""
+        await self._check_recover()
         await self.page.go_forward()
         return await self._wait_page()
 
     async def tab_focus(self, page_number: int):
         """Open a new, empty browser tab."""
+        await self._check_recover()
         page = self.browser_ctx.pages[page_number]
         await page.bring_to_front()
         return await self._wait_page()
 
     async def close_tab(self):
         """Close the currently active tab."""
+        await self._check_recover()
         await self.page.close()
         if len(self.browser_ctx.pages) > 0:
             self.page = self.browser_ctx.pages[-1]
         else:
             self.page = await self.browser_ctx.new_page()
             self.is_empty_page = True
+            self.url = ""
         return await self._wait_page()
+
+    async def view(self):
+        await self._check_recover()
+        observation = parse_accessibility_tree(self.accessibility_tree)
+        return f"Current Browser Viewer\n URL: {self.page.url}\nOBSERVATION:\n{observation[0]}\n"
 
     async def _wait_page(self):
         page = self.page
@@ -198,10 +250,6 @@ class Browser(BaseModel):
 
     async def _on_frame_change(self, frame: Frame):
         await self._update_page_last_busy_time(frame.page)
-
-    async def view(self):
-        observation = parse_accessibility_tree(self.accessibility_tree)
-        return f"Current Browser Viewer\n URL: {self.page.url}\nOBSERVATION:\n{observation[0]}\n"
 
     async def __aenter__(self):
         await self.start()
