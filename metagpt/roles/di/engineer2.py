@@ -19,6 +19,7 @@ from metagpt.tools.libs.editor import FileBlock
 from metagpt.tools.libs.git import git_create_pull
 from metagpt.tools.libs.image_getter import ImageGetter
 from metagpt.tools.libs.terminal import Terminal
+from metagpt.tools.libs.user_info_parser import UserInfoParser
 from metagpt.tools.tool_recommend import BM25ToolRecommender
 from metagpt.tools.tool_registry import TOOL_REGISTRY, register_tool
 from metagpt.utils.common import CodeParser, awrite, log_time
@@ -45,6 +46,7 @@ class Engineer2(RoleZero):
         "Engineer2",
         "CodeReview",
         "Deployer",
+        "UserInfoParser",
     ]
     # SWE Agent parameter
     run_eval: bool = False
@@ -87,6 +89,7 @@ class Engineer2(RoleZero):
     def _update_tool_execution(self):
         # validate = ValidateAndRewriteCode()
         cr = CodeReview()
+        up = UserInfoParser()
         if self.run_eval is True:
             # Evalute tool map
             self.tool_execution_map.update(
@@ -99,6 +102,7 @@ class Engineer2(RoleZero):
                     "RoleZero.ask_human": self._end,
                     "RoleZero.reply_to_human": self._end,
                     "Deployer.deploy_to_public": self._deploy_to_public,
+                    "UserInfoParser.get": up.get,
                 }
             )
         else:
@@ -111,6 +115,7 @@ class Engineer2(RoleZero):
                     "CodeReview.fix": cr.fix,
                     "Terminal.run_command": self.terminal.run_command,
                     "Deployer.deploy_to_public": self._deploy_to_public,
+                    "UserInfoParser.get": up.get,
                 }
             )
 

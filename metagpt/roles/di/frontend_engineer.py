@@ -32,6 +32,7 @@ class FrontendEngineer(Engineer2):
         "Deployer",
         "Engineer2",
         "Browser:click,goto,scroll",
+        "UserInfoParser",
     ]
 
     # Regarding template use:
