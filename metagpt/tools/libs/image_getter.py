@@ -35,7 +35,6 @@ async () => {{
     return null;
 }}
 """
-llm_config = Config.default().llm
 
 
 @register_tool(include_functions=["get", "process"])
@@ -56,7 +55,7 @@ class ImageGetter(BaseModel):
     url: str = "https://unsplash.com/s/photos/{search_term}/"
     img_element_selector: str = ".zNNw1 > div > img:nth-of-type(2)"
     # Add llm field to store instance
-    llm: BaseLLM = Field(default_factory=lambda: OpenAILLM(llm_config))
+    llm: BaseLLM = Field(default_factory=lambda: OpenAILLM(Config.default().llm))
 
     # Remove gen_image field and replace with property
     @property
