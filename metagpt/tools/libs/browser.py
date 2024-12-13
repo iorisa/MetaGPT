@@ -89,6 +89,7 @@ class Browser(BaseModel):
         if not self.is_empty_page:
             if self.url:
                 loop = asyncio.get_running_loop()
+                # Create an asynchronous task to perform the recovery in the background to avoid blocking the startup
                 task = self._recover_task = loop.create_task(self._recover())
 
                 def callback(task):
