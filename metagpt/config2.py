@@ -95,6 +95,12 @@ class Config(CLIParams, YamlModel):
 
     omniparse: Optional[OmniParseConfig] = None
 
+    # Config for the rapid api key
+    rapid_api_key: str = ""
+
+    # Config for the pixabay api key
+    pixabay_api_key: str = ""
+
     @classmethod
     def from_home(cls, path):
         """Load config from ~/.metagpt/config2.yaml"""
