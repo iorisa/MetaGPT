@@ -99,20 +99,4 @@ backgroundImage: 'url(<tool_call> ImageGetter.get(search_term="a beautiful sunse
 <img src=\"<tool_call> ImageGetter.get(search_term="a cute bird", image_save_path="/absolute_path/to/public/images/bird.png", mode="search") </tool_call>\" alt="bird" />
 // existing code
 ```
-
-3. To create a image and use it in the code:
-```jsx
-// example.jsx
-// existing code
-<img src=\"<tool_call> ImageGetter.get(search_term="a fly pig", image_save_path="/absolute_path/to/public/images/fly_pig.png", mode="create") </tool_call>\" alt="pig" />
-// existing code
-```
-
-4. To remove the background of an image:
-```jsx
-// example.jsx
-// existing code
-<img src=\"<tool_call> ImageGetter.process(image_path="/absolute_path/to/will/be/process/image.png", image_save_path="/absolute_path/to/public/images/image_rembg.png", mode="rembg") </tool_call>\" />
-// existing code
-```
 """

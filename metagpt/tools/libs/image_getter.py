@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import os
 from io import BytesIO
 from pathlib import Path
@@ -23,8 +22,6 @@ from metagpt.tools.tool_registry import register_tool
 from metagpt.utils.common import decode_image
 from metagpt.utils.proxy_env import get_proxy_from_env
 from metagpt.utils.report import BrowserReporter
-
-llm_config = Config.default().llm
 
 DOWNLOAD_PICTURE_JAVASCRIPT = """
 async () => {{
@@ -62,7 +59,7 @@ class OldImageGetter(BaseModel):
     url: str = "https://unsplash.com/s/photos/{search_term}/"
     img_element_selector: str = ".zNNw1 > div > img:nth-of-type(2)"
     # Add llm field to store instance
-    llm: BaseLLM = Field(default_factory=lambda: OpenAILLM(llm_config))
+    llm: BaseLLM = Field(default_factory=lambda: OpenAILLM(Config.default().llm))
 
     # Remove gen_image field and replace with property
     @property
@@ -209,7 +206,7 @@ class ImageGetter(BaseModel):
         default_factory=lambda: pxb.PixabayClient(apiKey=Config.default().pixabay_api_key), exclude=True
     )
     # Add llm field to store instance
-    llm: BaseLLM = Field(default_factory=lambda: OpenAILLM(llm_config))
+    llm: BaseLLM = Field(default_factory=lambda: OpenAILLM(Config.default().llm))
 
     # Remove gen_image field and replace with property
     @property
@@ -308,7 +305,8 @@ class ImageGetter(BaseModel):
             ValueError: If an invalid mode is specified
             RuntimeError: If image retrieval fails
         """
-        asyncio.create_task(self._get_async(search_term, image_save_path, mode))
+        # asyncio.create_task(self._get_async(search_term, image_save_path, mode))
+        await self._get_async(search_term, image_save_path, mode)
         _, image_save_path = self._process_save_path(image_save_path)
         return image_save_path.replace("public", "")
 
