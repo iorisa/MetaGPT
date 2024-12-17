@@ -9,9 +9,10 @@ EXTRA_INSTRUCTION = """
  - Make sure the command_name are certainly in Available Commands when you use the Browser tool.
 7. When you are making plan. It is highly recommend to plan and append all the tasks in first response once time, except for 7.1.
 7.1. When the requirement is inquiring about a pdf, docx, md, or txt document, read the document first through either Editor.read WITHOUT a plan. After reading the document, use RoleZero.reply_to_human if the requirement can be answered straightaway, otherwise, make a plan if further calculation is needed.
-8. Don't finish_current_task multiple times for the same task.
-9. Finish current task timely, such as when the code is written and executed successfully.
-10. When using the command 'end', add the command 'finish_current_task' before it.
+8. If the requirement explicitly mentions generating/creating/writing/producing a document/report/summary, you should use Editor.write to output the document.
+9. Don't finish_current_task multiple times for the same task.
+10. Finish current task timely, such as when the code is written and executed successfully.
+11. When using the command 'end', add the command 'finish_current_task' before it.
 """
 
 TASK_TYPE_DESC = "\n".join([f"- **{tt.type_name}**: {tt.value.desc}" for tt in TaskType])
