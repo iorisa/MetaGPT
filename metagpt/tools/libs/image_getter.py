@@ -16,7 +16,6 @@ from pydantic import BaseModel, Field
 
 from metagpt.config2 import Config
 from metagpt.const import DEFAULT_WORKSPACE_ROOT
-from metagpt.logs import logger
 from metagpt.provider.base_llm import BaseLLM
 from metagpt.provider.openai_api import OpenAILLM
 from metagpt.tools.tool_registry import register_tool
@@ -82,24 +81,21 @@ class BaseImageProvider(BaseModel):
     @abstractmethod
     async def search_image(self, search_term: str) -> ImageFile | None:
         """Search for an image. Must be implemented by subclasses."""
-        pass
+        raise NotImplementedError
 
     async def _get_async(self, search_term: str, image_save_path: str, mode: str):
         """Handle image retrieval and saving."""
-        try:
-            if mode == "search":
-                try:
-                    image = await self.search_image(search_term)
-                except Exception:
-                    image = await self.create_image(search_term)
-            elif mode == "create":
+        if mode == "search":
+            try:
+                image = await self.search_image(search_term)
+            except Exception:
                 image = await self.create_image(search_term)
-            else:
-                raise ValueError(f"Invalid mode: {mode}")
+        elif mode == "create":
+            image = await self.create_image(search_term)
+        else:
+            raise ValueError(f"Invalid mode: {mode}")
 
-            await self._save_image(image, image_save_path)
-        except Exception as e:
-            logger.info(f"Error processing image: {e}")
+        await self._save_image(image, image_save_path)
 
     async def get(self, search_term: str, image_save_path: str, mode="search") -> str:
         """Get an image either by searching online or generating with AI.
@@ -227,27 +223,20 @@ class UnsplashWeb(BaseImageProvider):
         if not self.playwright:
             await self.start()
 
-        browser_ctx = await self.browser_instance.new_context()
-        page = await browser_ctx.new_page()
+        async with await self.browser_instance.new_context() as browser_ctx:
+            async with await browser_ctx.new_page() as page:
+                url = self.url.format(search_term=search_term.replace(" ", "%20"))
+                await self._retry_goto(page, url)
+                await page.wait_for_selector(self.img_element_selector)
 
-        try:
-            url = self.url.format(search_term=search_term.replace(" ", "%20"))
-            await self._retry_goto(page, url)
-            await page.wait_for_selector(self.img_element_selector)
+                image_base64 = await page.evaluate(
+                    DOWNLOAD_PICTURE_JAVASCRIPT.format(img_element_selector=self.img_element_selector)
+                )
 
-            image_base64 = await page.evaluate(
-                DOWNLOAD_PICTURE_JAVASCRIPT.format(img_element_selector=self.img_element_selector)
-            )
-
-            if image_base64:
-                image = decode_image(image_base64)
-                return image
-            return None
-        finally:
-            if page:
-                await page.close()
-            if browser_ctx:
-                await browser_ctx.close()
+                if image_base64:
+                    image = decode_image(image_base64)
+                    return image
+                return None
 
 
 class UnsplashApi(BaseImageProvider):

@@ -81,22 +81,3 @@ Please ensure that the generated configuration is in valid JSON format.
 }}
 ```
 """
-
-
-CODE_TOOL_USAGE_EXAMPLE = """
-1. Setting a Background Image:
-```jsx
-// example.jsx
-// existing code
-backgroundImage: 'url(<tool_call> ImageGetter.get(search_term="a beautiful sunset", image_save_path="/absolute_path/to/public/images/sonnet-bj.png", mode="search") </tool_call>)',
-// existing code
-```
-
-2. To use an image as a game character or element:
-```jsx
-// example.jsx
-// existing code
-<img src=\"<tool_call> ImageGetter.get(search_term="a cute bird", image_save_path="/absolute_path/to/public/images/bird.png", mode="search") </tool_call>\" alt="bird" />
-// existing code
-```
-"""

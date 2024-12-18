@@ -8,7 +8,6 @@ from pydantic import Field, model_validator
 
 from metagpt.logs import logger
 from metagpt.prompts.di.engineer2 import ENGINEER2_INSTRUCTION, WRITE_CODE_PROMPT
-from metagpt.prompts.di.template import CODE_TOOL_USAGE_EXAMPLE
 from metagpt.roles.di.role_zero import RoleZero
 from metagpt.schema import UserMessage
 from metagpt.strategy.experience_retriever import ENGINEER_EXAMPLE
@@ -61,11 +60,11 @@ class Engineer2(RoleZero):
     def set_code_tool(self) -> "Engineer2":
         """Initialize code tool recommender if execution list exists."""
         # Code tool related attributes
-        self.code_tool: list[str] = ["ImageGetter"]
+        self.code_tools: list[str] = ["ImageGetter"]
         self.code_tool_execution_list: list[str] = ["ImageGetter.get", "ImageGetter.process"]
         self.code_tool_recommender: ToolRecommender = None
         if self.code_tool_execution_list and not self.code_tool_recommender:
-            self.code_tool_recommender = BM25ToolRecommender(tools=self.code_tool, force=True)
+            self.code_tool_recommender = BM25ToolRecommender(tools=self.code_tools, force=True)
         return self
 
     async def _update_workdir(self):
@@ -174,7 +173,6 @@ class Engineer2(RoleZero):
             file_path=paths,
             file_description=description,
             available_code_tools=code_tool_info,
-            tool_usage_example=CODE_TOOL_USAGE_EXAMPLE,
         )
         # Sometimes the Engineer repeats the last command to respond.
         # Replace the last command with a manual prompt to guide the Engineer to write new code.
