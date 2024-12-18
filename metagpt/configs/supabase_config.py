@@ -1,7 +1,9 @@
+import re
 from uuid import uuid4
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
+from metagpt.logs import logger
 from metagpt.utils.yaml_model import YamlModel
 
 
@@ -18,3 +20,22 @@ class SupabaseConfig(YamlModel):
         default_factory=lambda: uuid4().hex[:5],
         description="A unique session identifier generated for each chat. Used for creating isolated database tables.",
     )
+
+    @model_validator(mode="after")
+    def initialize(self):
+        if not self.enable:
+            return self
+
+        self.project_ref = self._extract_project_ref()
+
+        return self
+
+    def _extract_project_ref(self) -> str:
+        # extract project_ref from project_url, e.g. https://mcpkxegjwqjovrmegysk.supabase.co -> mcpkxegjwqjovrmegysk
+        match = re.search(r"//([^\.]+)\.", self.project_url)
+
+        if match:
+            return match.group(1)
+
+        logger.warning(f"Failed to extract project_ref from project_url: {self.project_url}")
+        return ""

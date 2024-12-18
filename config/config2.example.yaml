@@ -94,9 +94,8 @@ supabase:
   enable: false
   project_url: YOUR_PROJECT_URL # Required. The endpoint URL for connecting to specific Supabase project.
   project_key: YOUR_PROJECT_KEY # Required. The anon/public key used for client API authentication.
-  project_ref: YOUR_PROJECT_REF # Required. The unique reference ID of your Supabase project.
   access_token: YOUR_ACCESS_TOKEN # Required. The admin access token for Supabase management API.
-  session_id: YOUR_SESSION_ID # Required. The chat id used for creating isolated database tables.
+  session_id: YOUR_SESSION_ID # Optional. The chat id used for creating isolated database tables.
   management_base_url: YOUR_MANAGEMENT_BASE_URL # Optional. The base URL for Supabase management API endpoints.
 
 azure_tts_subscription_key: "YOUR_SUBSCRIPTION_KEY"
