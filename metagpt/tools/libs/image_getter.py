@@ -177,7 +177,7 @@ class PixabayAPI(BaseImageGetter):
         return self.download_image(hitsList[0].largeImageURL)
 
 
-class UnsplashAPI(BaseImageGetter):
+class UnsplashWeb(BaseImageGetter):
     """Image getter using Unsplash."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -254,7 +254,7 @@ class UnsplashAPI(BaseImageGetter):
                 await browser_ctx.close()
 
 
-class ImageGetterUnsplashApi(BaseImageGetter):
+class UnsplashApi(BaseImageGetter):
     """Image getter using Unsplash API."""
 
     api_base: str = "https://api.unsplash.com"
@@ -289,9 +289,9 @@ class ImageGetter(BaseModel):
     """
 
     image_provider: BaseImageGetter = Field(
-        default_factory=ImageGetterUnsplashApi,
+        default_factory=UnsplashApi,
         exclude=True,
-        description="The image getter to use. Choose from Pixabay, Unsplash, or Unsplash API.",
+        description="The image getter to use. Choose from Pixabay, Unsplash, or Unsplash API. Defaults to Unsplash API.",
     )
 
     async def get(self, search_term: str, image_save_path: str, mode="search") -> str:
