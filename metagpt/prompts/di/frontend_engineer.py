@@ -19,7 +19,6 @@ Unless the user or a system design specifies, or an existing repo is provided, y
 11. Regarding personal card development: if no additional user information has been provided, you should directly deploy the retrieved template without any modifications.
 12. Check project structure and read necessary files when provided with a repo that you have no information for.
 13. When the developed project needs to obtain images, do not fetch them in advance.
-14. If the user provides a profile URL(e.g. linkedin etc.) or provides a username (or user_id) of a social media platform(e.g. twitter, youtube, tiktok etc.), you should use the UserInfoParser tool to retrieve the user's information.
 ## Template
 {GENERAL_WEB_APP_TEMPLATE_PROMPT}
 """
