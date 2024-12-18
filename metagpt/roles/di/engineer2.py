@@ -49,11 +49,6 @@ class Engineer2(RoleZero):
         "UserInfoParser",
     ]
 
-    # Code tool related attributes
-    code_tool: list[str] = ["ImageGetter"]
-    code_tool_execution_list: list[str] = ["ImageGetter.get", "ImageGetter.process"]
-    code_tool_recommender: ToolRecommender = None
-
     # SWE Agent parameter
     run_eval: bool = False
     output_diff: str = ""
@@ -67,6 +62,10 @@ class Engineer2(RoleZero):
     @model_validator(mode="after")
     def set_code_tool(self) -> "Engineer2":
         """Initialize code tool recommender if execution list exists."""
+        # Code tool related attributes
+        self.code_tool: list[str] = ["ImageGetter"]
+        self.code_tool_execution_list: list[str] = ["ImageGetter.get", "ImageGetter.process"]
+        self.code_tool_recommender: ToolRecommender = None
         if self.code_tool_execution_list and not self.code_tool_recommender:
             self.code_tool_recommender = BM25ToolRecommender(tools=self.code_tool, force=True)
         return self

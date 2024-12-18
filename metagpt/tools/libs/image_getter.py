@@ -156,7 +156,7 @@ class BaseImageGetter(BaseModel):
         return image_save_path
 
 
-class ImageGetterPixabay(BaseImageGetter):
+class PixabayAPI(BaseImageGetter):
     """Image getter using Pixabay."""
 
     client: pxb.PixabayClient = Field(
@@ -177,7 +177,7 @@ class ImageGetterPixabay(BaseImageGetter):
         return self.download_image(hitsList[0].largeImageURL)
 
 
-class ImageGetterUnsplash(BaseImageGetter):
+class UnsplashAPI(BaseImageGetter):
     """Image getter using Unsplash."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -288,7 +288,7 @@ class ImageGetter(BaseModel):
     A tool to get/create/process images.
     """
 
-    image_getter: BaseImageGetter = Field(
+    image_provider: BaseImageGetter = Field(
         default_factory=ImageGetterUnsplashApi,
         exclude=True,
         description="The image getter to use. Choose from Pixabay, Unsplash, or Unsplash API.",
@@ -311,7 +311,7 @@ class ImageGetter(BaseModel):
             ValueError: If an invalid mode is specified
             RuntimeError: If image retrieval fails
         """
-        return await self.image_getter.get(search_term, image_save_path, mode)
+        return await self.image_provider.get(search_term, image_save_path, mode)
 
     async def process(self, image_path: str, image_save_path: str, mode: str = "rembg") -> str:
         """Process an existing image with filters.
@@ -325,4 +325,4 @@ class ImageGetter(BaseModel):
         Returns:
             str: Relative path to the processed image (public/ prefix removed)
         """
-        return await self.image_getter.process(image_path, image_save_path, mode)
+        return await self.image_provider.process(image_path, image_save_path, mode)
