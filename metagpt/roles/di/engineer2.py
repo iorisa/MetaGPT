@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import re
 from pathlib import Path
 
@@ -19,7 +18,6 @@ from metagpt.tools.libs.editor import FileBlock
 from metagpt.tools.libs.git import git_create_pull
 from metagpt.tools.libs.image_getter import ImageGetter
 from metagpt.tools.libs.terminal import Terminal
-from metagpt.tools.libs.user_info_parser import UserInfoParser
 from metagpt.tools.tool_recommend import BM25ToolRecommender, ToolRecommender
 from metagpt.tools.tool_registry import register_tool
 from metagpt.utils.common import CodeParser, awrite, log_time
@@ -46,7 +44,7 @@ class Engineer2(RoleZero):
         "Engineer2",
         "CodeReview",
         "Deployer",
-        "UserInfoParser",
+        # "UserInfoParser",
     ]
 
     # SWE Agent parameter
@@ -84,7 +82,7 @@ class Engineer2(RoleZero):
     def _update_tool_execution(self):
         # validate = ValidateAndRewriteCode()
         cr = CodeReview()
-        up = UserInfoParser()
+        # up = UserInfoParser()
         if self.run_eval is True:
             # Evalute tool map
             self.tool_execution_map.update(
@@ -97,7 +95,7 @@ class Engineer2(RoleZero):
                     "RoleZero.ask_human": self._end,
                     "RoleZero.reply_to_human": self._end,
                     "Deployer.deploy_to_public": self._deploy_to_public,
-                    "UserInfoParser.get": up.get,
+                    # "UserInfoParser.get": up.get,
                 }
             )
         else:
@@ -110,7 +108,7 @@ class Engineer2(RoleZero):
                     "CodeReview.fix": cr.fix,
                     "Terminal.run_command": self.terminal.run_command,
                     "Deployer.deploy_to_public": self._deploy_to_public,
-                    "UserInfoParser.get": up.get,
+                    # "UserInfoParser.get": up.get,
                 }
             )
 
@@ -170,8 +168,8 @@ class Engineer2(RoleZero):
             description (str): "Brief description and important notes of what and how to implement the files, including how they interact with each other if there will be multiple files.
             paths (list[str]): The paths of the files to be created.
         """
-        code_tools = await self.code_tool_recommender.recommend_tools()
-        code_tool_info = json.dumps({tool.name: tool.schemas for tool in code_tools})
+        # Get recommended code tools and their usage examples.
+        code_tool_info = await self.code_tool_recommender.get_recommended_tool_info()
         prompt = WRITE_CODE_PROMPT.format(
             file_path=paths,
             file_description=description,

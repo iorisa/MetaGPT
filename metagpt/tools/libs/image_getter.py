@@ -12,7 +12,7 @@ from PIL import Image
 from PIL.ImageFile import ImageFile
 from playwright.async_api import Browser as Browser_
 from playwright.async_api import BrowserContext, Page, Playwright, async_playwright
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from metagpt.config2 import Config
 from metagpt.const import DEFAULT_WORKSPACE_ROOT
@@ -43,10 +43,8 @@ async () => {{
 """
 
 
-class BaseImageGetter(BaseModel):
+class BaseImageProvider(BaseModel):
     """Abstract base class for image getter tools."""
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     # Common fields
     llm: BaseLLM = Field(default_factory=lambda: OpenAILLM(Config.default().llm))
@@ -156,7 +154,7 @@ class BaseImageGetter(BaseModel):
         return image_save_path
 
 
-class PixabayAPI(BaseImageGetter):
+class PixabayAPI(BaseImageProvider):
     """Image getter using Pixabay."""
 
     client: pxb.PixabayClient = Field(
@@ -177,10 +175,8 @@ class PixabayAPI(BaseImageGetter):
         return self.download_image(hitsList[0].largeImageURL)
 
 
-class UnsplashWeb(BaseImageGetter):
+class UnsplashWeb(BaseImageProvider):
     """Image getter using Unsplash."""
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     playwright: Optional[Playwright] = Field(default=None, exclude=True)
     browser_instance: Optional[Browser_] = Field(default=None, exclude=True)
@@ -254,7 +250,7 @@ class UnsplashWeb(BaseImageGetter):
                 await browser_ctx.close()
 
 
-class UnsplashApi(BaseImageGetter):
+class UnsplashApi(BaseImageProvider):
     """Image getter using Unsplash API."""
 
     api_base: str = "https://api.unsplash.com"
@@ -288,7 +284,7 @@ class ImageGetter(BaseModel):
     A tool to get/create/process images.
     """
 
-    image_provider: BaseImageGetter = Field(
+    image_provider: BaseImageProvider = Field(
         default_factory=UnsplashApi,
         exclude=True,
         description="The image getter to use. Choose from Pixabay, Unsplash, or Unsplash API. Defaults to Unsplash API.",
