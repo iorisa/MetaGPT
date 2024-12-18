@@ -101,6 +101,9 @@ class Config(CLIParams, YamlModel):
     # Config for the pixabay api key
     pixabay_api_key: str = ""
 
+    # Config for the unsplash api key
+    unsplash_api_key: str = ""
+
     @classmethod
     def from_home(cls, path):
         """Load config from ~/.metagpt/config2.yaml"""

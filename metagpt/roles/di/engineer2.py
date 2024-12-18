@@ -20,8 +20,8 @@ from metagpt.tools.libs.git import git_create_pull
 from metagpt.tools.libs.image_getter import ImageGetter
 from metagpt.tools.libs.terminal import Terminal
 from metagpt.tools.libs.user_info_parser import UserInfoParser
-from metagpt.tools.tool_recommend import BM25ToolRecommender
-from metagpt.tools.tool_registry import TOOL_REGISTRY, register_tool
+from metagpt.tools.tool_recommend import BM25ToolRecommender, ToolRecommender
+from metagpt.tools.tool_registry import register_tool
 from metagpt.utils.common import CodeParser, awrite, log_time
 from metagpt.utils.report import EditorReporter
 
@@ -48,6 +48,12 @@ class Engineer2(RoleZero):
         "Deployer",
         "UserInfoParser",
     ]
+
+    # Code tool related attributes
+    code_tool: list[str] = ["ImageGetter"]
+    code_tool_execution_list: list[str] = ["ImageGetter.get", "ImageGetter.process"]
+    code_tool_recommender: ToolRecommender = None
+
     # SWE Agent parameter
     run_eval: bool = False
     output_diff: str = ""
@@ -60,17 +66,7 @@ class Engineer2(RoleZero):
 
     @model_validator(mode="after")
     def set_code_tool(self) -> "Engineer2":
-        self.code_tool = ["ImageGetter"]
-        self.code_tool_execution_list = []
-        self.code_tool_recommender = None
-        self.code_tool_execution_list.extend(
-            [
-                f"{class_name}.{tool_name}"
-                for class_name in self.code_tool
-                for tool_name in TOOL_REGISTRY.get_tool(class_name).schemas["methods"]
-            ]
-        )
-
+        """Initialize code tool recommender if execution list exists."""
         if self.code_tool_execution_list and not self.code_tool_recommender:
             self.code_tool_recommender = BM25ToolRecommender(tools=self.code_tool, force=True)
         return self
