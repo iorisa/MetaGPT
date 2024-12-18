@@ -31,7 +31,4 @@ GENERAL_FUNCTION_SCHEMA = {
 GENERAL_TOOL_CHOICE = {"type": "function", "function": {"name": "execute"}}
 
 
-MULTI_MODAL_MODELS = [
-    "gpt-4o",
-    "gpt-4o-mini",
-]
+MULTI_MODAL_MODELS = ["gpt-4o", "gpt-4o-mini", "claude-3-5-sonnet"]
