@@ -1121,15 +1121,12 @@ class Editor(BaseModel):
                 current_path = Path(root) / file
 
                 if file_path.is_absolute():
-                    # 如果是绝对路径，进行完整路径匹配
                     if current_path == file_path:
                         matches.append(current_path)
                 elif "/" in str(file_path) or "\\" in str(file_path):
-                    # 如果是相对路径，进行路径后缀匹配
                     if str(current_path).endswith(str(file_path)):
                         matches.append(current_path)
                 else:
-                    # 如果是纯文件名，只匹配文件名
                     if current_path.name == file_name:
                         matches.append(current_path)
 
