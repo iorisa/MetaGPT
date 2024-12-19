@@ -51,6 +51,11 @@ class Engineer2(RoleZero):
     output_diff: str = ""
     max_react_loop: int = 40
 
+    # Code tools related attributes
+    code_tools: list[str] = ["ImageGetter"]
+    code_tool_execution_list: list[str] = ["ImageGetter.get", "ImageGetter.process"]
+    code_tool_recommender: ToolRecommender = None
+
     async def _think(self) -> bool:
         await self._update_workdir()
         res = await super()._think()
@@ -59,10 +64,6 @@ class Engineer2(RoleZero):
     @model_validator(mode="after")
     def set_code_tool(self) -> "Engineer2":
         """Initialize code tool recommender if execution list exists."""
-        # Code tool related attributes
-        self.code_tools: list[str] = ["ImageGetter"]
-        self.code_tool_execution_list: list[str] = ["ImageGetter.get", "ImageGetter.process"]
-        self.code_tool_recommender: ToolRecommender = None
         if self.code_tool_execution_list and not self.code_tool_recommender:
             self.code_tool_recommender = BM25ToolRecommender(tools=self.code_tools, force=True)
         return self
