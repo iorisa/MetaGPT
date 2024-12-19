@@ -140,7 +140,11 @@ For queries that require retrieving up-to-date or detailed information. This inc
 If a file or link is provided, you don't need to search for additional information.
 
 ## TASK
-For requests that involve tool utilizations, computer operations, multiple steps or detailed instructions. Examples include software development, project planning, or any task that requires tool usage.
+For requests that involve tool utilizations, computer operations, multiple steps or detailed instructions. Examples include:
+- Software development
+- Project planning
+- Writing detailed documentation (e.g., PRD, system architecture design)
+- Any task that requires tool usage.
 
 ## AMBIGUOUS
 For requests that are unclear, lack sufficient detail, or are outside the system's capabilities. Common characteristics of AMBIGUOUS requests:
@@ -212,6 +216,10 @@ Response Category: TASK.
 10. Request: "Help me make a personal business card."
 Thought: The user is requesting assistance in creating a personal business card, which involves design and layout tasks.
 Response Category: TASK
+
+11. Request: "Help me generate a PRD/system design for 2048 game."
+Thought: Generating a PRD document is the responsibility of the product manager. It requires structured, detailed output and involves multiple steps. This is a TASK.
+Response Category: TASK.
 """
 QUICK_RESPONSE_SYSTEM_PROMPT = """
 {role_info}
