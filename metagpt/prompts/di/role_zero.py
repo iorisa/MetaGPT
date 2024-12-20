@@ -140,11 +140,8 @@ For queries that require retrieving up-to-date or detailed information. This inc
 If a file or link is provided, you don't need to search for additional information.
 
 ## TASK
-For requests that involve tool utilizations, computer operations, multiple steps or detailed instructions. Examples include:
-- Software development
-- Project planning
-- Writing detailed documentation (e.g., PRD, system architecture design)
-- Any task that requires tool usage.
+For requests that involve tool utilizations, computer operations, multiple steps or detailed instructions. Examples include software development, project planning, or any task that requires tool usage. Also, requests that involve team member's specific responsibilities (e.g., data analysis for Data Analyst, PRD for Product Manager, system architecture design for Architect, coding for Engineer).
+
 
 ## AMBIGUOUS
 For requests that are unclear, lack sufficient detail, or are outside the system's capabilities. Common characteristics of AMBIGUOUS requests:
@@ -157,6 +154,7 @@ For requests that are unclear, lack sufficient detail, or are outside the system
 **Note:** Before categorizing a request as TASK:
 1. Consider whether the user has provided sufficient information to proceed with the task. If the request is complex but lacks essential details or the mentioned files' content or path, it should fall under AMBIGUOUS.
 2. If the request is a "how-to" question that asks for a general plan, approach or strategy, it should be categorized as QUICK.
+3. When user requests PRD, or TRD/system architecture design involving team member's specific responsibilities, regardless of task complexity, it should be categorized as TASK since it involves team member's specific responsibilities.
 
 {examples}
 """
@@ -216,10 +214,6 @@ Response Category: TASK.
 10. Request: "Help me make a personal business card."
 Thought: The user is requesting assistance in creating a personal business card, which involves design and layout tasks.
 Response Category: TASK
-
-11. Request: "Help me generate a PRD/system design for 2048 game."
-Thought: Generating a PRD document is the responsibility of the product manager. It requires structured, detailed output and involves multiple steps. This is a TASK.
-Response Category: TASK.
 """
 QUICK_RESPONSE_SYSTEM_PROMPT = """
 {role_info}
