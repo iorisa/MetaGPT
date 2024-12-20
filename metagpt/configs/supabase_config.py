@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from pydantic import Field, model_validator
 
+from metagpt.logs import logger
 from metagpt.utils.yaml_model import YamlModel
 
 
@@ -31,9 +32,13 @@ class SupabaseConfig(YamlModel):
 
     @model_validator(mode="after")
     def initialize(self):
-        if self.enable:
-            self._check_required_fields()
-            self.project_ref = self.project_ref or self._extract_project_ref()
+        if not self.enable:
+            logger.info("Supabase is not enabled.")
+            return self
+
+        self._check_required_fields()
+        self.project_ref = self.project_ref or self._extract_project_ref()
+        logger.info("Supabase is enabled.")
 
         return self
 
