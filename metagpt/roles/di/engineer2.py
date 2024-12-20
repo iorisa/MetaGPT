@@ -18,7 +18,7 @@ from metagpt.tools.libs.deployer import Deployer
 from metagpt.tools.libs.editor import FileBlock
 from metagpt.tools.libs.git import git_create_pull
 from metagpt.tools.libs.image_getter import ImageGetter
-from metagpt.tools.libs.supabase_manager import SupabaseManager
+from metagpt.tools.libs.supabase_manager import supabase_manager_instance
 from metagpt.tools.libs.terminal import Terminal
 from metagpt.tools.tool_registry import TOOL_REGISTRY, register_tool
 from metagpt.utils.common import CodeParser, awrite, log_time
@@ -75,7 +75,6 @@ class Engineer2(RoleZero):
 
     def _update_tool_execution(self):
         cr = CodeReview()
-        supabase_manager = SupabaseManager()
 
         self.autocall_tool_execution_list.extend(
             [
@@ -92,9 +91,8 @@ class Engineer2(RoleZero):
             "CodeReview.fix": cr.fix,
             "Terminal.run_command": self.terminal.run_command,
             "Deployer.deploy_to_public": self._deploy_to_public,
-            "SupabaseManager.execute_sql": supabase_manager.execute_sql,
-            "SupabaseManager.get_session_schemas": supabase_manager.get_session_schemas,
-            "SupabaseManager.get_config": supabase_manager.get_config,
+            "SupabaseManager.execute_sql": supabase_manager_instance.execute_sql,
+            "SupabaseManager.get_session_schemas": supabase_manager_instance.get_session_schemas,
         }
 
         # Add additional tools only in evaluation mode

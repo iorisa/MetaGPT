@@ -6,55 +6,34 @@ Supabase only provides a [SDK](https://github.com/supabase/supabase-py) for [RES
 Therefore, a management SDK is needed to wrap the [Management API](https://supabase.com/docs/reference/api/introduction).
 """
 
-import httpx
-from pydantic import BaseModel, Field, PrivateAttr, model_validator
+from typing import Any, Optional
+
+from pydantic import BaseModel, Field
 
 from metagpt.config2 import Config
-from metagpt.logs import logger
+from metagpt.configs.supabase_config import SupabaseConfig
 from metagpt.tools.tool_registry import register_tool
+from metagpt.utils.ahttp_client import apost
 
-config = Config.default()
 
-
-@register_tool(include_functions=["get_config", "get_session_schemas", "execute_sql"])
+@register_tool(include_functions=["execute_sql", "get_session_schemas"])
 class SupabaseManager(BaseModel):
-    access_token: str = Field(default=config.supabase.access_token, description="Supabase access token")
-    management_base_url: str = Field(
-        default=config.supabase.management_base_url, description="Supabase management base URL"
-    )
+    config: SupabaseConfig = Field(default=Config.default().supabase, description="The Supabase config")
 
-    _default_headers: dict[str, str] = PrivateAttr(default_factory=dict)
+    @property
+    def is_supabase_enabled(self) -> bool:
+        return self.config.enable
 
-    @model_validator(mode="after")
-    def validate(self) -> "SupabaseManager":
-        if not self.access_token:
-            logger.warning("Supabase access token is required, but not provided.")
+    @property
+    def default_headers(self) -> dict:
+        return {"Authorization": f"Bearer {self.config.access_token}", "Content-Type": "application/json"}
 
-        self._default_headers = {"Authorization": f"Bearer {self.access_token}", "Content-Type": "application/json"}
-
-        return self
-
-    def get_config(self) -> dict:
-        """Get Supabase configuration settings.
-
-        Returns:
-            dict: A dictionary containing Supabase configuration settings:
-                - enable (bool): Whether to use Supabase as the backend service. When True, Supabase will be used; when False, alternative solutions will be used.
-                - project_url (str): The Supabase project URL in format 'https://<project>.supabase.co'. This is the endpoint URL for connecting to your specific Supabase project instance.
-                - project_key (str): The Supabase project API key. This is the anon/public key used for client API authentication, found in your project's API settings dashboard.
-                - project_ref (str): The unique reference ID of your Supabase project. This identifier is used for project-specific API operations and management.
-                - access_token (str): The service role API key for Supabase management API. This token provides elevated access for administrative operations and should be kept secure.
-                - management_base_url (str): The base URL for Supabase management API endpoints. Used for administrative operations like schema management and project configuration.
-                - session_id (str): A unique session identifier generated for each chat. Used for creating isolated database tables and managing development environments.
-        """
-        return config.supabase.model_dump()
-
-    def execute_sql(self, sql: str, project_ref: str = config.supabase.project_ref, timeout: int = 10) -> dict:
+    async def execute_sql(self, sql: str, project_ref: Optional[str] = None, timeout: int = 10) -> Any:
         """Execute SQL query on Supabase database.
 
         Args:
             sql: SQL query to execute.
-            project_ref: Supabase project ref, defaults to config.supabase.project_ref.
+            project_ref: Supabase project ref, defaults to config.project_ref.
             timeout: Request timeout in seconds, defaults to 10.
 
         Returns:
@@ -82,20 +61,16 @@ class SupabaseManager(BaseModel):
             ...     FOR INSERT TO authenticated
             ...     WITH CHECK (auth.jwt() ->> 'email' = user_email);
             ... '''
-            >>> result = execute_sql(sql)
+            >>> result = await execute_sql(sql)
         """
-        url = f"{self.management_base_url}/projects/{project_ref}/database/query"
+        url = f"{self.config.management_base_url}/projects/{project_ref or self.config.project_ref}/database/query"
 
-        with httpx.Client(timeout=timeout) as client:
-            response = client.post(url, headers=self._default_headers, json={"query": sql}, timeout=timeout)
-            response.raise_for_status()
+        return await apost(url=url, json={"query": sql}, as_json=True, headers=self.default_headers, timeout=timeout)
 
-        return response.json()
-
-    def get_session_schemas(
+    async def get_session_schemas(
         self,
         session_id: str,
-        project_ref: str = config.supabase.project_ref,
+        project_ref: Optional[str] = None,
         db_name: str = "public",
         timeout: int = 10,
     ) -> list[dict[str, str]]:
@@ -103,7 +78,7 @@ class SupabaseManager(BaseModel):
 
         Args:
             session_id: A unique session identifier generated for each chat. Used for creating isolated database tables and managing development environments.
-            project_ref: Supabase project ref, defaults to config.supabase.project_ref.
+            project_ref: Supabase project ref, defaults to config.project_ref.
             db_name: Database schema name, defaults to 'public'.
             timeout: Request timeout in seconds, defaults to 10.
 
@@ -112,7 +87,7 @@ class SupabaseManager(BaseModel):
 
         Examples:
             # Get tables for specific session_id
-            >>> session_schemas = get_session_schemas(session_id="abc12")
+            >>> session_schemas = await get_session_schemas(session_id="abc12")
             >>> print(session_schemas)
             [
                 {
@@ -126,16 +101,16 @@ class SupabaseManager(BaseModel):
             ]
         """
 
-        return self._get_database_schemas(
-            session_id=session_id, project_ref=project_ref, db_name=db_name, timeout=timeout
+        return await self._get_database_schemas(
+            session_id=session_id, project_ref=project_ref or self.config.project_ref, db_name=db_name, timeout=timeout
         )
 
-    def _get_database_schemas(
+    async def _get_database_schemas(
         self,
-        project_ref: str = config.supabase.project_ref,
+        project_ref: Optional[str] = None,
         db_name: str = "public",
         timeout: int = 10,
-        session_id: str = None,
+        session_id: Optional[str] = None,
     ) -> list[dict[str, str]]:
         """Get complete database schema information from Supabase including table names and their columns.
 
@@ -150,7 +125,7 @@ class SupabaseManager(BaseModel):
 
         Examples:
             # Get all tables
-            >>> schemas = _get_database_schemas()
+            >>> schemas = await _get_database_schemas()
             >>> print(schemas)
             [
                 {
@@ -160,7 +135,7 @@ class SupabaseManager(BaseModel):
             ]
 
             # Get tables for specific session_id
-            >>> session_schemas = _get_database_schemas(session_id="abc12")
+            >>> session_schemas = await _get_database_schemas(session_id="abc12")
             >>> print(session_schemas)
             [
                 {
@@ -195,15 +170,16 @@ class SupabaseManager(BaseModel):
         ORDER BY 
             t.table_name;
         """
-        url = f"{self.management_base_url}/projects/{project_ref}/database/query"
+        url = f"{self.config.management_base_url}/projects/{project_ref}/database/query"
 
-        with httpx.Client(timeout=timeout) as client:
-            response = client.post(url, headers=self._default_headers, json={"query": query}, timeout=timeout)
-            response.raise_for_status()
-
-        table_schemas = response.json()
+        table_schemas = await apost(
+            url, json={"query": query}, as_json=True, headers=self.default_headers, timeout=timeout
+        )
 
         if session_id:
             table_schemas = [schema for schema in table_schemas if session_id in schema["table_name"]]
 
         return table_schemas
+
+
+supabase_manager_instance = SupabaseManager()
