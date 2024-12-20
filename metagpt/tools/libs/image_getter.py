@@ -279,6 +279,11 @@ class ImageGetter(BaseModel):
         description="The image getter to use. Choose from Pixabay, Unsplash, or Unsplash API. Defaults to Unsplash API.",
     )
 
+    @classmethod
+    def is_available(cls) -> bool:
+        config = Config.default()
+        return config.pixabay_api_key is not None or config.unsplash_api_key is not None
+
     async def get(self, search_term: str, image_save_path: str, mode="search") -> str:
         """Get an image either by searching online or generating with AI.
 

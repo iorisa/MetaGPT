@@ -65,7 +65,9 @@ class Engineer2(RoleZero):
     def set_code_tool(self) -> "Engineer2":
         """Initialize code tool recommender if execution list exists."""
         if self.code_tool_execution_list and not self.code_tool_recommender:
-            self.code_tool_recommender = BM25ToolRecommender(tools=self.code_tools, force=True)
+            # Check if the code tools is available
+            if ImageGetter.is_available():
+                self.code_tool_recommender = BM25ToolRecommender(tools=self.code_tools, force=True)
         return self
 
     async def _update_workdir(self):
@@ -169,7 +171,10 @@ class Engineer2(RoleZero):
             paths (list[str]): The paths of the files to be created.
         """
         # Get recommended code tools and their usage examples.
-        code_tool_info = await self.code_tool_recommender.get_recommended_tool_info()
+        if self.code_tool_recommender:
+            code_tool_info = await self.code_tool_recommender.get_recommended_tool_info()
+        else:
+            code_tool_info = "N/A"
         prompt = WRITE_CODE_PROMPT.format(
             file_path=paths,
             file_description=description,

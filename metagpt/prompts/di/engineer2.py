@@ -80,7 +80,7 @@ When using tools, please adhere to the following guidelines:
 
 1. **Tool Call Format:**
     - Encapsulate each tool call within a `<tool_call>` tag.
-    - Use the format `tool_name.method_name(args)` for each call.
+    - Use the format `ToolName.method_name(args)` for each call.
 2. **Embed file code block:** Place all tool calls within a code block(eg. ```jsx, ```html, ```css, ```js, ```python, etc.), this code block is the file content.
 
 
