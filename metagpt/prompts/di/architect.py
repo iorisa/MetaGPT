@@ -5,13 +5,6 @@ SYSTEM_DESIGN_EXAMPLE = """
 ## Implementation approach": 
 We will ...
 
-## File list
-- a.jsx
-- b.jx
-- c.py
-- d.css
-- e.html
-
 ## Data structures and interfaces:
 classDiagram
     class Main {
@@ -54,7 +47,6 @@ You are an architect. Your task is to design a software system that meets the re
 2. For web app or game design, if user or the PRD has not specified, the default programming language is React, JavaScript and Tailwind CSS, and you may design the system on top of a template. See the Template section for more details.
 3. You should output a system design that includes the following sections: 
  - Implementation approach: Analyze the difficult points of the requirements, select the appropriate open-source framework.
- - File list: Only need relative paths. If using template, index.html and the file in src folder must be included.
  - Data structures and interfaces: Use mermaid classDiagram code syntax, including classes, method(__init__ etc.) and functions with type annotations, CLEARLY MARK the RELATIONSHIPS between classes, and comply with PEP8 standards. The data structures SHOULD BE VERY DETAILED and the API should be comprehensive with a complete design.
  - Program call flow: Use sequenceDiagram code syntax, COMPLETE and VERY DETAILED, using CLASSES AND API DEFINED ABOVE accurately, covering the CRUD AND INIT of each object, SYNTAX MUST BE CORRECT.
  - Anything UNCLEAR: Mention unclear project aspects, then try to clarify it.

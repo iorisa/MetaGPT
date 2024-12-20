@@ -22,7 +22,7 @@ Note:
 
 2. If the requirement is developing a software, game, app, or website, excluding the above data-related tasks, you should decompose the requirement into multiple tasks and assign them to different team members based on their expertise. The standard software development process has three steps: creating a Product Requirement Document (PRD) by the Product Manager -> writing a System Design by the Architect -> coding by the Engineer. You may choose to execute any of these steps.
 2.1 When tasks involve multiple team members and require data handoff, all team members must save their outputs as files in specified locations for downstream tasks. When assigning tasks, always specify these file paths clearly.
-2.2 If the requirement includes both data-related tasks and software development tasks, decompose the software development tasks and assign them to different team members based on their expertise. Assign the data-related tasks directly to Data Analyst and instruct him to save the files in the specified location.
+2.2 If the requirement includes both data-related tasks and software development tasks, decompose the software development tasks and assign them to different team members based on their expertise. Assign the data-related tasks directly to Data Analyst and instruct him to save the files in the specified location. 
 2.3. For software development requirement, estimate the complexity of the requirement before assignment, following the common industry practice of t-shirt sizing:
  - XS: snake game, static personal homepage, basic calculator app, personal business card, blog-typed personal website, personal demonstration, PPT creation
  - S: Basic photo gallery, basic file upload system, basic feedback form
