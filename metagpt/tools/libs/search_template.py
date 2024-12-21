@@ -22,7 +22,7 @@ from metagpt.prompts.di.template import (
     read_file,
 )
 from metagpt.utils.async_helper import run_coroutine_sync
-from metagpt.utils.common import OutputParser, awrite, log_time
+from metagpt.utils.common import OutputParser, aread, awrite, log_time
 
 
 class TemplateRAGObject(BaseModel):
@@ -160,6 +160,7 @@ class SearchTemplate(BaseSearchTemplate):
     llm: Optional[LLM] = Field(default=None, exclude=True)
     template_version: str = Field(default="1.0.0")
     deployment_config: Dict[str, Any] = Field(default_factory=dict)
+    persist_dir: Optional[str] = Field(default=None)
 
     rag_top_k: int = Field(default=5, description="RAG top k")
 
@@ -211,6 +212,55 @@ class SearchTemplate(BaseSearchTemplate):
             return True
         return self._engine
 
+    async def restore(self) -> bool:
+        from metagpt.rag.engines import SimpleEngine
+        from metagpt.rag.schema import (
+            FAISSIndexConfig,
+            FAISSRetrieverConfig,
+            LLMRankerConfig,
+        )
+
+        if not self.persist_dir:
+            return False
+
+        persist_dir = Path(self.persist_dir)
+        if not persist_dir.exists():
+            return False
+
+        index_persist_dir = persist_dir / "index"
+        template_persist_path = persist_dir / "info" / "templates.json"
+
+        data = json.loads(await aread(template_persist_path))
+        templates = {}
+        for template in data:
+            template["template_path"] = Path(template["template_path"])
+            templates[template["style"]] = TemplateInfo(**template)
+
+        engine = SimpleEngine.from_index(
+            index_config=FAISSIndexConfig(persist_path=index_persist_dir),
+            retriever_configs=[FAISSRetrieverConfig()],
+            ranker_configs=[LLMRankerConfig(top_n=self.rag_top_k)],
+        )
+        self.templates = templates
+        self.engine = engine
+        return True
+
+    async def persist(self) -> bool:
+        if not self.persist_dir:
+            return False
+
+        persist_dir = Path(self.persist_dir)
+        index_persist_dir = persist_dir / "index"
+        template_persist_path = persist_dir / "info" / "templates.json"
+
+        index_persist_dir.mkdir(exist_ok=True, parents=True)
+        template_persist_path.parent.mkdir(exist_ok=True, parents=True)
+        await awrite(
+            template_persist_path, json.dumps(list(i.model_dump(mode="json") for i in self.templates.values()))
+        )
+        self._engine.persist(index_persist_dir)
+        return True
+
     @engine.setter
     def engine(self, value):
         self._engine = value
@@ -238,6 +288,8 @@ class SearchTemplate(BaseSearchTemplate):
     async def _ensure_initialized(self):
         """Ensure that the template and RAG engine have been initialized."""
         if not self._initialized:
+            if await self.restore():
+                return
             init_tempalte_flag, init_rag_flag = False, False
             if not self.templates:
                 init_tempalte_flag = await self._init_templates()

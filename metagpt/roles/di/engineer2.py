@@ -4,11 +4,9 @@ import asyncio
 import re
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from metagpt.logs import logger
-
-# from metagpt.actions.write_code_review import ValidateAndRewriteCode
 from metagpt.prompts.di.engineer2 import ENGINEER2_INSTRUCTION, WRITE_CODE_PROMPT
 from metagpt.roles.di.role_zero import RoleZero
 from metagpt.schema import UserMessage
@@ -20,7 +18,8 @@ from metagpt.tools.libs.git import git_create_pull
 from metagpt.tools.libs.image_getter import ImageGetter
 from metagpt.tools.libs.supabase_manager import supabase_manager_instance
 from metagpt.tools.libs.terminal import Terminal
-from metagpt.tools.tool_registry import TOOL_REGISTRY, register_tool
+from metagpt.tools.tool_recommend import BM25ToolRecommender, ToolRecommender
+from metagpt.tools.tool_registry import register_tool
 from metagpt.utils.common import CodeParser, awrite, log_time
 from metagpt.utils.report import EditorReporter
 
@@ -46,21 +45,32 @@ class Engineer2(RoleZero):
         "CodeReview",
         "Deployer",
         "SupabaseManager",
+        # "UserInfoParser",
     ]
+
     # SWE Agent parameter
     run_eval: bool = False
     output_diff: str = ""
     max_react_loop: int = 40
-    # Add a tag to track whether this is the first time receiving software development requirements.
-    autocall_tool_execution_list: list = []
-    autocall_tool: list[str] = [
-        "ImageGetter",
-    ]
+
+    # Code tools related attributes
+    code_tools: list[str] = ["ImageGetter"]
+    code_tool_execution_list: list[str] = ["ImageGetter.get", "ImageGetter.process"]
+    code_tool_recommender: ToolRecommender = None
 
     async def _think(self) -> bool:
         await self._update_workdir()
         res = await super()._think()
         return res
+
+    @model_validator(mode="after")
+    def set_code_tool(self) -> "Engineer2":
+        """Initialize code tool recommender if execution list exists."""
+        if self.code_tool_execution_list and not self.code_tool_recommender:
+            # Check if the code tools is available
+            if ImageGetter.is_available():
+                self.code_tool_recommender = BM25ToolRecommender(tools=self.code_tools, force=True)
+        return self
 
     async def _update_workdir(self):
         """
@@ -75,14 +85,6 @@ class Engineer2(RoleZero):
 
     def _update_tool_execution(self):
         cr = CodeReview()
-
-        self.autocall_tool_execution_list.extend(
-            [
-                f"{class_name}.{tool_name}"
-                for class_name in self.autocall_tool
-                for tool_name in TOOL_REGISTRY.get_tool(class_name).schemas["methods"]
-            ]
-        )
 
         tool_execution = {
             "git_create_pull": git_create_pull,
@@ -124,12 +126,12 @@ class Engineer2(RoleZero):
         # Regex pattern to match tool call tags like <tool_call.../>
         # Uses [\s\S] for multi-line matching and non-greedy *? to avoid over-matching
         # Supports optional $ prefix: $<tool_call.../>
-        tool_call_pattern = r"(?:\$)?<tool_call[\s\S]*?[\s\S]/>"
+        tool_call_pattern = r"(?:\$)?<tool_call>[\s\S]*?[\s\S]</tool_call>"
         tool_calls = re.findall(tool_call_pattern, code)
 
         async def execute_tool(tool_call: str):
             # Extract just the function call part
-            tool_name_str = r"|".join(self.autocall_tool_execution_list)
+            tool_name_str = r"|".join(self.code_tool_execution_list)
             func_match = re.search(rf"({tool_name_str})\(.*?\)", tool_call)
             if not func_match:
                 return None
@@ -163,9 +165,15 @@ class Engineer2(RoleZero):
             description (str): "Brief description and important notes of what and how to implement the files, including how they interact with each other if there will be multiple files.
             paths (list[str]): The paths of the files to be created.
         """
+        # Get recommended code tools and their usage examples.
+        if self.code_tool_recommender:
+            code_tool_info = await self.code_tool_recommender.get_recommended_tool_info()
+        else:
+            code_tool_info = "N/A"
         prompt = WRITE_CODE_PROMPT.format(
             file_path=paths,
             file_description=description,
+            available_code_tools=code_tool_info,
         )
         # Sometimes the Engineer repeats the last command to respond.
         # Replace the last command with a manual prompt to guide the Engineer to write new code.

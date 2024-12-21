@@ -33,6 +33,7 @@ class FrontendEngineer(Engineer2):
         "Engineer2",
         "SupabaseManager",
         "Browser:click,goto,scroll",
+        # "UserInfoParser",
     ]
 
     # Regarding template use:

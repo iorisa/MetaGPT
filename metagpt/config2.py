@@ -99,6 +99,15 @@ class Config(CLIParams, YamlModel):
     # Supabase
     supabase: SupabaseConfig = Field(default_factory=SupabaseConfig)
 
+    # Config for the rapid api key
+    rapid_api_key: str = ""
+
+    # Config for the pixabay api key
+    pixabay_api_key: str = ""
+
+    # Config for the unsplash api key
+    unsplash_api_key: str = ""
+
     @classmethod
     def from_home(cls, path):
         """Load config from ~/.metagpt/config2.yaml"""

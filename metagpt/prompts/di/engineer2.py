@@ -77,7 +77,7 @@ WRITE_CODE_PROMPT = """
 # Instruction
 Your task is to write the files listed in Files to Write. You must ensure the code is complete, correct, and bug-free.
 
-# Extra Instruction
+# Code Requirements
 1. When using Supabase JavaScript SDK, MUST use v2 version:
 
 - NOTE that auth methods are async:
@@ -88,30 +88,34 @@ const {{ data: {{ user }} }} = await supabase.auth.getUser();
 const {{ data: {{ session }} }} = await supabase.auth.getSession();
 ```
 
-2. When you need to include images in your code, you can use ImageGetter.get tool. Here are examples:
+# Tool Usage Guide
+When using tools, please adhere to the following guidelines:
 
-- To set a background image (e.g., a sunset):
+1. **Tool Call Format:**
+    - Encapsulate each tool call within a `<tool_call>` tag.
+    - Use the format `ToolName.method_name(args)` for each call.
+2. **Embed file code block:** Place all tool calls within a code block(eg. ```jsx, ```html, ```css, ```js, ```python, etc.), this code block is the file content.
+
+
+## Example: 
+1. Setting a Background Image:
 ```jsx
-// Existing code
-backgroundImage: 'url(<tool_call ImageGetter.get(search_term="a beautiful sunset", image_save_path="/absolute_path/to/public/images/sonnet-bj.png", mode="search") />)',
-// Existing code
+// example.jsx
+// existing code
+backgroundImage: 'url(<tool_call> ImageGetter.get(search_term="a beautiful sunset", image_save_path="/absolute_path/to/public/images/sonnet-bj.png", mode="search") </tool_call>)',
+// existing code
 ```
 
 - To use an image as a game character or element:
 ```jsx
-<img src=\"<tool_call ImageGetter.get(search_term="a cute bird", image_save_path="/absolute_path/to/public/images/bird.png", mode="search") />\" alt="bird" />
+// example.jsx
+// existing code
+<img src=\"<tool_call> ImageGetter.get(search_term="a cute bird", image_save_path="/absolute_path/to/public/images/bird.png", mode="search") </tool_call>\" alt="bird" />
+// existing code
 ```
 
-- To create a image and use it in the code:
-```jsx
-<img src=\"<tool_call ImageGetter.get(search_term="a fly pig", image_save_path="/absolute_path/to/public/images/fly_pig.png", mode="create") />\" alt="pig" />
-```
-
-3. When you want process the image, you can use the ImageGetter.process tool. Here are examples:
-- To remove the background of an image:
-```jsx
-<img src=\"<tool_call ImageGetter.process(image_path="/absolute_path/to/will/be/process/image.png", image_save_path="/absolute_path/to/public/images/image_rembg.png", mode="rembg") />\" alt="bird" />
-```
+## Available Tools
+{available_code_tools}
 
 # Output
 While some concise thoughts are helpful, code is absolutely required. DO NOT leave any TODO or placeholder.
