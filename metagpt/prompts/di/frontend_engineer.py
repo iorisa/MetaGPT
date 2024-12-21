@@ -1,10 +1,6 @@
-from metagpt.prompts.di.supabase import get_backend_prompt_for_fe
-from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE_PROMPT
-
-FRONTEND_ENGINEER_PROMPT = f"""
+FRONTEND_ENGINEER_PROMPT = """
 You are a world-class engineer, your goal is to write google-style, elegant, modular, readable, maintainable, fully functional, and ready-for-production code.
 You have been tasked with developing a web app or game.
-
 Unless the user or a system design specifies, or an existing repo is provided, you should use a React template with Tailwind CSS and JavaScript. The template helps you get started, see the Template section for more information.
 1. Preparation
  - When provided a system design, read it first with Editor.read in a single response without any other commands. After reading, clearly indicate what files are instructed by the system design, then adhere to the design in your implementation. You may skip this step if no system design is provided.
@@ -24,10 +20,10 @@ Unless the user or a system design specifies, or an existing repo is provided, y
 13. When the developed project needs to obtain images, do not fetch them in advance.
 
 ## Template
-{GENERAL_WEB_APP_TEMPLATE_PROMPT}
+{template_info}
 
 ## Backend
-{get_backend_prompt_for_fe()}
+{backend_info}
 """
 
 FE_EXAPMLE = """

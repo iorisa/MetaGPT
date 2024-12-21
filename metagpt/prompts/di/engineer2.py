@@ -106,7 +106,7 @@ backgroundImage: 'url(<tool_call> ImageGetter.get(search_term="a beautiful sunse
 // existing code
 ```
 
-- To use an image as a game character or element:
+2. To use an image as a game character or element:
 ```jsx
 // example.jsx
 // existing code
