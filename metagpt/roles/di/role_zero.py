@@ -16,7 +16,12 @@ from pydantic import Field, model_validator
 from metagpt.actions import Action, UserRequirement
 from metagpt.actions.di.run_command import RunCommand
 from metagpt.actions.search_enhanced_qa import SearchEnhancedQA
-from metagpt.const import DEFAULT_WORKSPACE_ROOT, IMAGES
+from metagpt.const import (
+    DEFAULT_WORKSPACE_ROOT,
+    IMAGES,
+    SUPABASE_CONNECTION_MESSAGE,
+    SUPABASE_TASK,
+)
 from metagpt.exp_pool import exp_cache
 from metagpt.exp_pool.context_builders import RoleZeroContextBuilder
 from metagpt.exp_pool.serializers import RoleZeroSerializer
@@ -40,6 +45,12 @@ from metagpt.prompts.di.role_zero import (
     SUMMARY_PROBLEM_WHEN_DUPLICATE,
     SUMMARY_PROMPT,
     SYSTEM_PROMPT,
+)
+from metagpt.prompts.di.supabase import (
+    get_supabase_task_example,
+    get_supabase_task_prompt,
+    get_supabase_task_with_comma,
+    get_supabase_task_with_slash,
 )
 from metagpt.roles import Role
 from metagpt.schema import AIMessage, Message, UserMessage
@@ -376,7 +387,20 @@ class RoleZero(Role):
 
     def format_quick_system_prompt(self) -> str:
         """Format the system prompt for quick thinking."""
-        return QUICK_THINK_SYSTEM_PROMPT.format(examples=QUICK_THINK_EXAMPLES, role_info=self._get_prefix())
+        return QUICK_THINK_SYSTEM_PROMPT.format(
+            examples=self._get_quick_think_examples(),
+            role_info=self._get_prefix(),
+            supabase_task_prompt=get_supabase_task_prompt(),
+        )
+
+    def _get_quick_think_examples(self) -> str:
+        return QUICK_THINK_EXAMPLES.format(supabase_task_example=get_supabase_task_example())
+
+    def _get_quick_think_prompt(self) -> str:
+        return QUICK_THINK_PROMPT.format(
+            supabase_task_with_comma=get_supabase_task_with_comma(),
+            supabase_task_with_slash=get_supabase_task_with_slash(),
+        )
 
     async def _quick_think(self) -> Tuple[Message, str]:
         answer = ""
@@ -387,7 +411,7 @@ class RoleZero(Role):
 
         # routing
         memory = self.get_memories(k=self.memory_k)
-        context = self.llm.format_msg(memory + [UserMessage(content=QUICK_THINK_PROMPT)])
+        context = self.llm.format_msg(memory + [UserMessage(content=self._get_quick_think_prompt())])
         async with ThoughtReporter() as reporter:
             await reporter.async_report({"type": "classify"})
             intent_result = await self.llm.aask(context, system_msgs=[self.format_quick_system_prompt()])
@@ -422,6 +446,8 @@ class RoleZero(Role):
         elif "SEARCH" in intent_result:
             query = "\n".join(str(msg) for msg in memory)
             answer = await SearchEnhancedQA().run(query)
+        elif SUPABASE_TASK in intent_result:
+            answer = SUPABASE_CONNECTION_MESSAGE
 
         if answer:
             self.rc.memory.add(AIMessage(content=answer, cause_by=QUICK_THINK_TAG))

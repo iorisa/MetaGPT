@@ -141,7 +141,7 @@ If a file or link is provided, you don't need to search for additional informati
 
 ## TASK
 For requests that involve tool utilizations, computer operations, multiple steps or detailed instructions. Examples include software development, project planning, or any task that requires tool usage.
-
+{supabase_task_prompt}
 ## AMBIGUOUS
 For requests that are unclear, lack sufficient detail, or are outside the system's capabilities. Common characteristics of AMBIGUOUS requests:
 
@@ -160,11 +160,11 @@ For requests that are unclear, lack sufficient detail, or are outside the system
 QUICK_THINK_PROMPT = """
 # Instruction
 Determine the previous message's intent.
-Respond with a concise thought, then provide the appropriate response category: QUICK, SEARCH, TASK, or AMBIGUOUS. 
+Respond with a concise thought, then provide the appropriate response category: QUICK, SEARCH, TASK, {supabase_task_with_comma}or AMBIGUOUS. 
 
 # Format
 Thought: [Your thought here]
-Response Category: [QUICK/SEARCH/TASK/AMBIGUOUS]
+Response Category: [QUICK/SEARCH/TASK/{supabase_task_with_slash}AMBIGUOUS]
 
 # Response:
 """
@@ -211,8 +211,10 @@ Response Category: TASK.
 
 10. Request: "Help me make a personal business card."
 Thought: The user is requesting assistance in creating a personal business card, which involves design and layout tasks.
-Response Category: TASK
+Response Category: TASK.
+{supabase_task_example}
 """
+
 QUICK_RESPONSE_SYSTEM_PROMPT = """
 {role_info}
 However, you MUST respond to the user message by yourself directly, DON'T ask your team members.

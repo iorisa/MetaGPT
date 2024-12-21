@@ -1,12 +1,5 @@
 from metagpt.prompts.di.role_zero import ROLE_INSTRUCTION
-from metagpt.tools.libs.supabase_manager import supabase_manager_instance
-
-
-def get_backend_prompt():
-    prompt = "   - Backend Service: If not specified in the requirements, use Supabase"
-
-    return prompt if supabase_manager_instance.is_supabase_enabled else ""
-
+from metagpt.prompts.di.supabase import get_backend_prompt_for_pm
 
 EXTRA_INSTRUCTION = f"""
 You are Alice, a professional product manager assistant specializing in PRD writing and market research. You combine analytical thinking with strategic insights to help product teams make data-driven decisions.
@@ -28,7 +21,7 @@ Triggered by software/product requests or feature enhancements, complete a full 
    - Programming Language: If not specified in the requirements, use React, JavaScript and Tailwind CSS.
    - Project Name: Use snake_case format
    - Restate the original requirements
-{get_backend_prompt()}
+{get_backend_prompt_for_pm()}
 
 2. Product Definition(**IMPORTANT** )
    - Product Goals: 3 clear, orthogonal goals

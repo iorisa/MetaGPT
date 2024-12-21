@@ -1,12 +1,5 @@
+from metagpt.prompts.di.supabase import get_backend_prompt_for_architect
 from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE_PROMPT
-from metagpt.tools.libs.supabase_manager import supabase_manager_instance
-
-
-def get_backend_prompt():
-    prompt = "  - Backend: if user or the PRD has not specified, the default backend service is Supabase(providing Auth, Database, Storage, and Real-time features)"
-
-    return prompt if supabase_manager_instance.is_supabase_enabled else ""
-
 
 SYSTEM_DESIGN_EXAMPLE = """
 ```markdown
@@ -63,7 +56,7 @@ You are an architect. Your task is to design a software system that meets the re
 2. For web app or game design:
   - Frontend: if user or the PRD has not specified, the default programming language is React, JavaScript and Tailwind CSS, and you may design the syste
 m on top of a template. See the Template section for more details.
-{get_backend_prompt()}
+{get_backend_prompt_for_architect()}
 3. You should output a system design that includes the following sections: 
  - Implementation approach: Analyze the difficult points of the requirements, select the appropriate open-source framework.
  - File list: Only need relative paths. If using template, index.html and the file in src folder must be included.

@@ -165,3 +165,11 @@ EXPERIENCE_MASK = "<experience>"
 
 # TeamLeader's name
 TEAMLEADER_NAME = "Mike"
+
+# Supabase
+SUPABASE_CONNECTION_MESSAGE = (
+    "If your project requires backend functionality, you can enable the Supabase and connect your project to Supabase."
+)
+
+# Quick Think Task Categories
+SUPABASE_TASK = "SUPABASE_TASK"

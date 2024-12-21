@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 
 from metagpt.config2 import Config
 from metagpt.configs.supabase_config import SupabaseConfig
+from metagpt.logs import logger
 from metagpt.tools.tool_registry import register_tool
 from metagpt.utils.ahttp_client import apost
 
@@ -22,6 +23,7 @@ class SupabaseManager(BaseModel):
 
     @property
     def is_supabase_enabled(self) -> bool:
+        logger.debug(f"Supabase enabled: {self.config.enable}")
         return self.config.enable
 
     @property

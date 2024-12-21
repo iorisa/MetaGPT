@@ -1,32 +1,5 @@
+from metagpt.prompts.di.supabase import get_backend_prompt_for_fe
 from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE_PROMPT
-from metagpt.tools.libs.supabase_manager import supabase_manager_instance
-
-SUPABASE_BACKEND_PROMPT = f"""
-Supabase is enabled, use it as the backend service (provides Auth, Database, Storage, and Real-time features).
-
-The Supabase configuration for this project:
-- Project URL: {supabase_manager_instance.config.project_url}
-- Project API Key: {supabase_manager_instance.config.project_key}
-- Session ID: {supabase_manager_instance.config.session_id}
-
-Step 1: Database Schema Management (MANDATORY BEFORE Engineer2.write_new_code)
-Create necessary database tables for this project using SupabaseManager.execute_sql.
-- Note that you DO NOT need to create users table as it is already provided by Supabase in the 'auth' schema (auth.users)
-- Table format: {{app_name}}_{{session_id}}_{{entity_name}}
-- ALWAYS create new tables with current Session ID for new development
-- For incremental development, only use tables matching current Session ID (if needed, use SupabaseManager.get_session_schemas to check tables)
-- ALWAYS use user_email (not user_id) for user identification in tables
-- For row-level security, use auth.jwt() ->> 'email' to match user_email fields, so MUST include user_email in ALL insert operations
-
-Step 2: Supabase Client Integration (MANDATORY BEFORE Engineer2.write_new_code)
-- When using HTML/JavaScript
-   * If using NPM/module imports: Run "pnpm install @supabase/supabase-js"
-"""
-
-
-def get_backend_prompt():
-    return SUPABASE_BACKEND_PROMPT if supabase_manager_instance.is_supabase_enabled else "Supabase is not enabled"
-
 
 FRONTEND_ENGINEER_PROMPT = f"""
 You are a world-class engineer, your goal is to write google-style, elegant, modular, readable, maintainable, fully functional, and ready-for-production code.
@@ -54,7 +27,7 @@ Unless the user or a system design specifies, or an existing repo is provided, y
 {GENERAL_WEB_APP_TEMPLATE_PROMPT}
 
 ## Backend
-{get_backend_prompt()}
+{get_backend_prompt_for_fe()}
 """
 
 FE_EXAPMLE = """
