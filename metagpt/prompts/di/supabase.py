@@ -1,44 +1,4 @@
-from metagpt.const import SUPABASE_TASK
 from metagpt.tools.libs.supabase_manager import supabase_manager_instance
-
-QUICK_THINK_SUPABASE_TASK_PROMPT = """
-
-## SUPABASE_TASK
-For requests that need backend functionality without specifying a backend solution, particularly suitable for Supabase integration. 
-Key indicators include needs for:
-- User authentication/authorization
-- Data storage and CRUD operations
-- Real-time features
-- File storage
-- Simple API endpoints
-
-**Note:** Categorize as SUPABASE_TASK only if ALL conditions are met:
-1. Request requires backend functionality (auth, database, etc.)
-2. No specific backend technology is specified
-3. No explicit rejection of Supabase
-4. Requirements align with Supabase's capabilities
-
-"""
-
-QUICK_THICK_SUPABASE_TASK_EXAMPLE = """
-
-Request: "Create a todo list app with user login and task management"
-Thought: Needs auth and data storage with no specific backend requirement. Supabase can handle this perfectly.
-Response Category: SUPABASE_TASK
-
-Request: "Build a chat app with message history"
-Thought: Requires real-time features and data persistence without specified backend. Suitable for Supabase.
-Response Category: SUPABASE_TASK
-
-Request: "Create a todo app using MySQL and Express.js"
-Thought: Backend solution is explicitly specified as MySQL and Express.js.
-Response Category: TASK
-
-Request: "Build a todo app, but don't use Supabase"
-Thought: Explicitly requests not to use Supabase.
-Response Category: TASK
-
-"""
 
 FE_SUPABASE_PROMPT = f"""
 Supabase is enabled, use it as the backend service (provides Auth, Database, Storage, and Real-time features).
@@ -74,26 +34,6 @@ const {{ data: {{ session }} }} = await supabase.auth.getSession();
 TL_SUPABASE_PROMPT = "12.1 Default backend service is Supabase(providing Auth, Database, Storage, and Real-time features) insead of localStorage."
 PM_SUPABASE_PROMPT = "   - Backend Service: If not specified in the requirements, use Supabase"
 ARCHITECT_SUPABASE_PROMPT = "  - Backend: if user or the PRD has not specified, the default backend service is Supabase (providing Auth, Database, Storage, and Real-time features)"
-
-
-def get_supabase_task_prompt():
-    """Add SUPABASE_TASK intent recognition only if Supabase is not enabled"""
-    return QUICK_THINK_SUPABASE_TASK_PROMPT if not supabase_manager_instance.is_supabase_enabled else ""
-
-
-def get_supabase_task_example():
-    """Add SUPABASE_TASK example only if Supabase is not enabled"""
-    return QUICK_THICK_SUPABASE_TASK_EXAMPLE if not supabase_manager_instance.is_supabase_enabled else ""
-
-
-def get_supabase_task_with_comma():
-    """Add SUPABASE_TASK intent option only if Supabase is not enabled"""
-    return f"{SUPABASE_TASK}, " if not supabase_manager_instance.is_supabase_enabled else ""
-
-
-def get_supabase_task_with_slash():
-    """Add SUPABASE_TASK intent option only if Supabase is not enabled"""
-    return f"{SUPABASE_TASK}/" if not supabase_manager_instance.is_supabase_enabled else ""
 
 
 def get_backend_prompt_for_fe():
