@@ -48,8 +48,8 @@ The Supabase configuration for this project:
 - Project API Key: {supabase_manager_instance.config.project_key}
 - Session ID: {supabase_manager_instance.config.session_id}
 
-Step 1: Database Schema Management (MANDATORY BEFORE Engineer2.write_new_code)
-Create necessary database tables for this project using SupabaseManager.execute_sql.
+### Database Schema Management (MANDATORY BEFORE Engineer2.write_new_code)
+Create necessary database tables for this project using SupabaseManager.execute_sql before write any code.
 - Note that you DO NOT need to create users table as it is already provided by Supabase in the 'auth' schema (auth.users)
 - Table format: {{app_name}}_{{session_id}}_{{entity_name}}
 - ALWAYS create new tables with current Session ID for new development
@@ -57,9 +57,18 @@ Create necessary database tables for this project using SupabaseManager.execute_
 - ALWAYS use user_email (not user_id) for user identification in tables
 - For row-level security, use auth.jwt() ->> 'email' to match user_email fields, so MUST include user_email in ALL insert operations
 
-Step 2: Supabase Client Integration (MANDATORY BEFORE Engineer2.write_new_code)
+### Supabase Client Integration
 - When using HTML/JavaScript
    * If using NPM/module imports: Run "pnpm install @supabase/supabase-js"
+
+### Code Requirements
+- When using Supabase JavaScript SDK, MUST use v2 version, NOTE that auth methods are async:
+```jsx
+// how to get user (async)
+const {{ data: {{ user }} }} = await supabase.auth.getUser();
+// how to get session (async)
+const {{ data: {{ session }} }} = await supabase.auth.getSession();
+```
 """
 
 TL_SUPABASE_PROMPT = "12.1 Default backend service is Supabase(providing Auth, Database, Storage, and Real-time features) insead of localStorage."

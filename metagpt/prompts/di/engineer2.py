@@ -77,17 +77,6 @@ WRITE_CODE_PROMPT = """
 # Instruction
 Your task is to write the files listed in Files to Write. You must ensure the code is complete, correct, and bug-free.
 
-# Code Requirements
-1. When using Supabase JavaScript SDK, MUST use v2 version:
-
-- NOTE that auth methods are async:
-```jsx
-// how to get user (async)
-const {{ data: {{ user }} }} = await supabase.auth.getUser();
-// how to get session (async)
-const {{ data: {{ session }} }} = await supabase.auth.getSession();
-```
-
 # Tool Usage Guide
 When using tools, please adhere to the following guidelines:
 
