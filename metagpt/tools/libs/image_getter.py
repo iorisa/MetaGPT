@@ -12,7 +12,7 @@ from PIL import Image
 from PIL.ImageFile import ImageFile
 from playwright.async_api import Browser as Browser_
 from playwright.async_api import BrowserContext, Page, Playwright, async_playwright
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from metagpt.config2 import Config
 from metagpt.const import DEFAULT_WORKSPACE_ROOT
@@ -273,6 +273,7 @@ class ImageGetter(BaseModel):
     A tool to get/create/process images.
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     image_provider: BaseImageProvider = Field(
         default_factory=UnsplashApi,
         exclude=True,
