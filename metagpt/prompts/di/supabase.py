@@ -68,4 +68,5 @@ def get_backend_prompt_for_architect():
 
 
 def get_supabase_code_requirement():
+    """Return Supabase code requirement only if Supabase is enabled"""
     return SUPABASE_CODE_REQUIREMENT if supabase_manager_instance.is_supabase_enabled else ""
