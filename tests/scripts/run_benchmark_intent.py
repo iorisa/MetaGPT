@@ -46,16 +46,23 @@ from metagpt.actions import UserRequirement
 import copy
 import seaborn as sns
 import matplotlib.pyplot as plt
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 
-input_csv_file = "/root/MetaGPT/intention-test.xlsx"
-output_csv_file = "/root/MetaGPT/intention-test-result.xlsx"
 
 class TeamLeaderForTesting(TeamLeader):
     """Testing class to capture intent_result from quick_think"""
     intent_result: str = ""
     command_rsp: str = ""
     commands: List[Dict] = []  
+
+    async def dummy_search(*args, **kwargs):
+        return None
+
+    def __init__(self):
+        super().__init__()
+        # 禁用搜索SearchEnhancedQA
+        self.tool_execution_map.update({"SearchEnhancedQA.run": self.dummy_search})
+
 
     # parse commands
     async def _act(self) -> Message:
@@ -67,66 +74,13 @@ class TeamLeaderForTesting(TeamLeader):
     
     # get intent result
     async def _quick_think(self) -> Tuple[Message, str]:
-        """Override to capture intent_result and remove  SearchEnhancedQA"""
-        answer = ""
-        rsp_msg = None
-        if self.rc.news[-1].cause_by != any_to_str(UserRequirement):
-            # Agents themselves won't generate quick questions, use this rule to reduce extra llm calls
-            return rsp_msg, ""
-
-        # routing
-        memory = self.get_memories(k=self.memory_k)
-        context = self.llm.format_msg(memory + [UserMessage(content=QUICK_THINK_PROMPT)])
-        async with ThoughtReporter() as reporter:
-            await reporter.async_report({"type": "classify"})
-            intent_result = await self.llm.aask(context, system_msgs=[self.format_quick_system_prompt()])
-        self.intent_result = intent_result
-
-        if "QUICK" in intent_result or "AMBIGUOUS" in intent_result:  # llm call with the original context
-            cleaned_memory = []
-            memory = self.get_memories(k=self.memory_k)
-
-            for element in memory:
-                # deep copy all element
-                copied_element = copy.deepcopy(element)
-
-                # If the answer contains the substring '[Message] from A to B:', remove it.
-                pattern = r"\[Message\] from .+? to .+?:\s*"
-                copied_element.content = re.sub(pattern, "", copied_element.content, count=1)
-                cleaned_memory.append(copied_element)
-
-            # cleaned_memory = self._clean_memory() # deep copy and
-            async with ThoughtReporter(enable_llm_stream=True) as reporter:
-                await reporter.async_report({"type": "quick"})
-                answer = await self.llm.aask(
-                    self.llm.format_msg(cleaned_memory),
-                    system_msgs=[QUICK_RESPONSE_SYSTEM_PROMPT.format(role_info=self._get_prefix())],
-                )
-            # If the answer contains the substring '[Message] from A to B:', remove it.
-            pattern = r"\[Message\] from .+? to .+?:\s*"
-            answer = re.sub(pattern, "", answer, count=1)
-            if "command_name" in answer:
-                # an actual TASK intent misclassified as QUICK, correct it here, FIXME: a better way is to classify it correctly in the first place
-                answer = ""
-                intent_result = "TASK"
-        elif "SEARCH" in intent_result:
-            # 修改search部分，避免搜索工具报错程序停止
-            return Message(content="Search intent detected, but search is skipped for testing"), intent_result
-
-        if answer:
-            self.rc.memory.add(AIMessage(content=answer, cause_by=QUICK_THINK_TAG))
-            await self.reply_to_human(content=answer)
-            rsp_msg = AIMessage(
-                content=answer,
-                sent_from=self.name,
-                cause_by=QUICK_THINK_TAG,
-            )
-
+        rsp_msg, intent_result = await super()._quick_think()
+        self.intent_result = intent_result  
         return rsp_msg, intent_result
-    
 
 
-async def main(requirement="",  use_fixed_sop=False, allow_idle_time=30):
+
+async def run_MGX(requirement="",  use_fixed_sop=False, allow_idle_time=30):
     
     team_leader = TeamLeaderForTesting()
     env = MGXEnv()
@@ -156,11 +110,24 @@ async def main(requirement="",  use_fixed_sop=False, allow_idle_time=30):
         return intent_category, assignees
 
 
+async def process_batch(df_data: pd.DataFrame):
 
+    category_list = []
+    assignees_list = []
 
-def read_intention_test_file(file_path):
-    df = pd.read_excel(file_path)
-    return df
+    for index, row in df_data.iterrows():
+        intent_category, assignees = await run_MGX(requirement=row["requirement"],  use_fixed_sop=False)
+        print(f"intent_category: {intent_category}, assignees: {assignees}")
+        category_list.append(intent_category)
+        assignees_list.append(assignees)
+    df_data['intention_test'] = category_list
+    df_data['assignee_test'] = assignees_list
+
+    # evaluation intention result
+    accuracy = eval_intention(df_data)
+    print(f"\nAccuracy: {accuracy:.2%}")
+    
+    return df_data
 
 
 def eval_intention(df_data):
@@ -195,6 +162,8 @@ def eval_intention(df_data):
         else:
             df_data.at[index, "accurate"] = 0
 
+    accuracy = accuracy_score(y_true, y_pred)
+    df_data['accurate'] = [1 if y_t == y_p else 0 for y_t, y_p in zip(y_true, y_pred)]
 
     print("\n各类别数量统计:")
     for class_name, count in class_counts.items():
@@ -204,10 +173,10 @@ def eval_intention(df_data):
     print("\n实际出现的类别:", actual_classes)
     
    
-    # 计算混淆矩阵
+    # confusion matrix
     cm = confusion_matrix(y_true, y_pred, labels=actual_classes)
     
-    # 创建热力图
+    # create heatmap
     plt.figure(figsize=(8, 6))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
                 xticklabels=actual_classes,
@@ -223,37 +192,34 @@ def eval_intention(df_data):
     print("\n分类报告:")
     print(report)
 
+    return accuracy
+
+
+async def main(input_csv_file, output_csv_file):
+    # read file
+    df_data = pd.read_excel(input_csv_file)
+
+    # run benchmark
+    df_data = await process_batch(df_data)
+
+    # evaluation
+    accuracy = eval_intention(df_data)
+    print(f"\nAccuracy: {accuracy:.2%}")
+    
+    # save result
+    df_data.to_excel(output_csv_file, index=False)
+
 
 
 if __name__ == "__main__":
-    # NOTE: Add access_token to test github issue fixing
+    input_csv_file = "/root/MetaGPT/intent-test.xlsx"
+    output_csv_file = "/root/MetaGPT/intention-test-result5.xlsx"
+
+    # init agentops
     os.environ["access_token"] = "ghp_xxx"
-    # NOTE: Change the requirement to the one you want to test
-    #       Set enable_human_input to True if you want to simulate sending messages in chatbox
     agentops.init(api_key="", auto_start_session=False, skip_auto_end_session=True)
     session = agentops.start_session()
-    benchmark_test_file = input_csv_file
-    df_data = read_intention_test_file(benchmark_test_file)
+    asyncio.run(main(input_csv_file, output_csv_file))
 
-    # save intent_category to excel
-    category_list = []
-    assignees_list = []
-    for index, row in df_data.iterrows():
-        intent_category, assignees = asyncio.run(main(requirement=row["requirement"],  use_fixed_sop=False))
-        print(f"intent_category: {intent_category}, assignees: {assignees}")
-        category_list.append(intent_category)
-        assignees_list.append(assignees)
-    df_data['intention_test'] = category_list
-    df_data['assignee_test'] = assignees_list
-    
-
-    # evaluation intention result
-    eval_intention(df_data)
-    accuracy = (df_data['accurate'] == 1).mean()
-    print(f"\nAccuracy: {accuracy:.2%}")
-    
-    df_data.to_excel(output_csv_file, index=False)
 
     
-    
-
