@@ -27,6 +27,9 @@ from typing import Tuple, List, Dict
 import agentops
 
 from metagpt.environment.mgx.mgx_env import MGXEnv
+from metagpt.roles import Architect, Engineer, ProductManager, ProjectManager
+from metagpt.roles.di.data_analyst import DataAnalyst
+from metagpt.roles.di.engineer2 import Engineer2
 from metagpt.roles.di.team_leader import TeamLeader
 from metagpt.schema import AIMessage, Message, UserMessage
 
@@ -55,13 +58,14 @@ class TeamLeaderForTesting(TeamLeader):
     command_rsp: str = ""
     commands: List[Dict] = []  
 
-    async def dummy_search(*args, **kwargs):
-        return None
 
     def __init__(self):
         super().__init__()
         # 禁用搜索SearchEnhancedQA
-        self.tool_execution_map.update({"SearchEnhancedQA.run": self.dummy_search})
+        self.tool_execution_map.update({
+            "SearchEnhancedQA.run": (lambda *args, **kwargs: None),
+            "TeamLeader.publish_team_message": (lambda *args, **kwargs: None)
+        })
 
 
     # parse commands
@@ -86,7 +90,12 @@ async def run_MGX(requirement="",  use_fixed_sop=False, allow_idle_time=30):
     env = MGXEnv()
     env.add_roles(
         [
-            team_leader
+            team_leader,
+            ProductManager(use_fixed_sop=use_fixed_sop),
+            Architect(use_fixed_sop=use_fixed_sop),
+            ProjectManager(use_fixed_sop=use_fixed_sop),
+            Engineer2(),
+            DataAnalyst(),
         ]
     )
 
@@ -215,10 +224,6 @@ if __name__ == "__main__":
     input_csv_file = "/root/MetaGPT/intent-test.xlsx"
     output_csv_file = "/root/MetaGPT/intention-test-result5.xlsx"
 
-    # init agentops
-    os.environ["access_token"] = "ghp_xxx"
-    agentops.init(api_key="", auto_start_session=False, skip_auto_end_session=True)
-    session = agentops.start_session()
     asyncio.run(main(input_csv_file, output_csv_file))
 
 
