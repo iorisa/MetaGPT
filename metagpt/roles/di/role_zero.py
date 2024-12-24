@@ -421,7 +421,8 @@ class RoleZero(Role):
                 intent_result = "TASK"
         elif "SEARCH" in intent_result:
             query = "\n".join(str(msg) for msg in memory)
-            answer = await SearchEnhancedQA().run(query)
+            # answer = await SearchEnhancedQA().run(query)
+            answer = await self.tool_execution_map["SearchEnhancedQA.run"](query)
 
         if answer:
             self.rc.memory.add(AIMessage(content=answer, cause_by=QUICK_THINK_TAG))
