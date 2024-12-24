@@ -131,10 +131,6 @@ async def process_batch(df_data: pd.DataFrame):
         assignees_list.append(assignees)
     df_data['intention_test'] = category_list
     df_data['assignee_test'] = assignees_list
-
-    # evaluation intention result
-    accuracy = eval_intention(df_data)
-    print(f"\nAccuracy: {accuracy:.2%}")
     
     return df_data
 
