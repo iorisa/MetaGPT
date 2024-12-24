@@ -3,37 +3,48 @@ from metagpt.tools.libs.supabase_manager import supabase_manager_instance
 FE_SUPABASE_PROMPT = f"""
 Supabase is enabled, use it as the backend service (provides Auth, Database, Storage, and Real-time features).
 
-The Supabase configuration for this project:
+Supabase Configuration:
 - Project URL: {supabase_manager_instance.config.project_url}
 - Project API Key: {supabase_manager_instance.config.project_key}
 - Session ID: {supabase_manager_instance.config.session_id}
 
-### Database Schema Management (MANDATORY BEFORE Engineer2.write_new_code)
-Create necessary database tables for this project using SupabaseManager.execute_sql before write any code.
+### CRITICAL: Follow These Steps in Order:
+
+For New Project Development:
+1. Database First: Create all necessary tables using SupabaseManager.execute_sql
+2. Install Dependencies:
+   - MUST run: `pnpm install @supabase/supabase-js`
+   - This step is REQUIRED before writing any Supabase-related code
+
+For Incremental Development:
+1. Database Changes (if needed):
+   - Check existing tables using SupabaseManager.get_session_schemas
+   - Create new tables or modify existing ones as needed
+
+### Table Management Rules
 - Note that you DO NOT need to create users table as it is already provided by Supabase in the 'auth' schema (auth.users)
 - Table format: {{app_name}}_{{session_id}}_{{entity_name}}
-- ALWAYS create new tables with current Session ID for new development
-- For incremental development, only use tables matching current Session ID (if needed, use SupabaseManager.get_session_schemas to check tables)
 - ALWAYS use user_email (not user_id) for user identification in tables
 - For row-level security, use auth.jwt() ->> 'email' to match user_email fields, so MUST include user_email in ALL insert operations
-
-### Supabase Client Integration
-- When using HTML/JavaScript
-   * If using NPM/module imports: Run "pnpm install @supabase/supabase-js"
-
-### Code Requirements
-- When using Supabase JavaScript SDK, MUST use v2 version, NOTE that auth methods are async:
-```jsx
-// how to get user (async)
-const {{ data: {{ user }} }} = await supabase.auth.getUser();
-// how to get session (async)
-const {{ data: {{ session }} }} = await supabase.auth.getSession();
-```
 """
-
 TL_SUPABASE_PROMPT = "12.1 Default backend service is Supabase(providing Auth, Database, Storage, and Real-time features) insead of localStorage."
 PM_SUPABASE_PROMPT = "   - Backend Service: If not specified in the requirements, use Supabase"
 ARCHITECT_SUPABASE_PROMPT = "  - Backend: if user or the PRD has not specified, the default backend service is Supabase (providing Auth, Database, Storage, and Real-time features)"
+
+SUPABASE_CODE_REQUIREMENT = """
+
+# Code Requirements
+1. When using Supabase JavaScript SDK, MUST use v2 version:
+
+- NOTE that getSession and getUser methods are async, THIS IS CRUCIAL for proper user and session handling:
+```jsx
+// how to get session (async)
+const {{ data: {{ session }} }} = await supabase.auth.getSession();
+// how to get user (async)
+const {{ data: {{ user }} }} = await supabase.auth.getUser();
+```
+
+"""
 
 
 def get_backend_prompt_for_fe():
@@ -54,3 +65,7 @@ def get_backend_prompt_for_pm():
 def get_backend_prompt_for_architect():
     """Allow architect to specify Supabase as the backend service only if Supabase is enabled"""
     return ARCHITECT_SUPABASE_PROMPT if supabase_manager_instance.is_supabase_enabled else ""
+
+
+def get_supabase_code_requirement():
+    return SUPABASE_CODE_REQUIREMENT if supabase_manager_instance.is_supabase_enabled else ""

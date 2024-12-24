@@ -76,7 +76,7 @@ WRITE_CODE_PROMPT = """
 
 # Instruction
 Your task is to write the files listed in Files to Write. You must ensure the code is complete, correct, and bug-free.
-
+{supabase_code_requirement}
 # Tool Usage Guide
 When using tools, please adhere to the following guidelines:
 

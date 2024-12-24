@@ -8,6 +8,7 @@ from pydantic import Field, model_validator
 
 from metagpt.logs import logger
 from metagpt.prompts.di.engineer2 import ENGINEER2_INSTRUCTION, WRITE_CODE_PROMPT
+from metagpt.prompts.di.supabase import get_supabase_code_requirement
 from metagpt.roles.di.role_zero import RoleZero
 from metagpt.schema import UserMessage
 from metagpt.strategy.experience_retriever import ENGINEER_EXAMPLE
@@ -174,6 +175,7 @@ class Engineer2(RoleZero):
             file_path=paths,
             file_description=description,
             available_code_tools=code_tool_info,
+            supabase_code_requirement=get_supabase_code_requirement(),
         )
         # Sometimes the Engineer repeats the last command to respond.
         # Replace the last command with a manual prompt to guide the Engineer to write new code.
