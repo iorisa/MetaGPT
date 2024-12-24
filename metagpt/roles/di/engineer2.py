@@ -134,6 +134,10 @@ class Engineer2(RoleZero):
         tool_call_pattern = r"(?:\$)?<tool_call>[\s\S]*?[\s\S]</tool_call>"
         tool_calls = re.findall(tool_call_pattern, code)
 
+        # Check the tool whether available
+        if not ImageGetter.is_available():
+            return code
+
         async def execute_tool(tool_call: str):
             # Extract just the function call part
             tool_name_str = r"|".join(self.code_tool_execution_list)

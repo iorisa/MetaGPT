@@ -16,7 +16,6 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from metagpt.config2 import Config
 from metagpt.const import DEFAULT_WORKSPACE_ROOT
-from metagpt.logs import logger
 from metagpt.provider.base_llm import BaseLLM
 from metagpt.provider.openai_api import OpenAILLM
 from metagpt.tools.tool_registry import register_tool
@@ -291,7 +290,7 @@ class ImageGetter(BaseModel):
             elif config.pixabay_api_key:
                 self.image_provider = PixabayAPI()
             else:
-                logger.warning("No image provider configured. Please set either unsplash_api_key or pixabay_api_key.")
+                raise ValueError("No image provider configured. Please set either unsplash_api_key or pixabay_api_key.")
         return self
 
     @classmethod
