@@ -18,5 +18,13 @@ async def test_terminal():
     assert output.strip() == str(DATA_PATH)
 
 
+@pytest.mark.asyncio
+async def test_terminal_switch_tab():
+    terminal = Terminal()
+    output = await terminal._read_and_process_output("echo abc && sleep 60", timeout=5)
+    assert "abc" in output
+    assert len(terminal.tabs) == 2
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-s"])

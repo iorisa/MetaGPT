@@ -1,8 +1,9 @@
 import asyncio
 import os
 import re
+import time
 from asyncio import Queue
-from asyncio.subprocess import PIPE, STDOUT
+from asyncio.subprocess import PIPE, STDOUT, Process
 from pathlib import Path
 from typing import Optional, Union
 
@@ -12,8 +13,14 @@ from metagpt.logs import logger
 from metagpt.tools.tool_registry import register_tool
 from metagpt.utils.report import END_MARKER_VALUE, TerminalReporter
 
+DETACH_PROMPT = """
+The command is running in detach at tab {detached_tab_id}, currently with output: {output_so_far}
+New tab info: {new_tab_info}
+You may operate on the new tab, or switch back to the detached tab {detached_tab_id} and input command using switch_tab plus run_command
+"""
 
-@register_tool(include_functions=["run_command"])
+
+@register_tool(include_functions=["run_command", "switch_tab"])
 class Terminal:
     """
     A tool for running terminal commands.
@@ -27,7 +34,10 @@ class Terminal:
         self.command_terminator = "\n"
         self.stdout_queue = Queue(maxsize=1000)
         self.observer = TerminalReporter()
-        self.process: Optional[asyncio.subprocess.Process] = None
+        self.tabs: Optional[dict[str, Process]] = {}
+        self.current_tab_id: str = ""
+        self.process: Optional[Process] = None  # process of the current tab
+        self.tab_stdout_queue: dict[str, Queue] = {}
         #  The cmd in forbidden_terminal_commands will be replace by pass ana return the advise. example:{"cmd":"forbidden_reason/advice"}
         self.forbidden_commands = {
             "run dev": "Use Deployer.deploy_to_public instead.",
@@ -39,7 +49,7 @@ class Terminal:
 
     async def _start_process(self):
         # Start a persistent shell process
-        self.process = await asyncio.create_subprocess_exec(
+        process = await asyncio.create_subprocess_exec(
             *self.shell_command,
             stdin=PIPE,
             stdout=PIPE,
@@ -48,14 +58,32 @@ class Terminal:
             env=os.environ.copy(),
             cwd=DEFAULT_WORKSPACE_ROOT.absolute(),
         )
-        await self._check_state()
+        return process
+
+    def switch_tab(self, tab_id: str = "") -> str:
+        if tab_id in self.tabs:
+            self.process = self.tabs[tab_id]
+            self.current_tab_id = tab_id
+            tab_new_output = self._read_background_output()
+            return f"Switched to tab {tab_id}, the tab has new output: {tab_new_output}"
+        return f"Tab {tab_id} not found, created tabs are {list(self.tabs.keys())}"
+
+    async def _create_new_tab(self) -> str:
+        process = await self._start_process()
+        tab_id = f"{len(self.tabs):02}"
+        self.tabs = {tab_id: process}
+        self.switch_tab(tab_id)
+        self.current_tab_id = tab_id
+        pwd = await self._check_state()
+        return f"Tab {tab_id} created and switched to successfully, with pwd at {pwd}"
 
     async def _check_state(self):
         """
         Check the state of the terminal, e.g. the current directory of the terminal process. Useful for agent to understand.
         """
         output = await self.run_command("pwd")
-        logger.info("The terminal is at:", output)
+        logger.info(f"The terminal is at: {output}")
+        return output
 
     async def run_command(self, cmd: str, daemon=False) -> str:
         """
@@ -72,7 +100,7 @@ class Terminal:
                  when `daemon` is True, use the `get_stdout_output` method to get the output.
         """
         if self.process is None:
-            await self._start_process()
+            await self._create_new_tab()
 
         output = ""
         # Remove forbidden commands
@@ -127,20 +155,26 @@ class Terminal:
         cmd = f"conda run -n {env} {cmd}"
         return await self.run_command(cmd, daemon=daemon)
 
-    async def get_stdout_output(self) -> str:
+    async def _read_background_output(self) -> str:
         """
         Retrieves all collected output from background running commands and returns it as a string.
 
         Returns:
             str: The collected output from background running commands, returned as a string.
         """
-        output_lines = []
-        while not self.stdout_queue.empty():
-            line = await self.stdout_queue.get()
-            output_lines.append(line)
-        return "\n".join(output_lines)
+        tmp = []
+        while True:
+            new_output = b""
+            try:
+                # Set a timeout for the read operation
+                new_output = await asyncio.wait_for(self.process.stdout.read(1), timeout=1)
+                tmp.append(new_output)
+            except asyncio.TimeoutError:
+                print("No more data to read")
+                break
+        return b"".join(tmp).decode()
 
-    async def _read_and_process_output(self, cmd, daemon=False) -> str:
+    async def _read_and_process_output(self, cmd: str, daemon: bool = False, timeout: int = 20) -> str:
         async with self.observer as observer:
             cmd_output = []
             await observer.async_report(cmd + self.command_terminator, "cmd")
@@ -148,14 +182,36 @@ class Terminal:
             # Read the output until the unique marker is found.
             # We read bytes directly from stdout instead of text because when reading text,
             # '\r' is changed to '\n', resulting in excessive output.
-            tmp = b""
+            start_time = time.time()
+            tmp = []
             while True:
-                output = tmp + await self.process.stdout.read(1)
-                if not output:
-                    continue
-                *lines, tmp = output.splitlines(True)
-                for line in lines:
-                    line = line.decode()
+                new_output = b""
+                try:
+                    # Set a timeout for the read operation
+                    new_output = await asyncio.wait_for(self.process.stdout.read(1), timeout=timeout)
+                except asyncio.TimeoutError:
+                    logger.info("No more output, detached from current tab and switched to a new tab")
+
+                if not new_output:
+                    if time.time() - start_time > timeout:
+                        output_so_far = "".join(cmd_output) + b"".join(tmp).decode()
+                        detached_tab_id = self.current_tab_id
+                        new_tab_info = await self._create_new_tab()
+                        instruction = DETACH_PROMPT.format(
+                            detached_tab_id=detached_tab_id,
+                            output_so_far=output_so_far,
+                            new_tab_info=new_tab_info,
+                        )
+                        return instruction
+                    else:
+                        continue
+                start_time = time.time()  # has output, reset start time
+
+                tmp.append(new_output)
+                if new_output == b"\n":
+                    # each time gather a full line, record and report it, and reset the tmp holder
+                    line = b"".join(tmp).decode()
+                    tmp = []
                     ix = line.rfind(END_MARKER_VALUE)
                     if ix >= 0:
                         line = line[0:ix]
@@ -166,6 +222,7 @@ class Terminal:
                         return "".join(cmd_output)
                     # log stdout in real-time
                     await observer.async_report(line, "output")
+                    # print(line)
                     cmd_output.append(line)
                     if daemon:
                         await self.stdout_queue.put(line)
