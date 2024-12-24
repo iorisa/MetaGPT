@@ -24,7 +24,16 @@ import os
 import re
 from typing import Tuple, List, Dict
 
-import agentops
+from metagpt.actions.search_enhanced_qa import SearchEnhancedQA
+# 重写 SearchEnhancedQA
+class MockSearchEnhancedQA(SearchEnhancedQA):
+    async def run(self, query: str, rewrite_query: bool = True) -> str:
+        """直接返回空字符串，不执行任何操作"""
+        return ""
+
+import metagpt.actions.search_enhanced_qa
+metagpt.actions.search_enhanced_qa.SearchEnhancedQA = MockSearchEnhancedQA
+
 
 from metagpt.environment.mgx.mgx_env import MGXEnv
 from metagpt.roles import Architect, Engineer, ProductManager, ProjectManager
@@ -50,6 +59,8 @@ import copy
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+from pydantic import model_validator
+
 
 
 class TeamLeaderForTesting(TeamLeader):
@@ -58,12 +69,11 @@ class TeamLeaderForTesting(TeamLeader):
     command_rsp: str = ""
     commands: List[Dict] = []  
 
+    # async
 
     def __init__(self):
         super().__init__()
-        # 禁用搜索SearchEnhancedQA
         self.tool_execution_map.update({
-            "SearchEnhancedQA.run": (lambda *args, **kwargs: None),
             "TeamLeader.publish_team_message": (lambda *args, **kwargs: None)
         })
 
@@ -145,39 +155,22 @@ def eval_intention(df_data):
     }
     y_true = [] 
     y_pred = [] 
-    class_counts = {
-        "TASK": 0,
-        "QUICK": 0,
-        "SEARCH": 0,
-        "AMBIGUOUS": 0
-    }
     
     for index, row in df_data.iterrows():
         int_intent = int(row["intention"])
         ground_truth = INTENTION_MAP.get(str(int_intent), "UNKNOWN")
         test_result = row["intention_test"]
 
-        class_counts[ground_truth] += 1
         
         y_true.append(ground_truth)
         y_pred.append(test_result)
         
-        if ground_truth == test_result:
-            df_data.at[index, "accurate"] = 1
-        else:
-            df_data.at[index, "accurate"] = 0
+    # 标签列，查看每个intention是否预测正确
 
-    accuracy = accuracy_score(y_true, y_pred)
-    df_data['accurate'] = [1 if y_t == y_p else 0 for y_t, y_p in zip(y_true, y_pred)]
+    df_data['intention_accurate'] = (df_data['intention_test'] == y_true).astype(int)
 
-    print("\n各类别数量统计:")
-    for class_name, count in class_counts.items():
-        print(f"{class_name}: {count}条")
-     
     actual_classes = sorted(set(y_true + y_pred))
-    print("\n实际出现的类别:", actual_classes)
-    
-   
+
     # confusion matrix
     cm = confusion_matrix(y_true, y_pred, labels=actual_classes)
     
@@ -197,19 +190,17 @@ def eval_intention(df_data):
     print("\n分类报告:")
     print(report)
 
-    return accuracy
 
 
 async def main(input_csv_file, output_csv_file):
     # read file
-    df_data = pd.read_excel(input_csv_file)
+    df_data = pd.read_excel(input_csv_file).iloc[100:102].copy()
 
     # run benchmark
     df_data = await process_batch(df_data)
 
     # evaluation
-    accuracy = eval_intention(df_data)
-    print(f"\nAccuracy: {accuracy:.2%}")
+    eval_intention(df_data)
     
     # save result
     df_data.to_excel(output_csv_file, index=False)
@@ -218,7 +209,7 @@ async def main(input_csv_file, output_csv_file):
 
 if __name__ == "__main__":
     input_csv_file = "/root/MetaGPT/intent-test.xlsx"
-    output_csv_file = "/root/MetaGPT/intention-test-result5.xlsx"
+    output_csv_file = "/root/MetaGPT/intention-test-result3.xlsx"
 
     asyncio.run(main(input_csv_file, output_csv_file))
 
