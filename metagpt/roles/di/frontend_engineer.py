@@ -6,6 +6,7 @@ from pydantic import model_validator
 
 from metagpt.logs import logger
 from metagpt.prompts.di.frontend_engineer import FE_EXAPMLE, FRONTEND_ENGINEER_PROMPT
+from metagpt.prompts.di.supabase import get_backend_prompt_for_fe
 from metagpt.prompts.di.template import (
     EXRTA_INFO_PROMPT,
     GENERAL_WEB_APP_TEMPLATE_PROMPT,
@@ -23,7 +24,6 @@ _ = FixedSearchTemplate  # avoid pre-commit error
 
 # @track_agent("FrontendEngineer")
 class FrontendEngineer(Engineer2):
-    instruction: str = FRONTEND_ENGINEER_PROMPT
     tools: list[str] = [
         "Editor:read,write,edit_file_by_replace,append_file",
         "RoleZero",
@@ -31,6 +31,7 @@ class FrontendEngineer(Engineer2):
         "SearchEnhancedQA",
         "Deployer",
         "Engineer2",
+        "SupabaseManager",
         "Browser:click,goto,scroll",
         # "UserInfoParser",
     ]
@@ -53,6 +54,10 @@ class FrontendEngineer(Engineer2):
         return self
 
     async def _think(self) -> bool:
+        self.instruction = FRONTEND_ENGINEER_PROMPT.format(
+            template_info=GENERAL_WEB_APP_TEMPLATE_PROMPT, backend_info=get_backend_prompt_for_fe()
+        )
+
         # Check if the latest message is a development request
         send_msg = self.rc.memory.get()
 

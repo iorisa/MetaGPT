@@ -8,6 +8,7 @@ from pydantic import Field, model_validator
 
 from metagpt.logs import logger
 from metagpt.prompts.di.engineer2 import ENGINEER2_INSTRUCTION, WRITE_CODE_PROMPT
+from metagpt.prompts.di.supabase import get_supabase_code_requirement
 from metagpt.roles.di.role_zero import RoleZero
 from metagpt.schema import UserMessage
 from metagpt.strategy.experience_retriever import ENGINEER_EXAMPLE
@@ -16,6 +17,7 @@ from metagpt.tools.libs.deployer import Deployer
 from metagpt.tools.libs.editor import FileBlock
 from metagpt.tools.libs.git import git_create_pull
 from metagpt.tools.libs.image_getter import ImageGetter
+from metagpt.tools.libs.supabase_manager import supabase_manager_instance
 from metagpt.tools.libs.terminal import Terminal
 from metagpt.tools.tool_recommend import BM25ToolRecommender, ToolRecommender
 from metagpt.tools.tool_registry import register_tool
@@ -43,6 +45,7 @@ class Engineer2(RoleZero):
         "Engineer2",
         "CodeReview",
         "Deployer",
+        "SupabaseManager",
         # "UserInfoParser",
     ]
 
@@ -82,37 +85,30 @@ class Engineer2(RoleZero):
         self.editor.set_workdir(self.working_dir)
 
     def _update_tool_execution(self):
-        # validate = ValidateAndRewriteCode()
         cr = CodeReview()
-        # up = UserInfoParser()
-        if self.run_eval is True:
-            # Evalute tool map
-            self.tool_execution_map.update(
+
+        tool_execution = {
+            "git_create_pull": git_create_pull,
+            "Engineer2.write_new_code": self.write_new_code,
+            "CodeReview.review": cr.review,
+            "CodeReview.fix": cr.fix,
+            "Terminal.run_command": self.terminal.run_command,
+            "Deployer.deploy_to_public": self._deploy_to_public,
+            "SupabaseManager.execute_sql": supabase_manager_instance.execute_sql,
+            "SupabaseManager.get_session_schemas": supabase_manager_instance.get_session_schemas,
+        }
+
+        # Add additional tools only in evaluation mode
+        if self.run_eval:
+            tool_execution.update(
                 {
-                    "git_create_pull": git_create_pull,
-                    "Engineer2.write_new_code": self.write_new_code,
-                    "CodeReview.review": cr.review,
-                    "CodeReview.fix": cr.fix,
-                    "Terminal.run_command": self._eval_terminal_run,
                     "RoleZero.ask_human": self._end,
                     "RoleZero.reply_to_human": self._end,
-                    "Deployer.deploy_to_public": self._deploy_to_public,
-                    # "UserInfoParser.get": up.get,
+                    "Terminal.run_command": self._eval_terminal_run,  # Override terminal command in eval mode
                 }
             )
-        else:
-            # Default tool map
-            self.tool_execution_map.update(
-                {
-                    "git_create_pull": git_create_pull,
-                    "Engineer2.write_new_code": self.write_new_code,
-                    "CodeReview.review": cr.review,
-                    "CodeReview.fix": cr.fix,
-                    "Terminal.run_command": self.terminal.run_command,
-                    "Deployer.deploy_to_public": self._deploy_to_public,
-                    # "UserInfoParser.get": up.get,
-                }
-            )
+
+        self.tool_execution_map.update(tool_execution)
 
     def _retrieve_experience(self) -> str:
         return ENGINEER_EXAMPLE
@@ -179,6 +175,7 @@ class Engineer2(RoleZero):
             file_path=paths,
             file_description=description,
             available_code_tools=code_tool_info,
+            supabase_code_requirement=get_supabase_code_requirement(),
         )
         # Sometimes the Engineer repeats the last command to respond.
         # Replace the last command with a manual prompt to guide the Engineer to write new code.

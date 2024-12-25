@@ -40,6 +40,7 @@ Note:
 10. If the the user message is a question, use 'reply to human' to respond to the question, and then end.
 11. Instructions and reply must be in the same language.
 12. Default technology stack is React, JavaScript and Tailwind CSS. Web app is the default option when developing software. If using these technology stacks, ask the engineer to delopy the web app after project completion.
+{backend_info}
 13. You are the only one who decides the programming language for the software, so the instruction must contain the programming language.
 14. Data collection and web/software development are two separate tasks. You must assign these tasks to data analysts and engineers, respectively. Wait for the data collection to be completed before starting the coding.
 15. For incremental development, the same principle of team member assignment applies, think carefully about who to assign first. This could possibly involve multiple members.

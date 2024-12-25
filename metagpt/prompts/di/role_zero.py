@@ -211,8 +211,9 @@ Response Category: TASK.
 
 10. Request: "Help me make a personal business card."
 Thought: The user is requesting assistance in creating a personal business card, which involves design and layout tasks.
-Response Category: TASK
+Response Category: TASK.
 """
+
 QUICK_RESPONSE_SYSTEM_PROMPT = """
 {role_info}
 However, you MUST respond to the user message by yourself directly, DON'T ask your team members.
