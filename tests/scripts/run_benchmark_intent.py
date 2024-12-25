@@ -22,6 +22,7 @@
 
 import asyncio
 from typing import Dict, List, Tuple
+from unittest.mock import AsyncMock, patch
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -35,6 +36,8 @@ from metagpt.roles.di.engineer2 import Engineer2
 from metagpt.roles.di.team_leader import TeamLeader
 from metagpt.schema import Message
 
+mock_search = AsyncMock(return_value="jump SearchEnhancedQA")
+
 
 class TeamLeaderForTesting(TeamLeader):
     """Testing class to capture intent_result from quick_think"""
@@ -43,17 +46,11 @@ class TeamLeaderForTesting(TeamLeader):
     command_rsp: str = ""
     commands: List[Dict] = []
 
-    # make async function to mock SearchEnhancedQA.run
-    async def dummy_search(self, *args, **kwargs):
-        await asyncio.sleep(0)
-        return "jump SearchEnhancedQA"
-
     def __init__(self):
         super().__init__()
         self.tool_execution_map.update(
             {
                 "TeamLeader.publish_team_message": (lambda *args, **kwargs: None),
-                "SearchEnhancedQA.run": (self.dummy_search),
             }
         )
 
@@ -71,37 +68,36 @@ class TeamLeaderForTesting(TeamLeader):
         return rsp_msg, intent_result
 
 
-async def run_MGX(requirement="", use_fixed_sop=False, allow_idle_time=30):
+@patch("metagpt.actions.search_enhanced_qa.SearchEnhancedQA.run", mock_search)
+async def run_MGX(requirement=""):
     team_leader = TeamLeaderForTesting()
     env = MGXEnv()
     env.add_roles(
         [
             team_leader,
-            ProductManager(use_fixed_sop=use_fixed_sop),
-            Architect(use_fixed_sop=use_fixed_sop),
-            ProjectManager(use_fixed_sop=use_fixed_sop),
+            ProductManager(),
+            Architect(),
+            ProjectManager(),
             Engineer2(),
             DataAnalyst(),
         ]
     )
 
-    if requirement:
-        env.publish_message(Message(content=requirement))
-        await env.run()
+    env.publish_message(Message(content=requirement))
+    await env.run()
 
-        intent_category = ""
-        if team_leader.intent_result and "Response Category:" in team_leader.intent_result:
-            intent_category = team_leader.intent_result.split("Response Category:")[1].strip().split("\n")[0]
-        # check commands
-        print(f"-------------------------commands{team_leader.commands}")
-        assignees = None
-        if team_leader.commands:
-            assignees = set()
-            for cmd in team_leader.commands:
-                if cmd["command_name"] == "Plan.append_task":
-                    assignees.add(cmd["args"]["assignee"])
+    intent_category = ""
+    if team_leader.intent_result and "Response Category:" in team_leader.intent_result:
+        intent_category = team_leader.intent_result.split("Response Category:")[1].strip().split("\n")[0]
+    # check commands
+    print(f"-------------------------commands{team_leader.commands}")
+    assignees = None
+    for cmd in team_leader.commands:
+        assignees = set()
+        if cmd["command_name"] == "Plan.append_task":
+            assignees.add(cmd["args"]["assignee"])
 
-        return intent_category, assignees
+    return intent_category, assignees
 
 
 async def process_batch(df_data: pd.DataFrame):
@@ -109,7 +105,7 @@ async def process_batch(df_data: pd.DataFrame):
     assignees_list = []
 
     for index, row in df_data.iterrows():
-        intent_category, assignees = await run_MGX(requirement=row["requirement"], use_fixed_sop=False)
+        intent_category, assignees = await run_MGX(requirement=row["requirement"])
         print(f"intent_category: {intent_category}, assignees: {assignees}")
         category_list.append(intent_category)
         assignees_list.append(assignees)
@@ -134,9 +130,9 @@ def eval_intention(df_data):
         y_pred.append(test_result)
 
     # 标签列，查看每个intention是否预测正确
-
     df_data["intention_accurate"] = (df_data["intention_test"] == y_true).astype(int)
 
+    # intention的可能值
     actual_classes = sorted(set(y_true + y_pred))
 
     # confusion matrix
@@ -159,7 +155,7 @@ def eval_intention(df_data):
 
 async def main(input_csv_file, output_csv_file):
     # read file
-    df_data = pd.read_excel(input_csv_file).iloc[100:102].copy()
+    df_data = pd.read_excel(input_csv_file)
 
     # run benchmark
     df_data = await process_batch(df_data)
@@ -173,6 +169,6 @@ async def main(input_csv_file, output_csv_file):
 
 if __name__ == "__main__":
     input_csv_file = "/root/MetaGPT/intent-test.xlsx"
-    output_csv_file = "/root/MetaGPT/intention-test-result3.xlsx"
+    output_csv_file = "/root/MetaGPT/intention-test-result.xlsx"
 
     asyncio.run(main(input_csv_file, output_csv_file))
