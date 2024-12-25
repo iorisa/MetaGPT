@@ -45,12 +45,8 @@ class TeamLeaderForTesting(TeamLeader):
     commands: List[Dict] = []
     assignees: set = set()
 
-    def _update_tool_execution(self):
-        self.tool_execution_map.update(
-            {
-                "TeamLeader.publish_team_message": (lambda *args, **kwargs: None),
-            }
-        )
+    def publish_team_message(self, content: str, send_to: str):
+        self._set_state(-1)
 
     # parse commands
     async def _act(self) -> Message:
@@ -61,7 +57,7 @@ class TeamLeaderForTesting(TeamLeader):
 
     # get intent result, mock SearchEnhancedQA.run
     async def _quick_think(self) -> Tuple[Message, str]:
-        mock_search = AsyncMock(return_value="jump SearchEnhancedQA")
+        mock_search = AsyncMock(return_value="skip SearchEnhancedQA")
         # 使用 with patch 来 mock SearchEnhancedQA.run
         with patch("metagpt.actions.search_enhanced_qa.SearchEnhancedQA.run", mock_search):
             rsp_msg, intent_result = await super()._quick_think()
@@ -89,16 +85,11 @@ async def run_mgx(requirement=""):
     intent_category = ""
     if team_leader.intent_result and "Response Category:" in team_leader.intent_result:
         intent_category = team_leader.intent_result.split("Response Category:")[1].strip().split("\n")[0]
-    # check commands
-    print(f"-------------------------commands{team_leader.commands}")
+    # get assignees
     assignees = (
-        set(
-            cmd["args"]["send_to"]
-            for cmd in team_leader.commands
-            if cmd["command_name"] == "TeamLeader.publish_team_message"
-        )
-        | set(cmd["args"]["assignee"] for cmd in team_leader.commands if cmd["command_name"] == "Plan.append_task")
-    ) or None
+        set(cmd["args"]["assignee"] for cmd in team_leader.commands if cmd["command_name"] == "Plan.append_task")
+        or None
+    )
 
     return intent_category, assignees
 
@@ -150,7 +141,7 @@ def eval_intention(df_data):
 
 async def main(input_csv_file, output_csv_file):
     # read file
-    df_data = pd.read_excel(input_csv_file)
+    df_data = pd.read_excel(input_csv_file).iloc[103:104].copy()
     # get prediction
     df_data = await process_batch(df_data)
 
