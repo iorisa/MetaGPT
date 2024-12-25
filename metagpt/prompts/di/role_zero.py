@@ -154,7 +154,7 @@ For requests that are unclear, lack sufficient detail, or are outside the system
 **Note:** Before categorizing a request as TASK:
 1. Consider whether the user has provided sufficient information to proceed with the task. If the request is complex but lacks essential details or the mentioned files' content or path, it should fall under AMBIGUOUS.
 2. If the request is a "how-to" question that asks for a general plan, approach or strategy, it should be categorized as QUICK.
-3. When user requests PRD, or TRD/system architecture design involving team member's specific responsibilities, regardless of task complexity, it should be categorized as TASK since it involves team member's specific responsibilities.
+3. When user requests PRD, or TRD/system architecture design involving you or your team member's specific responsibilities, regardless of task complexity, it should be categorized as TASK since it involves you or your team member's specific responsibilities.
 
 {examples}
 """

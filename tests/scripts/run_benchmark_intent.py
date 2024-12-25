@@ -36,8 +36,6 @@ from metagpt.roles.di.engineer2 import Engineer2
 from metagpt.roles.di.team_leader import TeamLeader
 from metagpt.schema import Message
 
-mock_search = AsyncMock(return_value="jump SearchEnhancedQA")
-
 
 class TeamLeaderForTesting(TeamLeader):
     """Testing class to capture intent_result from quick_think"""
@@ -46,8 +44,7 @@ class TeamLeaderForTesting(TeamLeader):
     command_rsp: str = ""
     commands: List[Dict] = []
 
-    def __init__(self):
-        super().__init__()
+    def _update_tool_execution(self):
         self.tool_execution_map.update(
             {
                 "TeamLeader.publish_team_message": (lambda *args, **kwargs: None),
@@ -61,15 +58,17 @@ class TeamLeaderForTesting(TeamLeader):
             self.commands = commands
         return await super()._act()
 
-    # get intent result
+    # get intent result, mock SearchEnhancedQA.run
     async def _quick_think(self) -> Tuple[Message, str]:
-        rsp_msg, intent_result = await super()._quick_think()
-        self.intent_result = intent_result
-        return rsp_msg, intent_result
+        mock_search = AsyncMock(return_value="jump SearchEnhancedQA")
+        # 使用 with patch 来 mock SearchEnhancedQA.run
+        with patch("metagpt.actions.search_enhanced_qa.SearchEnhancedQA.run", mock_search):
+            rsp_msg, intent_result = await super()._quick_think()
+            self.intent_result = intent_result
+            return rsp_msg, intent_result
 
 
-@patch("metagpt.actions.search_enhanced_qa.SearchEnhancedQA.run", mock_search)
-async def run_MGX(requirement=""):
+async def run_mgx(requirement=""):
     team_leader = TeamLeaderForTesting()
     env = MGXEnv()
     env.add_roles(
@@ -105,7 +104,7 @@ async def process_batch(df_data: pd.DataFrame):
     assignees_list = []
 
     for index, row in df_data.iterrows():
-        intent_category, assignees = await run_MGX(requirement=row["requirement"])
+        intent_category, assignees = await run_mgx(requirement=row["requirement"])
         print(f"intent_category: {intent_category}, assignees: {assignees}")
         category_list.append(intent_category)
         assignees_list.append(assignees)
@@ -155,9 +154,9 @@ def eval_intention(df_data):
 
 async def main(input_csv_file, output_csv_file):
     # read file
-    df_data = pd.read_excel(input_csv_file)
+    df_data = pd.read_excel(input_csv_file).iloc[96:98].copy()
 
-    # run benchmark
+    # get prediction
     df_data = await process_batch(df_data)
 
     # evaluation
