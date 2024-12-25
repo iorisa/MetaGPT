@@ -68,5 +68,8 @@ def get_backend_prompt_for_architect():
 
 
 def get_supabase_code_requirement():
-    """Return Supabase code requirement only if Supabase is enabled"""
+    """Return Supabase code requirement only if Supabase is enabled.
+
+    Some LLMs (like DeepSeek) default to JavaScript v1 SDK syntax despite knowing v2 exists - examples needed.
+    """
     return SUPABASE_CODE_REQUIREMENT if supabase_manager_instance.is_supabase_enabled else ""
