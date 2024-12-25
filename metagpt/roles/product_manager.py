@@ -11,6 +11,7 @@
 from metagpt.actions import UserRequirement, WritePRD
 from metagpt.actions.prepare_documents import PrepareDocuments
 from metagpt.actions.search_enhanced_qa import SearchEnhancedQA
+from metagpt.prompts.di.supabase import get_backend_prompt_for_pm
 from metagpt.prompts.product_manager import PRODUCT_MANAGER_INSTRUCTION
 from metagpt.roles.di.role_zero import RoleZero
 from metagpt.roles.role import RoleReactMode
@@ -35,7 +36,6 @@ class ProductManager(RoleZero):
     profile: str = "Product Manager"
     goal: str = "Analyze user needs, create a PRD or Product Research report (including competitive analysis, market research) after collecting information and data online."
     constraints: str = "utilize the same language as the user requirements for seamless communication"
-    instruction: str = PRODUCT_MANAGER_INSTRUCTION
     tools: list[str] = [
         Browser.__name__,
         "Editor:read,write,edit_file_by_replace,insert_content_at_line,append_file",
@@ -58,6 +58,8 @@ class ProductManager(RoleZero):
         self.tool_execution_map.update(tool2name(WritePRD, ["run"], wp.run))
 
     async def _think(self) -> bool:
+        self.instruction = PRODUCT_MANAGER_INSTRUCTION.format(backend_info=get_backend_prompt_for_pm())
+
         if not self.use_fixed_sop:
             return await super()._think()
 
