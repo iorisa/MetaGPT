@@ -36,12 +36,6 @@ from metagpt.roles.di.team_leader import TeamLeader
 from metagpt.schema import Message
 
 
-class SearchEnhancedQA:
-    async def run(self, query: str, rewrite_query: bool = True) -> str:
-        """直接返回空字符串，不执行任何操作"""
-        return ""
-
-
 class TeamLeaderForTesting(TeamLeader):
     """Testing class to capture intent_result from quick_think"""
 
