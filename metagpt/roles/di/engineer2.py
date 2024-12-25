@@ -75,10 +75,7 @@ class Engineer2(RoleZero):
         Display the current terminal and editor state.
         This information will be dynamically added to the command prompt.
         """
-        if not self.terminal.initial_workdir:
-            # A special case to set terminal dir based on Role dir. This happens one time when Role is deserialized and terminal re-initialized
-            await self.terminal.set_initial_workdir(self.working_dir)
-        self.working_dir = (await self.terminal.run_command("pwd")).strip()
+        self.working_dir = self.terminal.cwd
         self.editor.set_workdir(self.working_dir)
 
     def _update_tool_execution(self):

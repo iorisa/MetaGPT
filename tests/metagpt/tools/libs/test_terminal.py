@@ -20,10 +20,24 @@ async def test_terminal():
 
 @pytest.mark.asyncio
 async def test_terminal_switch_tab():
-    terminal = Terminal()
-    output = await terminal._read_and_process_output("echo abc && sleep 60", timeout=5)
+    terminal = Terminal(timeout=5)
+    output = await terminal.run_command("echo abc && sleep 60")
+    print(output)
     assert "abc" in output
     assert len(terminal.tabs) == 2
+
+
+@pytest.mark.skip
+@pytest.mark.asyncio
+async def test_terminal_typing():
+    terminal = Terminal(timeout=5)
+    command = 'python -c "x = input(); print(int(x) * 2)"'
+    output1 = await terminal.run_command(command)
+    print(output1)
+    await terminal.switch_tab("00")
+    output2 = await terminal.run_command("2")
+    print(output2)
+    assert "4" in output2
 
 
 if __name__ == "__main__":

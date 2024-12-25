@@ -2,10 +2,9 @@ import asyncio
 import os
 import re
 import time
-from asyncio import Queue
 from asyncio.subprocess import PIPE, STDOUT, Process
-from pathlib import Path
-from typing import Optional, Union
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from metagpt.config2 import Config
 from metagpt.const import DEFAULT_WORKSPACE_ROOT, SWE_SETUP_PATH
@@ -20,86 +19,104 @@ You may operate on the new tab, or switch back to the detached tab {detached_tab
 """
 
 
-@register_tool(include_functions=["run_command", "switch_tab"])
-class Terminal:
-    """
-    A tool for running terminal commands.
-    Don't initialize a new instance of this class if one already exists.
-    For commands that need to be executed within a Conda environment, it is recommended
-    to use the `execute_in_conda_env` method.
-    """
+class Tab(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def __init__(self):
-        self.shell_command = ["bash"]  # FIXME: should consider windows support later
-        self.command_terminator = "\n"
-        self.stdout_queue = Queue(maxsize=1000)
-        self.observer = TerminalReporter()
-        self.tabs: Optional[dict[str, Process]] = {}
-        self.current_tab_id: str = ""
-        self.process: Optional[Process] = None  # process of the current tab
-        self.tab_stdout_queue: dict[str, Queue] = {}
-        #  The cmd in forbidden_terminal_commands will be replace by pass ana return the advise. example:{"cmd":"forbidden_reason/advice"}
-        self.forbidden_commands = {
-            "run dev": "Use Deployer.deploy_to_public instead.",
-            "run preview": "Use Deployer.deploy_to_public instead.",
-            # serve cmd have a space behind it,
-            "serve ": "Use Deployer.deploy_to_public instead.",
-        }
-        self.initial_workdir = None  # to be set by the agent using it
+    tab_id: str = "temp_id"
+    process: Process = Field(default=None, exclude=True)
+    cwd: str = str(DEFAULT_WORKSPACE_ROOT.absolute())  # crucial for state recovery
+    observer: TerminalReporter = Field(default_factory=TerminalReporter)
+
+    shell_command: list[str] = ["bash"]  # FIXME: should consider windows support later
 
     async def _start_process(self):
         # Start a persistent shell process
-        process = await asyncio.create_subprocess_exec(
+        self.process = await asyncio.create_subprocess_exec(
             *self.shell_command,
             stdin=PIPE,
             stdout=PIPE,
             stderr=STDOUT,
             executable="bash",
             env=os.environ.copy(),
-            cwd=DEFAULT_WORKSPACE_ROOT.absolute(),
+            cwd=self.cwd,
         )
-        return process
 
-    def switch_tab(self, tab_id: str = "") -> str:
+    async def start(self):
+        if not self.process:
+            await self._start_process()
+
+    def read(self, *args, **kwargs):
+        return self.process.stdout.read(*args, **kwargs)
+
+    def write(self, *args, **kwargs):
+        return self.process.stdin.write(*args, **kwargs)
+
+    async def close(self):
+        """Close the persistent shell process."""
+        self.process.stdin.close()
+        await self.process.wait()
+
+
+@register_tool(include_functions=["run_command"])
+class Terminal(BaseModel):
+    """A tool for running terminal commands. Don't initialize a new instance of this class if one already exists."""
+
+    command_terminator: str = "\n"
+    tabs: dict[str, Tab] = {}
+    current_tab_id: str = ""
+    current_tab: Tab = None
+    #  The cmd in forbidden_terminal_commands will be replace by pass ana return the advise. example:{"cmd":"forbidden_reason/advice"}
+    forbidden_commands: dict[str, str] = {
+        "run dev": "Use Deployer.deploy_to_public instead.",
+        "run preview": "Use Deployer.deploy_to_public instead.",
+        # serve cmd have a space behind it,
+        "serve ": "Use Deployer.deploy_to_public instead.",
+    }
+    timeout: float = 20.0  # timeout for reading output
+
+    async def switch_tab(self, tab_id: str = "") -> str:
+        """Switch tab based on tab_id. Useful for checking out new output from detached tabs or typing on desired tabs."""
+        # NOTE: Hide from agent for now (not registered), need to solve the echo END_MARKER_VALUE problem
         if tab_id in self.tabs:
-            self.process = self.tabs[tab_id]
+            self.current_tab = self.tabs[tab_id]
             self.current_tab_id = tab_id
-            tab_new_output = self._read_background_output()
-            return f"Switched to tab {tab_id}, the tab has new output: {tab_new_output}"
+            tab_new_output = await self._read_background_output()
+            return f"Switched to tab {tab_id}, pwd is {self.current_tab.cwd}, the tab has new output: {tab_new_output}"
         return f"Tab {tab_id} not found, created tabs are {list(self.tabs.keys())}"
 
     async def _create_new_tab(self) -> str:
-        process = await self._start_process()
-        tab_id = f"{len(self.tabs):02}"
-        self.tabs = {tab_id: process}
-        self.switch_tab(tab_id)
-        self.current_tab_id = tab_id
-        pwd = await self._check_state()
-        return f"Tab {tab_id} created and switched to successfully, with pwd at {pwd}"
+        """create a new tab and switch to it"""
+        new_tab_id = f"{len(self.tabs):02}"
+        new_tab = Tab(tab_id=new_tab_id)
+        await new_tab.start()
+        self.tabs.update({new_tab_id: new_tab})
+        switch_tab_info = await self.switch_tab(new_tab_id)
+        return f"Tab {new_tab_id} created. " + switch_tab_info
 
-    async def _check_state(self):
+    @property
+    def cwd(self):
+        return self.current_tab.cwd if self.current_tab else str(DEFAULT_WORKSPACE_ROOT.absolute())
+
+    async def _update_cwd(self):
         """
-        Check the state of the terminal, e.g. the current directory of the terminal process. Useful for agent to understand.
+        Check the current directory of the terminal process. Useful for agent to understand.
         """
         output = await self.run_command("pwd")
         logger.info(f"The terminal is at: {output}")
+        self.current_tab.cwd = output.strip()
         return output
 
-    async def run_command(self, cmd: str, daemon=False) -> str:
+    async def run_command(self, cmd: str) -> str:
         """
         Executes a specified command in the terminal and streams the output back in real time.
-        This command maintains state across executions, such as the current directory,
-        allowing for sequential commands to be contextually aware.
 
         Args:
             cmd (str): The command to execute in the terminal.
-            daemon (bool): If True, executes the command in an asynchronous task, allowing
-                           the main program to continue execution.
+
         Returns:
-            str: The command's output or an empty string if `daemon` is True. Remember that
-                 when `daemon` is True, use the `get_stdout_output` method to get the output.
+            str: The command's output.
         """
-        if self.process is None:
+        if not self.current_tab:
             await self._create_new_tab()
 
         output = ""
@@ -114,24 +131,22 @@ class Terminal:
         cmd = " && ".join(commands)
 
         # Send the command
-        self.process.stdin.write((cmd + self.command_terminator).encode())
-        self.process.stdin.write(
+        self.current_tab.write((cmd + self.command_terminator).encode())
+        self.current_tab.write(
             f'echo "{END_MARKER_VALUE}"{self.command_terminator}'.encode()  # write EOF
         )  # Unique marker to signal command end
-        await self.process.stdin.drain()
-        if daemon:
-            asyncio.create_task(self._read_and_process_output(cmd))
-        else:
-            output += await self._read_and_process_output(cmd)
+        await self.current_tab.process.stdin.drain()
+
+        output += await self._read_and_process_output(cmd)
+
+        # Record the changed working directory if the command changes it,
+        # crucial for state syncronization with Role and state recovery
+        if "cd" in cmd:
+            await self._update_cwd()
 
         return output
 
-    async def set_initial_workdir(self, path: Union[str, Path]):
-        if Path(path).exists():
-            await self.run_command(f"cd {path}")
-            self.initial_workdir = path
-
-    async def execute_in_conda_env(self, cmd: str, env, daemon=False) -> str:
+    async def execute_in_conda_env(self, cmd: str, env) -> str:
         """
         Executes a given command within a specified Conda environment automatically without
         the need for manual activation. Users just need to provide the name of the Conda
@@ -141,8 +156,6 @@ class Terminal:
             cmd (str): The command to execute within the Conda environment.
             env (str, optional): The name of the Conda environment to activate before executing the command.
                                  If not specified, the command will run in the current active environment.
-            daemon (bool): If True, the command is run in an asynchronous task, similar to `run_command`,
-                           affecting error logging and handling in the same manner.
 
         Returns:
             str: The command's output, or an empty string if `daemon` is True, with output processed
@@ -153,7 +166,7 @@ class Terminal:
             to ensure the specified environment is active for the command's execution.
         """
         cmd = f"conda run -n {env} {cmd}"
-        return await self.run_command(cmd, daemon=daemon)
+        return await self.run_command(cmd)
 
     async def _read_background_output(self) -> str:
         """
@@ -166,16 +179,15 @@ class Terminal:
         while True:
             new_output = b""
             try:
-                # Set a timeout for the read operation
-                new_output = await asyncio.wait_for(self.process.stdout.read(1), timeout=1)
+                # a short timeout since the output should already be available
+                new_output = await asyncio.wait_for(self.current_tab.read(1), timeout=1)
                 tmp.append(new_output)
             except asyncio.TimeoutError:
-                print("No more data to read")
                 break
         return b"".join(tmp).decode()
 
-    async def _read_and_process_output(self, cmd: str, daemon: bool = False, timeout: int = 20) -> str:
-        async with self.observer as observer:
+    async def _read_and_process_output(self, cmd: str) -> str:
+        async with self.current_tab.observer as observer:
             cmd_output = []
             await observer.async_report(cmd + self.command_terminator, "cmd")
             # report the command
@@ -188,12 +200,12 @@ class Terminal:
                 new_output = b""
                 try:
                     # Set a timeout for the read operation
-                    new_output = await asyncio.wait_for(self.process.stdout.read(1), timeout=timeout)
+                    new_output = await asyncio.wait_for(self.current_tab.read(1), timeout=self.timeout)
                 except asyncio.TimeoutError:
                     logger.info("No more output, detached from current tab and switched to a new tab")
 
                 if not new_output:
-                    if time.time() - start_time > timeout:
+                    if time.time() - start_time > self.timeout:
                         output_so_far = "".join(cmd_output) + b"".join(tmp).decode()
                         detached_tab_id = self.current_tab_id
                         new_tab_info = await self._create_new_tab()
@@ -202,6 +214,7 @@ class Terminal:
                             output_so_far=output_so_far,
                             new_tab_info=new_tab_info,
                         )
+                        # print(instruction)
                         return instruction
                     else:
                         continue
@@ -224,13 +237,10 @@ class Terminal:
                     await observer.async_report(line, "output")
                     # print(line)
                     cmd_output.append(line)
-                    if daemon:
-                        await self.stdout_queue.put(line)
 
     async def close(self):
-        """Close the persistent shell process."""
-        self.process.stdin.close()
-        await self.process.wait()
+        for tab in self.tabs.values():
+            await tab.close()
 
 
 @register_tool(include_functions=["run"])
