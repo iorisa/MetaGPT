@@ -17,7 +17,7 @@
 2. 输出：
    - 控制台打印统计信息和分类报告
    - confusion_matrix.png: 混淆矩阵热力图
-   - intention-test-eval.xlsx: 带评估结果的Excel文件（retuirement, intention, intention_test, assignee_test, accurate）
+   - intention-test-eval.xlsx: 带评估结果的Excel文件（retuirement, intention, intention_test, assignee_test, intention_accurate）
 """
 
 import asyncio
@@ -43,6 +43,7 @@ class TeamLeaderForTesting(TeamLeader):
     intent_result: str = ""
     command_rsp: str = ""
     commands: List[Dict] = []
+    assignees: set = set()
 
     def _update_tool_execution(self):
         self.tool_execution_map.update(
@@ -90,11 +91,14 @@ async def run_mgx(requirement=""):
         intent_category = team_leader.intent_result.split("Response Category:")[1].strip().split("\n")[0]
     # check commands
     print(f"-------------------------commands{team_leader.commands}")
-    assignees = None
-    for cmd in team_leader.commands:
-        assignees = set()
-        if cmd["command_name"] == "Plan.append_task":
-            assignees.add(cmd["args"]["assignee"])
+    assignees = (
+        set(
+            cmd["args"]["send_to"]
+            for cmd in team_leader.commands
+            if cmd["command_name"] == "TeamLeader.publish_team_message"
+        )
+        | set(cmd["args"]["assignee"] for cmd in team_leader.commands if cmd["command_name"] == "Plan.append_task")
+    ) or None
 
     return intent_category, assignees
 
@@ -117,25 +121,17 @@ async def process_batch(df_data: pd.DataFrame):
 def eval_intention(df_data):
     # define intention map
     INTENTION_MAP = {"0": "TASK", "1": "QUICK", "2": "SEARCH", "3": "AMBIGUOUS"}
-    y_true = []
-    y_pred = []
 
-    for index, row in df_data.iterrows():
-        int_intent = int(row["intention"])
-        ground_truth = INTENTION_MAP.get(str(int_intent), "UNKNOWN")
-        test_result = row["intention_test"]
+    # map intention to str
+    df_data["ground_truth"] = df_data["intention"].astype(str).map(INTENTION_MAP)
+    # check if intention is correct
+    df_data["intention_accurate"] = (df_data["ground_truth"] == df_data["intention_test"]).astype(int)
 
-        y_true.append(ground_truth)
-        y_pred.append(test_result)
-
-    # 标签列，查看每个intention是否预测正确
-    df_data["intention_accurate"] = (df_data["intention_test"] == y_true).astype(int)
-
-    # intention的可能值
-    actual_classes = sorted(set(y_true + y_pred))
+    # get all possible intention values
+    actual_classes = sorted(set(df_data["ground_truth"].unique()) | set(df_data["intention_test"].unique()))
 
     # confusion matrix
-    cm = confusion_matrix(y_true, y_pred, labels=actual_classes)
+    cm = confusion_matrix(df_data["ground_truth"], df_data["intention_test"], labels=actual_classes)
 
     # create heatmap
     plt.figure(figsize=(8, 6))
@@ -147,15 +143,14 @@ def eval_intention(df_data):
     plt.close()
 
     # classification report
-    report = classification_report(y_true, y_pred, target_names=actual_classes)
+    report = classification_report(df_data["ground_truth"], df_data["intention_test"], target_names=actual_classes)
     print("\n分类报告:")
     print(report)
 
 
 async def main(input_csv_file, output_csv_file):
     # read file
-    df_data = pd.read_excel(input_csv_file).iloc[96:98].copy()
-
+    df_data = pd.read_excel(input_csv_file)
     # get prediction
     df_data = await process_batch(df_data)
 
