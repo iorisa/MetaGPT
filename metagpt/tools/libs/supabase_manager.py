@@ -19,11 +19,11 @@ from metagpt.utils.ahttp_client import apost
 
 @register_tool(include_functions=["execute_sql", "get_session_schemas"])
 class SupabaseManager(BaseModel):
-    config: SupabaseConfig = Field(default=Config.default().supabase, description="The Supabase config")
+    config: SupabaseConfig = Field(default_factory=lambda: Config.default().supabase, description="The Supabase config")
 
     @property
     def is_supabase_enabled(self) -> bool:
-        logger.debug(f"Supabase enabled: {self.config.enable}")
+        logger.debug(f"Supabase enabled: {self.config.enable}, project_ref: {self.config.project_ref}")
         return self.config.enable
 
     @property
@@ -184,4 +184,11 @@ class SupabaseManager(BaseModel):
         return table_schemas
 
 
-supabase_manager_instance = SupabaseManager()
+_SUPABASE_MANAGER_INSTANCE = None
+
+
+def get_supabase_manager_instance() -> SupabaseManager:
+    global _SUPABASE_MANAGER_INSTANCE
+    if _SUPABASE_MANAGER_INSTANCE is None:
+        _SUPABASE_MANAGER_INSTANCE = SupabaseManager()
+    return _SUPABASE_MANAGER_INSTANCE

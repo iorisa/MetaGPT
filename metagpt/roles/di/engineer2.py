@@ -17,7 +17,7 @@ from metagpt.tools.libs.deployer import Deployer
 from metagpt.tools.libs.editor import FileBlock
 from metagpt.tools.libs.git import git_create_pull
 from metagpt.tools.libs.image_getter import ImageGetter
-from metagpt.tools.libs.supabase_manager import supabase_manager_instance
+from metagpt.tools.libs.supabase_manager import get_supabase_manager_instance
 from metagpt.tools.libs.terminal import Terminal
 from metagpt.tools.tool_recommend import BM25ToolRecommender, ToolRecommender
 from metagpt.tools.tool_registry import register_tool
@@ -86,6 +86,7 @@ class Engineer2(RoleZero):
 
     def _update_tool_execution(self):
         cr = CodeReview()
+        supabase_manager = get_supabase_manager_instance()
 
         tool_execution = {
             "git_create_pull": git_create_pull,
@@ -94,8 +95,8 @@ class Engineer2(RoleZero):
             "CodeReview.fix": cr.fix,
             "Terminal.run_command": self.terminal.run_command,
             "Deployer.deploy_to_public": self._deploy_to_public,
-            "SupabaseManager.execute_sql": supabase_manager_instance.execute_sql,
-            "SupabaseManager.get_session_schemas": supabase_manager_instance.get_session_schemas,
+            "SupabaseManager.execute_sql": supabase_manager.execute_sql,
+            "SupabaseManager.get_session_schemas": supabase_manager.get_session_schemas,
         }
 
         # Add additional tools only in evaluation mode
