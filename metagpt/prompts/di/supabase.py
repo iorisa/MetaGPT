@@ -64,25 +64,25 @@ def get_backend_prompt_for_fe() -> str:
     )
 
 
-def get_backend_prompt_for_tl():
+def get_backend_prompt_for_tl() -> str:
     """Allow team leader to specify Supabase as the backend service only if Supabase is enabled"""
     manager = get_supabase_manager_instance()
     return TL_SUPABASE_PROMPT if manager.is_supabase_enabled else ""
 
 
-def get_backend_prompt_for_pm():
+def get_backend_prompt_for_pm() -> str:
     """Allow PM to specify Supabase as the backend service only if Supabase is enabled"""
     manager = get_supabase_manager_instance()
     return PM_SUPABASE_PROMPT if manager.is_supabase_enabled else ""
 
 
-def get_backend_prompt_for_architect():
+def get_backend_prompt_for_architect() -> str:
     """Allow architect to specify Supabase as the backend service only if Supabase is enabled"""
     manager = get_supabase_manager_instance()
     return ARCHITECT_SUPABASE_PROMPT if manager.is_supabase_enabled else ""
 
 
-def get_supabase_code_requirement():
+def get_supabase_code_requirement() -> str:
     """Return Supabase code requirement only if Supabase is enabled.
 
     Some LLMs (like DeepSeek) default to JavaScript v1 SDK syntax despite knowing v2 exists - examples needed.
