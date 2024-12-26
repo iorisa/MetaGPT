@@ -17,6 +17,7 @@ I will provide you with a question with a list of documents. Your task is to res
 
 ## Format Example
 Doc: 9, Relevance: 7
+Doc: 3, Relevance: 5
 
 ## Instructions
 - Understand the question.
@@ -25,11 +26,13 @@ Doc: 9, Relevance: 7
 - Do not include any documents that are not relevant to the question.
 - If none of the documents provided contain information that directly answers the question, simply respond with "no relevant documents".
 
-## Constraint
-Format: Just print the result in format like **Format Example**.
+## Required Output Format
+- ONLY output in the exact format: Doc: [number], Relevance: [score]
+- DO NOT include any other text or explanations
+- Multiple relevant documents should be on separate lines
 
 ## Action
-Follow instructions, generate output and make sure it follows the **Constraint**.
+Follow instructions, output ONLY the doc numbers and relevance scores in the required format.
 """
 
 DEFAULT_CHOICE_SELECT_PROMPT = PromptTemplate(DEFAULT_CHOICE_SELECT_PROMPT_TMPL, prompt_type=PromptType.CHOICE_SELECT)
