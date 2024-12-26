@@ -45,6 +45,7 @@ async () => {{
 class BaseImageProvider(BaseModel):
     """Abstract base class for image getter tools."""
 
+    model_config = {"arbitrary_types_allowed": True}
     # Common fields
     llm: BaseLLM = Field(default_factory=lambda: OpenAILLM(Config.default().llm))
 
