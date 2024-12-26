@@ -24,7 +24,7 @@ class Tab(BaseModel):
 
     tab_id: str = "temp_id"
     process: Process = Field(default=None, exclude=True)
-    cwd: str = str(DEFAULT_WORKSPACE_ROOT.absolute())  # crucial for state recovery
+    cwd: str = Field(default_factory=lambda: str(DEFAULT_WORKSPACE_ROOT.absolute()))
     observer: TerminalReporter = Field(default_factory=TerminalReporter)
     shell_command: list[str] = ["bash"]  # FIXME: should consider windows support later
     command_terminator: str = "\n"
