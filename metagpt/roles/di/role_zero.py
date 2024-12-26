@@ -205,7 +205,7 @@ class RoleZero(Role):
     def _get_goal_from_memories(self):
         """Get goal from memories by finding the latest message from TL or UserRequirement"""
         memories = self.get_memories()
-        for msg in memories:
+        for msg in reversed(memories):
             if msg.sent_from == "Mike" or "UserRequirement" in msg.cause_by:
                 return msg.content
         # Fallback to last message if no matching message found
