@@ -245,7 +245,9 @@ class UnsplashApi(BaseImageProvider):
     """Image getter using Unsplash API."""
 
     api_base: str = "https://api.unsplash.com"
-    headers: ClassVar[Dict[str, str]] = {"Authorization": f"Client-ID {Config.default().unsplash_api_key}"}
+    headers: ClassVar[Dict[str, str]] = Field(
+        default_factory=lambda: {"Authorization": f"Client-ID {Config.default().unsplash_api_key}"}
+    )
 
     def download_image(self, url: str, connect_timeout: int = 20, read_timeout: int = 20) -> ImageFile | None:
         """Download image from URL."""

@@ -1,14 +1,16 @@
-from metagpt.tools.libs.supabase_manager import supabase_manager_instance
+from metagpt.tools.libs.supabase_manager import get_supabase_manager_instance
 
-FE_SUPABASE_PROMPT = f"""
+FE_SUPABASE_PROMPT = """
 Supabase is enabled, use it as the backend service (provides Auth, Database, Storage, and Real-time features).
 
 Supabase Configuration:
-- Project URL: {supabase_manager_instance.config.project_url}
-- Project API Key: {supabase_manager_instance.config.project_key}
-- Session ID: {supabase_manager_instance.config.session_id}
+- Project URL: {project_url}
+- Project API Key: {project_key}
 
-### CRITICAL: Follow These Steps in Order:
+### CRITICAL: DATABASE SETUP MUST BE COMPLETED BEFORE ANY CODE IMPLEMENTATION OR MODIFICATION, Follow These Steps in Order:
+
+Before Starting:
+- Review "Table Management Rules" section below for table operation guidelines
 
 For New Project Development:
 1. Database First: Create all necessary tables using SupabaseManager.execute_sql
@@ -19,11 +21,11 @@ For New Project Development:
 For Incremental Development:
 1. Database Changes (if needed):
    - Check existing tables using SupabaseManager.get_session_schemas
-   - Create new tables or modify existing ones as needed
+   - Create new tables or modify existing ones as needed using SupabaseManager.execute_sql
 
 ### Table Management Rules
 - Note that you DO NOT need to create users table as it is already provided by Supabase in the 'auth' schema (auth.users)
-- Table format: {{app_name}}_{{session_id}}_{{entity_name}}
+- Table format: {{app_name}}_{{session_id}}_{{entity_name}} (session_id is {session_id})
 - ALWAYS use user_email (not user_id) for user identification in tables
 - For row-level security, use auth.jwt() ->> 'email' to match user_email fields, so MUST include user_email in ALL insert operations
 """
@@ -47,24 +49,37 @@ const {{ data: {{ user }} }} = await supabase.auth.getUser();
 """
 
 
-def get_backend_prompt_for_fe():
+def get_backend_prompt_for_fe() -> str:
     """Allow frontend engineer to specify Supabase as the backend service only if Supabase is enabled"""
-    return FE_SUPABASE_PROMPT if supabase_manager_instance.is_supabase_enabled else "Supabase is not enabled"
+    manager = get_supabase_manager_instance()
+
+    return (
+        FE_SUPABASE_PROMPT.format(
+            project_url=manager.config.project_url,
+            project_key=manager.config.project_key,
+            session_id=manager.config.session_id,
+        )
+        if manager.is_supabase_enabled
+        else "Supabase is not enabled"
+    )
 
 
 def get_backend_prompt_for_tl():
     """Allow team leader to specify Supabase as the backend service only if Supabase is enabled"""
-    return TL_SUPABASE_PROMPT if supabase_manager_instance.is_supabase_enabled else ""
+    manager = get_supabase_manager_instance()
+    return TL_SUPABASE_PROMPT if manager.is_supabase_enabled else ""
 
 
 def get_backend_prompt_for_pm():
     """Allow PM to specify Supabase as the backend service only if Supabase is enabled"""
-    return PM_SUPABASE_PROMPT if supabase_manager_instance.is_supabase_enabled else ""
+    manager = get_supabase_manager_instance()
+    return PM_SUPABASE_PROMPT if manager.is_supabase_enabled else ""
 
 
 def get_backend_prompt_for_architect():
     """Allow architect to specify Supabase as the backend service only if Supabase is enabled"""
-    return ARCHITECT_SUPABASE_PROMPT if supabase_manager_instance.is_supabase_enabled else ""
+    manager = get_supabase_manager_instance()
+    return ARCHITECT_SUPABASE_PROMPT if manager.is_supabase_enabled else ""
 
 
 def get_supabase_code_requirement():
@@ -72,4 +87,5 @@ def get_supabase_code_requirement():
 
     Some LLMs (like DeepSeek) default to JavaScript v1 SDK syntax despite knowing v2 exists - examples needed.
     """
-    return SUPABASE_CODE_REQUIREMENT if supabase_manager_instance.is_supabase_enabled else ""
+    manager = get_supabase_manager_instance()
+    return SUPABASE_CODE_REQUIREMENT if manager.is_supabase_enabled else ""
