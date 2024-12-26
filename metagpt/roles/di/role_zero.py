@@ -202,6 +202,15 @@ class RoleZero(Role):
     def _update_tool_execution(self):
         pass
 
+    def _get_goal_from_memories(self):
+        """Get goal from memories by finding the latest message from TL or UserRequirement"""
+        memories = self.get_memories()
+        for msg in reversed(memories):
+            if msg.sent_from == "Mike" or "UserRequirement" in msg.cause_by:
+                return msg.content
+        # Fallback to last message if no matching message found
+        return memories[-1].content if memories else ""
+
     async def _think(self) -> bool:
         """Useful in 'react' mode. Use LLM to decide whether and what to do next."""
         # Compatibility
@@ -213,7 +222,7 @@ class RoleZero(Role):
             return False
 
         if not self.planner.plan.goal:
-            self.planner.plan.goal = self.get_memories()[-1].content
+            self.planner.plan.goal = self._get_goal_from_memories()
             detect_language_prompt = DETECT_LANGUAGE_PROMPT.format(requirement=self.planner.plan.goal)
             self.respond_language = await self.llm.aask(detect_language_prompt)
 

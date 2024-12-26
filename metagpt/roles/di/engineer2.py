@@ -124,6 +124,10 @@ class Engineer2(RoleZero):
     @log_time
     async def _tool_call(self, code: str):
         """Execute tool calls in code and replace with results."""
+        # Check the tool whether available
+        if not ImageGetter.is_available():
+            return code
+
         # Regex pattern to match tool call tags like <tool_call.../>
         # Uses [\s\S] for multi-line matching and non-greedy *? to avoid over-matching
         # Supports optional $ prefix: $<tool_call.../>
