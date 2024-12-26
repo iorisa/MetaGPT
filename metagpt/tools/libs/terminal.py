@@ -28,7 +28,7 @@ class Tab(BaseModel):
     observer: TerminalReporter = Field(default_factory=TerminalReporter)
     shell_command: list[str] = ["bash"]  # FIXME: should consider windows support later
     command_terminator: str = "\n"
-    output_queue: asyncio.Queue = Field(default_factory=asyncio.Queue)
+    output_queue: asyncio.Queue = Field(default_factory=asyncio.Queue, exclude=True)
     task: Optional[asyncio.Task] = Field(None, exclude=True)
 
     async def _start_process(self):
@@ -68,6 +68,9 @@ class Tab(BaseModel):
         Returns:
             str: The command's output.
         """
+        if not self.process or self.process.returncode is not None:
+            await self._start_process()
+
         self.write((cmd + self.command_terminator).encode())
         self.write(
             f'echo "{END_MARKER_VALUE}"{self.command_terminator}'.encode()  # write EOF
@@ -223,9 +226,13 @@ class Terminal(BaseModel):
                 f" (ID: {self.current_tab_id})."
             )
 
+        # clear the output queue before execute command
+        output_queue = current_tab.output_queue
+        while not output_queue.empty():
+            output_queue.get_nowait()
+
         await current_tab.execute(cmd)
 
-        output_queue = current_tab.output_queue
         tmp = []
         while True:
             try:
