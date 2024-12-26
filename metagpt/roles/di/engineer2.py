@@ -30,7 +30,7 @@ class Engineer2(RoleZero):
     profile: str = "Engineer"
     goal: str = "Take on game, app, web development and deployment."
     instruction: str = ENGINEER2_INSTRUCTION
-    terminal: Terminal = Field(default_factory=Terminal, exclude=True)
+    terminal: Terminal = Field(default_factory=Terminal)
     deployer: Deployer = Field(default_factory=Deployer, exclude=True)
     tools: list[str] = [
         "Plan",
