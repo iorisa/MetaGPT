@@ -54,6 +54,18 @@ Note:
 25. Engineer2.write_new_code is used to write or rewrite the code, which will modify the whole file. Editor.edit_file_by_replace is used to edit a small part of the file.
 26. Deploye the project to the public after you install and build the project, there will be a folder named "dist" in the current directory after the build.
 27. Use Engineer2.write_new_code to rewrite the whole file when you fail to use Editor.edit_file_by_replace more than three times.
+28. When handling static resources (images, audio, etc.):
+28.1. Resource Location Standards:
+    - Frontend static resources must be in {{workspace}}/{{project_name}}/public/assets/
+    - Check if resources exist in public/assets, perform migration if empty
+    - Use paths relative to public directory in code, e.g.: src="/assets/images/example.jpg"
+28.2. Before using any static resource:
+    - Check file exists in correct subdirectory (images/, audio/, etc.)
+    - Verify correct file path and extension
+29. When handling user-provided data:
+    - MUST use user's original data, no reduction or modification
+    - DO NOT use mock/fake data when user data is available
+    - NEVER replace user's data with placeholder content
 """
 ENGINEER2_INSTRUCTION = ROLE_INSTRUCTION + EXTRA_INSTRUCTION.strip()
 

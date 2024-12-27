@@ -17,7 +17,7 @@
 2. 输出：
    - 控制台打印统计信息和分类报告
    - confusion_matrix.png: 混淆矩阵热力图
-   - intention-test-eval.xlsx: 带评估结果的Excel文件（retuirement, intention, intention_test, assignee_test, intention_accurate）
+   - intention-test-eval.xlsx: 带评估结果的Excel文件（retuirement, intention, intention_pred, assignee_pred, is_intention_accurate）
 """
 
 import asyncio
@@ -103,8 +103,8 @@ async def process_batch(df_data: pd.DataFrame):
         print(f"intent_category: {intent_category}, assignees: {assignees}")
         category_list.append(intent_category)
         assignees_list.append(assignees)
-    df_data["intention_test"] = category_list
-    df_data["assignee_test"] = assignees_list
+    df_data["intention_pred"] = category_list
+    df_data["assignee_pred"] = assignees_list
 
     return df_data
 
@@ -116,13 +116,13 @@ def eval_intention(df_data):
     # map intention to str
     df_data["ground_truth"] = df_data["intention"].astype(str).map(INTENTION_MAP)
     # check if intention is correct
-    df_data["intention_accurate"] = (df_data["ground_truth"] == df_data["intention_test"]).astype(int)
+    df_data["is_intention_accurate"] = (df_data["ground_truth"] == df_data["intention_pred"]).astype(int)
 
     # get all possible intention values
-    actual_classes = sorted(set(df_data["ground_truth"].unique()) | set(df_data["intention_test"].unique()))
+    actual_classes = sorted(set(df_data["ground_truth"].unique()) | set(df_data["intention_pred"].unique()))
 
     # confusion matrix
-    cm = confusion_matrix(df_data["ground_truth"], df_data["intention_test"], labels=actual_classes)
+    cm = confusion_matrix(df_data["ground_truth"], df_data["intention_pred"], labels=actual_classes)
 
     # create heatmap
     plt.figure(figsize=(8, 6))
@@ -134,14 +134,14 @@ def eval_intention(df_data):
     plt.close()
 
     # classification report
-    report = classification_report(df_data["ground_truth"], df_data["intention_test"], target_names=actual_classes)
+    report = classification_report(df_data["ground_truth"], df_data["intention_pred"], target_names=actual_classes)
     print("\n分类报告:")
     print(report)
 
 
 async def main(input_csv_file, output_csv_file):
     # read file
-    df_data = pd.read_excel(input_csv_file).iloc[103:104].copy()
+    df_data = pd.read_excel(input_csv_file)
     # get prediction
     df_data = await process_batch(df_data)
 
@@ -153,7 +153,7 @@ async def main(input_csv_file, output_csv_file):
 
 
 if __name__ == "__main__":
-    input_csv_file = "/root/MetaGPT/intent-test.xlsx"
-    output_csv_file = "/root/MetaGPT/intention-test-result.xlsx"
+    input_csv_file = "/root/MetaGPT/intention_test2.xlsx"
+    output_csv_file = "/root/MetaGPT/intention-test2-result.xlsx"
 
     asyncio.run(main(input_csv_file, output_csv_file))
