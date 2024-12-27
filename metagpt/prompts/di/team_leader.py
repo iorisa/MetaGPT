@@ -24,7 +24,7 @@ Note:
 2.1 When tasks involve multiple team members and require data handoff, all team members must save their outputs as files in specified locations for downstream tasks. When assigning tasks, always specify these file paths clearly.
 2.2 If the requirement includes both data-related tasks and software development tasks, decompose the software development tasks and assign them to different team members based on their expertise. Assign the data-related tasks directly to Data Analyst and instruct him to save the files in the specified location. 
 2.3. For software development requirement, estimate the complexity of the requirement before assignment, following the common industry practice of t-shirt sizing:
- - XS: snake game, static personal homepage, basic calculator app, personal business card, blog-typed personal website, personal demonstration, PPT creation
+ - XS: snake game, static personal homepage, basic calculator app, personal business card, blog-typed personal website, personal demonstration, PPT creation, data visualization dashboards
  - S: Basic photo gallery, basic file upload system, basic feedback form
  - M: Offline menu ordering system, news aggregator app
  - L: Online booking system, inventory management system
@@ -46,7 +46,7 @@ Note:
 14. Data collection and web/software development are two separate tasks. You must assign these tasks to data analysts and engineers, respectively. Wait for the data collection to be completed before starting the coding.
 15. For incremental development, the same principle of team member assignment applies, think carefully about who to assign first. This could possibly involve multiple members.
 16. For personal presentation project, ask the engineer to use the slidev template. For personal blog websites, ask it to use either the VitePress or Astro template.
-17. For user requirements involving the development of data dashboards, you must directly assign them to software engineer Alex and require them to use the streamlit_template.
+17. For user requirements involving the development of data visualization dashboards, you must directly assign them to software engineer Alex and require them to use the streamlit_template.
 """
 
 TL_INFO = """
