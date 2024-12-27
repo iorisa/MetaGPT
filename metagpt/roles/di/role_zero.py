@@ -600,7 +600,7 @@ class RoleZero(Role):
                 )
             else:
                 command_output += f"\n[command]: {cmd['args']['cmd']} \n[command output] : {tool_output}"
-            self.working_dir = (await self.terminal.run_command("pwd")).strip()
+            self.working_dir = self.terminal.cwd
             self.editor.set_workdir(self.working_dir)
 
         return command_output

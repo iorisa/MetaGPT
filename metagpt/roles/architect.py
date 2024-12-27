@@ -33,7 +33,8 @@ class Architect(RoleZero):
     profile: str = "Architect"
     goal: str = "Design a concise, usable, complete software system. Output the system design."
     constraints: str = "Make sure the architecture is simple enough and use appropriate open source libraries. Use same language as user requirement"
-    terminal: Terminal = Field(default_factory=Terminal, exclude=True)
+    terminal: Terminal = Field(default_factory=Terminal)
+    instruction: str = ARCHITECT_INSTRUCTION
     tools: list[str] = [
         "Editor:write,read,similarity_search",
         "RoleZero",
