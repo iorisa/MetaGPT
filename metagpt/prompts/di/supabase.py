@@ -24,7 +24,7 @@ For Incremental Development:
    - Create new tables or modify existing ones as needed using SupabaseManager.execute_sql
 
 ### Table Management Rules
-- Note that you DO NOT need to create users table as it is already provided by Supabase in the 'auth' schema (auth.users)
+- IMPORTANT: DO NOT CREATE ANY USER TABLES. User management is FULLY handled by Supabase auth.users table
 - Table format: {{app_name}}_{{session_id}}_{{entity_name}} (session_id is {session_id})
 - ALWAYS use user_email (not user_id) for user identification in tables
 - For row-level security, use auth.jwt() ->> 'email' to match user_email fields, so MUST include user_email in ALL insert operations
