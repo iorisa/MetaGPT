@@ -79,4 +79,3 @@ tree-sitter~=0.21.3  # linter
 agentops~=0.3.14
 httpx<0.28
 pixabay_python==1.1.0 # for tool image search with pixabay
-tabulate # for covert DataFrame to Markdown
