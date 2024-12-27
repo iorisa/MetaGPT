@@ -82,39 +82,37 @@ class Tab(BaseModel):
 
     async def read_and_process_output(self, cmd: str) -> str:
         output_queue = self.output_queue
-        try:
-            async with self.observer as observer:
-                cmd_output = []
-                await observer.async_report(cmd + self.command_terminator, "cmd")
-                # report the command
-                # Read the output until the unique marker is found.
-                # We read bytes directly from stdout instead of text because when reading text,
-                # '\r' is changed to '\n', resulting in excessive output.
-                tmp = []
-                while True:
-                    new_output = await self.read(1)
-                    tmp.append(new_output)
-                    if new_output == b"\n":
-                        # each time gather a full line, record and report it, and reset the tmp holder
-                        line = b"".join(tmp).decode()
-                        tmp = []
-                        ix = line.rfind(END_MARKER_VALUE)
-                        if ix >= 0:
-                            line = line[0:ix]
-                            if line:
-                                await observer.async_report(line, "output")
-                                await output_queue.put(line)
-                                # report stdout in real-time
-                                cmd_output.append(line)
-                            return "".join(cmd_output)
-                        # log stdout in real-time
-                        await observer.async_report(line, "output")
-                        await output_queue.put(line)
-                        cmd_output.append(line)
-        finally:
-            await output_queue.put(None)
+        process = self.process
+        async with self.observer as observer:
+            cmd_output = []
+            await observer.async_report(cmd + self.command_terminator, "cmd")
+            # report the command
+            # Read the output until the unique marker is found.
+            # We read bytes directly from stdout instead of text because when reading text,
+            # '\r' is changed to '\n', resulting in excessive output.
+            tmp = []
+            while process.returncode is None:
+                new_output = await self.read(1)
+                tmp.append(new_output)
+                if new_output == b"\n":
+                    # each time gather a full line, record and report it, and reset the tmp holder
+                    line = b"".join(tmp).decode()
+                    tmp = []
+                    ix = line.rfind(END_MARKER_VALUE)
+                    if ix >= 0:
+                        line = line[0:ix]
+                        if line:
+                            await observer.async_report(line, "output")
+                            await output_queue.put(line)
+                            # report stdout in real-time
+                            cmd_output.append(line)
+                        return "".join(cmd_output)
+                    # log stdout in real-time
+                    await observer.async_report(line, "output")
+                    await output_queue.put(line)
+                    cmd_output.append(line)
 
-    async def read_background_output(self) -> str:
+    def read_background_output(self) -> str:
         """
         Retrieves all collected output from background running commands and returns it as a string.
 
@@ -123,28 +121,18 @@ class Tab(BaseModel):
         """
         tmp = []
         output_queue = self.output_queue
-        if self.task is None or self.task.done():
-            while not output_queue.empty():
-                line = output_queue.get_nowait()
-                if line is None:
-                    break
-                tmp.append(line)
-        else:
-            while True:
-                try:
-                    # a short timeout since the output should already be available
-                    line = await self.read(1)
-
-                    if line is None:
-                        break
-                    tmp.append(line)
-                except asyncio.TimeoutError:
-                    break
+        while not output_queue.empty():
+            line = output_queue.get_nowait()
+            if line is None:
+                break
+            tmp.append(line)
         return "".join(tmp)
 
     @property
     def is_running(self):
         if self.task is None:
+            return False
+        if self.process.returncode is not None:
             return False
         return not self.task.done()
 
@@ -177,7 +165,7 @@ class Terminal(BaseModel):
         if tab_id in self.tabs:
             self.current_tab = self.tabs[tab_id]
             self.current_tab_id = tab_id
-            tab_new_output = await self.current_tab.read_background_output()
+            tab_new_output = self.current_tab.read_background_output()
             return f"Switched to tab {tab_id}, pwd is {self.current_tab.cwd}, the tab has new output: {tab_new_output}"
         return f"Tab {tab_id} not found, created tabs are {list(self.tabs.keys())}"
 
@@ -241,9 +229,15 @@ class Terminal(BaseModel):
                     break
                 tmp.append(line)
             except asyncio.TimeoutError:
+                output_so_far = "".join(tmp)
+                if (returncode := current_tab.process.returncode) is not None:
+                    # The command is running in detach at tab {detached_tab_id}, currently with output: {output_so_far}
+                    msg = f"The terminal has exited with code {returncode}"
+                    logger.warning(msg)
+                    return f"{msg}, currently with output: {output_so_far}"
+
                 logger.info("No more output, detached from current tab and switched to a new tab")
 
-                output_so_far = "".join(tmp)
                 detached_tab_id = self.current_tab_id
                 new_tab_info = await self._create_new_tab()
                 instruction = DETACH_PROMPT.format(
