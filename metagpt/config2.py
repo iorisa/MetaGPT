@@ -22,6 +22,7 @@ from metagpt.configs.role_custom_config import RoleCustomConfig
 from metagpt.configs.role_zero_config import RoleZeroConfig
 from metagpt.configs.s3_config import S3Config
 from metagpt.configs.search_config import SearchConfig
+from metagpt.configs.supabase_config import SupabaseConfig
 from metagpt.configs.workspace_config import WorkspaceConfig
 from metagpt.const import CONFIG_ROOT, METAGPT_ROOT
 from metagpt.utils.yaml_model import YamlModel
@@ -95,6 +96,9 @@ class Config(CLIParams, YamlModel):
 
     omniparse: Optional[OmniParseConfig] = None
 
+    # Supabase
+    supabase: SupabaseConfig = Field(default_factory=SupabaseConfig)
+
     # Config for the rapid api key
     rapid_api_key: str = ""
 
@@ -113,7 +117,7 @@ class Config(CLIParams, YamlModel):
         return Config.from_yaml_file(pathname)
 
     @classmethod
-    def default(cls, reload: bool = False, **kwargs):
+    def default(cls, reload: bool = False, **kwargs) -> "Config":
         """Load default config
         - Priority: env < default_config_paths
         - Inside default_config_paths, the latter one overwrites the former one

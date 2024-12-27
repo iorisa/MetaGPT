@@ -4,9 +4,8 @@ import os
 from abc import abstractmethod
 from io import BytesIO
 from pathlib import Path
-from typing import Callable, ClassVar, Dict, Optional
+from typing import Any, Callable, ClassVar, Dict, Optional
 
-import pixabay_python as pxb
 import requests
 from PIL import Image
 from PIL.ImageFile import ImageFile
@@ -45,6 +44,7 @@ async () => {{
 class BaseImageProvider(BaseModel):
     """Abstract base class for image getter tools."""
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     # Common fields
     llm: BaseLLM = Field(default_factory=lambda: OpenAILLM(Config.default().llm))
 
@@ -153,9 +153,22 @@ class BaseImageProvider(BaseModel):
 class PixabayAPI(BaseImageProvider):
     """Image getter using Pixabay."""
 
-    client: pxb.PixabayClient = Field(
-        default_factory=lambda: pxb.PixabayClient(apiKey=Config.default().pixabay_api_key), exclude=True
-    )
+    # client: pxb.PixabayClient = Field(
+    #     default_factory=lambda: pxb.PixabayClient(apiKey=Config.default().pixabay_api_key), exclude=True
+    # )
+    client: Any = Field(default=None, exclude=True, description="Pixabay API client")
+
+    @model_validator(mode="after")
+    def _ensure_client(self) -> "PixabayAPI":
+        """Ensure that the Pixabay API client is initialized."""
+        if self.client is None:
+            try:
+                import pixabay_python as pxb
+
+                self.client = pxb.PixabayClient(apiKey=Config.default().pixabay_api_key)
+            except ImportError:
+                raise ImportError("Please install pixabay_python with `pip install pixabay_python`.")
+        return self
 
     def download_image(self, url: str, connect_timeout: int = 20, read_timeout: int = 20) -> ImageFile | None:
         """Download image from URL."""
@@ -243,7 +256,9 @@ class UnsplashApi(BaseImageProvider):
     """Image getter using Unsplash API."""
 
     api_base: str = "https://api.unsplash.com"
-    headers: ClassVar[Dict[str, str]] = {"Authorization": f"Client-ID {Config.default().unsplash_api_key}"}
+    headers: ClassVar[Dict[str, str]] = Field(
+        default_factory=lambda: {"Authorization": f"Client-ID {Config.default().unsplash_api_key}"}
+    )
 
     def download_image(self, url: str, connect_timeout: int = 20, read_timeout: int = 20) -> ImageFile | None:
         """Download image from URL."""

@@ -20,6 +20,7 @@ Triggered by software/product requests or feature enhancements, complete a full 
    - Programming Language: If not specified in the requirements, use React, JavaScript and Tailwind CSS.
    - Project Name: Use snake_case format
    - Restate the original requirements
+{backend_info}
 
 2. Product Definition(**IMPORTANT** )
    - Product Goals: 3 clear, orthogonal goals

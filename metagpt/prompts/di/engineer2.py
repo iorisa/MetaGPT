@@ -55,6 +55,7 @@ Note:
 26. Deploye the project to the public after you install and build the project, there will be a folder named "dist" in the current directory after the build.
 27. Use Engineer2.write_new_code to rewrite the whole file when you fail to use Editor.edit_file_by_replace more than three times.
 """
+
 ENGINEER2_INSTRUCTION = ROLE_INSTRUCTION + EXTRA_INSTRUCTION.strip()
 
 WRITE_CODE_SYSTEM_PROMPT = """
@@ -75,6 +76,7 @@ WRITE_CODE_PROMPT = """
 
 # Instruction
 Your task is to write the files listed in Files to Write. You must ensure the code is complete, correct, and bug-free.
+{supabase_code_requirement}
 # Tool Usage Guide
 When using tools, please adhere to the following guidelines:
 

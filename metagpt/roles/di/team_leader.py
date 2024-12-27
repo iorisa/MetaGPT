@@ -8,6 +8,7 @@ from pydantic import Field
 from metagpt.actions.di.run_command import RunCommand
 from metagpt.const import TEAMLEADER_NAME
 from metagpt.prompts.di.role_zero import QUICK_THINK_TAG
+from metagpt.prompts.di.supabase import get_backend_prompt_for_tl
 from metagpt.prompts.di.team_leader import (
     FINISH_CURRENT_TASK_CMD,
     TL_INFO,
@@ -58,7 +59,9 @@ class TeamLeader(RoleZero):
         return TL_INFO.format(role_info=role_info, team_info=team_info)
 
     async def _think(self) -> bool:
-        self.instruction = TL_INSTRUCTION.format(team_info=self._get_team_info())
+        self.instruction = TL_INSTRUCTION.format(
+            team_info=self._get_team_info(), backend_info=get_backend_prompt_for_tl()
+        )
         return await super()._think()
 
     def publish_message(self, msg: Message, send_to="no one"):

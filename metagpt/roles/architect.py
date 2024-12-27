@@ -10,7 +10,9 @@ from pydantic import Field
 
 from metagpt.actions.design_api import WriteDesign
 from metagpt.actions.write_prd import WritePRD
-from metagpt.prompts.di.architect import ARCHITECT_INSTRUCTION
+from metagpt.prompts.di.architect import ARCHITECT_INSTRUCTION, SYSTEM_DESIGN_EXAMPLE
+from metagpt.prompts.di.supabase import get_backend_prompt_for_architect
+from metagpt.prompts.di.template import GENERAL_WEB_APP_TEMPLATE_PROMPT
 from metagpt.roles.di.role_zero import RoleZero
 from metagpt.tools.libs.terminal import Terminal
 
@@ -48,3 +50,12 @@ class Architect(RoleZero):
 
         # Set events or actions the Architect should watch or be aware of
         self._watch({WritePRD})
+
+    async def _think(self) -> bool:
+        self.instruction = ARCHITECT_INSTRUCTION.format(
+            backend_info=get_backend_prompt_for_architect(),
+            system_design_example=SYSTEM_DESIGN_EXAMPLE,
+            template_info=GENERAL_WEB_APP_TEMPLATE_PROMPT,
+        )
+
+        return await super()._think()
