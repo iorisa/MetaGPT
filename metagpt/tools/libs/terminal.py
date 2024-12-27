@@ -107,6 +107,7 @@ class Tab(BaseModel):
                             # report stdout in real-time
                             cmd_output.append(line)
                         await output_queue.put(None)
+                        self.update_cwd()  # update cwd if command executed
                         return "".join(cmd_output)
                     # log stdout in real-time
                     await observer.async_report(line, "output")
@@ -136,6 +137,9 @@ class Tab(BaseModel):
         if self.process.returncode is not None:
             return False
         return not self.task.done()
+
+    def update_cwd(self):
+        self.cwd = os.readlink(f"/proc/{self.process.pid}/cwd")
 
 
 @register_tool(include_functions=["run_command"])
@@ -237,6 +241,7 @@ class Terminal(BaseModel):
                     logger.warning(msg)
                     return f"{msg}, currently with output: {output_so_far}"
 
+                current_tab.update_cwd()  # update cwd for the command still running
                 logger.info("No more output, detached from current tab and switched to a new tab")
 
                 detached_tab_id = self.current_tab_id
