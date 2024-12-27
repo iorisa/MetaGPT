@@ -4,6 +4,7 @@ import re
 from asyncio.subprocess import PIPE, STDOUT, Process
 from typing import Optional
 
+import psutil
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from metagpt.config2 import Config
@@ -139,7 +140,7 @@ class Tab(BaseModel):
         return not self.task.done()
 
     def update_cwd(self):
-        self.cwd = os.readlink(f"/proc/{self.process.pid}/cwd")
+        self.cwd = psutil.Process(self.process.pid).cwd()
 
 
 @register_tool(include_functions=["run_command"])
