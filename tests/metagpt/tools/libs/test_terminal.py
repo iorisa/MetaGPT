@@ -17,6 +17,8 @@ async def test_terminal():
     output = await terminal.run_command("pwd")
     assert output.strip() == str(DATA_PATH)
 
+    assert terminal.cwd == str(DATA_PATH)
+
 
 @pytest.mark.asyncio
 async def test_terminal_switch_tab():
