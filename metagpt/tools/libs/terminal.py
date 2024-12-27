@@ -106,6 +106,7 @@ class Tab(BaseModel):
                             await output_queue.put(line)
                             # report stdout in real-time
                             cmd_output.append(line)
+                        await output_queue.put(None)
                         return "".join(cmd_output)
                     # log stdout in real-time
                     await observer.async_report(line, "output")
