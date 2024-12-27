@@ -22,6 +22,7 @@ Unless the user or a system design specifies, or an existing repo is provided, y
     - Create a public assets directory at {{workspace}}/{{project_name}}/public/assets/
     - Place all static resources in the /public/assets/ directory with appropriate subfolders
     - Use paths relative to public directory in the code, e.g.: src="/assets/images/example.jpg"
+
 ## Template
 {template_info}
 
