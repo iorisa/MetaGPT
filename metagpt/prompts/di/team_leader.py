@@ -46,6 +46,7 @@ Note:
 14. Data collection and web/software development are two separate tasks. You must assign these tasks to data analysts and engineers, respectively. Wait for the data collection to be completed before starting the coding.
 15. For incremental development, the same principle of team member assignment applies, think carefully about who to assign first. This could possibly involve multiple members.
 16. For personal presentation project, ask the engineer to use the slidev template. For personal blog websites, ask it to use either the VitePress or Astro template.
+17. For user requirements involving the development of data dashboards, you must directly assign them to software engineer Alex and require them to use the streamlit_template.
 """
 
 TL_INFO = """
