@@ -8,6 +8,7 @@ from pydantic import Field, model_validator
 
 from metagpt.logs import logger
 from metagpt.prompts.di.engineer2 import ENGINEER2_INSTRUCTION, WRITE_CODE_PROMPT
+from metagpt.prompts.di.supabase import get_supabase_code_requirement
 from metagpt.roles.di.role_zero import RoleZero
 from metagpt.schema import UserMessage
 from metagpt.strategy.experience_retriever import ENGINEER_EXAMPLE
@@ -16,6 +17,7 @@ from metagpt.tools.libs.deployer import Deployer
 from metagpt.tools.libs.editor import FileBlock
 from metagpt.tools.libs.git import git_create_pull
 from metagpt.tools.libs.image_getter import ImageGetter
+from metagpt.tools.libs.supabase_manager import get_supabase_manager_instance
 from metagpt.tools.libs.terminal import Terminal
 from metagpt.tools.tool_recommend import BM25ToolRecommender, ToolRecommender
 from metagpt.tools.tool_registry import register_tool
@@ -30,7 +32,7 @@ class Engineer2(RoleZero):
     profile: str = "Engineer"
     goal: str = "Take on game, app, web development and deployment."
     instruction: str = ENGINEER2_INSTRUCTION
-    terminal: Terminal = Field(default_factory=Terminal, exclude=True)
+    terminal: Terminal = Field(default_factory=Terminal)
     deployer: Deployer = Field(default_factory=Deployer, exclude=True)
     tools: list[str] = [
         "Plan",
@@ -43,6 +45,7 @@ class Engineer2(RoleZero):
         "Engineer2",
         "CodeReview",
         "Deployer",
+        "SupabaseManager",
         # "UserInfoParser",
     ]
 
@@ -75,44 +78,35 @@ class Engineer2(RoleZero):
         Display the current terminal and editor state.
         This information will be dynamically added to the command prompt.
         """
-        if not self.terminal.initial_workdir:
-            # A special case to set terminal dir based on Role dir. This happens one time when Role is deserialized and terminal re-initialized
-            await self.terminal.set_initial_workdir(self.working_dir)
-        self.working_dir = (await self.terminal.run_command("pwd")).strip()
+        self.working_dir = self.terminal.cwd
         self.editor.set_workdir(self.working_dir)
 
     def _update_tool_execution(self):
-        # validate = ValidateAndRewriteCode()
         cr = CodeReview()
-        # up = UserInfoParser()
-        if self.run_eval is True:
-            # Evalute tool map
-            self.tool_execution_map.update(
+        supabase_manager = get_supabase_manager_instance()
+
+        tool_execution = {
+            "git_create_pull": git_create_pull,
+            "Engineer2.write_new_code": self.write_new_code,
+            "CodeReview.review": cr.review,
+            "CodeReview.fix": cr.fix,
+            "Terminal.run_command": self.terminal.run_command,
+            "Deployer.deploy_to_public": self._deploy_to_public,
+            "SupabaseManager.execute_sql": supabase_manager.execute_sql,
+            "SupabaseManager.get_session_schemas": supabase_manager.get_session_schemas,
+        }
+
+        # Add additional tools only in evaluation mode
+        if self.run_eval:
+            tool_execution.update(
                 {
-                    "git_create_pull": git_create_pull,
-                    "Engineer2.write_new_code": self.write_new_code,
-                    "CodeReview.review": cr.review,
-                    "CodeReview.fix": cr.fix,
-                    "Terminal.run_command": self._eval_terminal_run,
                     "RoleZero.ask_human": self._end,
                     "RoleZero.reply_to_human": self._end,
-                    "Deployer.deploy_to_public": self._deploy_to_public,
-                    # "UserInfoParser.get": up.get,
+                    "Terminal.run_command": self._eval_terminal_run,  # Override terminal command in eval mode
                 }
             )
-        else:
-            # Default tool map
-            self.tool_execution_map.update(
-                {
-                    "git_create_pull": git_create_pull,
-                    "Engineer2.write_new_code": self.write_new_code,
-                    "CodeReview.review": cr.review,
-                    "CodeReview.fix": cr.fix,
-                    "Terminal.run_command": self.terminal.run_command,
-                    "Deployer.deploy_to_public": self._deploy_to_public,
-                    # "UserInfoParser.get": up.get,
-                }
-            )
+
+        self.tool_execution_map.update(tool_execution)
 
     def _retrieve_experience(self) -> str:
         return ENGINEER_EXAMPLE
@@ -128,6 +122,10 @@ class Engineer2(RoleZero):
     @log_time
     async def _tool_call(self, code: str):
         """Execute tool calls in code and replace with results."""
+        # Check the tool whether available
+        if not ImageGetter.is_available():
+            return code
+
         # Regex pattern to match tool call tags like <tool_call.../>
         # Uses [\s\S] for multi-line matching and non-greedy *? to avoid over-matching
         # Supports optional $ prefix: $<tool_call.../>
@@ -179,6 +177,7 @@ class Engineer2(RoleZero):
             file_path=paths,
             file_description=description,
             available_code_tools=code_tool_info,
+            supabase_code_requirement=get_supabase_code_requirement(),
         )
         # Sometimes the Engineer repeats the last command to respond.
         # Replace the last command with a manual prompt to guide the Engineer to write new code.

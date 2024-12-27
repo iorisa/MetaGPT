@@ -76,6 +76,7 @@ class BaseSearchTemplate(BaseModel):
             raise FileNotFoundError(f"Template path {template_path} does not exist")
 
         target_path = self.output_dir / template_path.name
+        target_path = target_path.absolute()
         target_path.mkdir(parents=True, exist_ok=True)
         shutil.copytree(template_path, target_path, dirs_exist_ok=True)
         logger.info(f"Template copied to: {target_path}")

@@ -1100,22 +1100,35 @@ class Editor(BaseModel):
         return "\n".join(res_list)
 
     def find_file(self, file_name: str, dir_path: str = "./") -> str:
-        """Finds all files with the given name in the specified directory.
+        """Finds all files with the given name or path in the specified directory.
 
         Args:
-            file_name: str: The name of the file to find.
+            file_name: str: The name or path of the file to find.
+                           If it's an absolute path, will match the exact path.
+                           If it's a relative path, will match the path suffix.
+                           If it's just a name, will match file names.
             dir_path: str: The path to the directory to search.
         """
-        file_name = self._try_fix_path(file_name)
         dir_path = self._try_fix_path(dir_path)
         if not dir_path.is_dir():
             raise FileNotFoundError(f"Directory {dir_path} not found")
 
+        file_path = Path(file_name)
+
         matches = []
         for root, _, files in os.walk(dir_path):
             for file in files:
-                if str(file_name) in file:
-                    matches.append(Path(root) / file)
+                current_path = Path(root) / file
+
+                if file_path.is_absolute():
+                    if current_path == file_path:
+                        matches.append(current_path)
+                elif "/" in str(file_path) or "\\" in str(file_path):
+                    if str(current_path).endswith(str(file_path)):
+                        matches.append(current_path)
+                else:
+                    if current_path.name == file_name:
+                        matches.append(current_path)
 
         res_list = []
         if matches:

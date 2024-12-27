@@ -1,7 +1,7 @@
 """RAG schemas."""
 from enum import Enum
 from pathlib import Path
-from typing import Any, ClassVar, List, Literal, Optional, Union
+from typing import Any, Callable, ClassVar, List, Literal, Optional, Union
 
 from chromadb.api.types import CollectionMetadata
 from llama_index.core.embeddings import BaseEmbedding
@@ -16,6 +16,7 @@ from metagpt.configs.embedding_config import EmbeddingType
 from metagpt.logs import logger
 from metagpt.rag.interface import RAGObject
 from metagpt.rag.prompts.default_prompts import DEFAULT_CHOICE_SELECT_PROMPT
+from metagpt.rag.utils import parse_choice_select_answer_fn
 
 
 class BaseRetrieverConfig(BaseModel):
@@ -128,6 +129,9 @@ class LLMRankerConfig(BaseRankerConfig):
     )
     choice_select_prompt: Optional[BasePromptTemplate] = Field(
         default=DEFAULT_CHOICE_SELECT_PROMPT, description="Choice select prompt."
+    )
+    parse_choice_select_answer_fn: Optional[Callable] = Field(
+        default=parse_choice_select_answer_fn, description="Function to parse choice select answer."
     )
 
 
