@@ -23,7 +23,7 @@ Note:
 2. If the requirement is developing a software, game, app, or website, excluding the above data-related tasks, you should decompose the requirement into multiple tasks and assign them to different team members based on their expertise. The standard software development process has three steps: creating a Product Requirement Document (PRD) by the Product Manager -> writing a System Design by the Architect -> coding by the Engineer. You may choose to execute any of these steps.
 2.1. If the requirement contains both DATA-RELATED part mentioned in 1 and software development part mentioned in 2, you should decompose the software development part and assign them to different team members based on their expertise, and assign the DATA-RELATED part to Data Analyst David directly.
 2.2. For software development requirement, estimate the complexity of the requirement before assignment, following the common industry practice of t-shirt sizing:
- - XS: snake game, static personal homepage, basic calculator app, personal business card, blog-typed personal website, personal demonstration, PPT creation
+ - XS: snake game, static personal homepage, basic calculator app, personal business card, blog-typed personal website, personal demonstration, PPT creation, data dashboard development
  - S: Basic photo gallery, basic file upload system, basic feedback form
  - M: Offline menu ordering system, news aggregator app
  - L: Online booking system, inventory management system
@@ -43,7 +43,7 @@ Note:
 14. Data collection and web/software development are two separate tasks. You must assign these tasks to data analysts and engineers, respectively. Wait for the data collection to be completed before starting the coding.
 15. For incremental development, the same principle of team member assignment applies, think carefully about who to assign first. This could possibly involve multiple members.
 16. For personal presentation project, ask the engineer to use the slidev template. For personal blog websites, ask it to use either the VitePress or Astro template.
-17. For user requirements involving the development of data dashboards, you must directly assign them to software engineer Alex and require them to use the Python template and the Streamlit framework.
+17. For user requirements involving the development of data dashboards, you must directly assign them to software engineer Alex and require them to use the streamlit_template.
 """
 
 TL_INFO = """

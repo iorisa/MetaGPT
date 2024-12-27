@@ -9,6 +9,7 @@ import tempfile
 from pathlib import Path
 from typing import List, Optional, Union
 
+import pandas as pd
 import tiktoken
 from pydantic import BaseModel, ConfigDict, field_validator
 
@@ -141,10 +142,25 @@ class Editor(BaseModel):
         # self.resource.report(path, "path")
         return f"File successfully written and saved to {path}."
 
+    @staticmethod
+    def read_csv_and_json(path: str) -> FileBlock:
+        """Read the whole content of a csv file. Using an absolute path as the argument for specifying the file location."""
+        if path.endswith(".csv"):
+            df = pd.read_csv(path)
+
+        elif path.endswith(".json"):
+            df = pd.read_json(path)
+        else:
+            raise ValueError("The file must be a csv or json file.")
+        return FileBlock(path=path, content=f"The data show as markdown:\n{df.head().to_markdown(tablefmt='grid')}")
+
     async def read(self, path: str) -> FileBlock:
         """Read the whole content of a file. Using an absolute path as the argument for specifying the file location."""
 
         path = self._try_fix_path(path)
+
+        if path.suffix in (".csv", ".json"):
+            return self.read_csv_and_json(str(path))
 
         error = FileBlock(
             path=str(path),

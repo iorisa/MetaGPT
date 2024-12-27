@@ -68,7 +68,7 @@ class Terminal:
             daemon (bool): If True, executes the command in an asynchronous task, allowing
                            the main program to continue execution.
         Returns:
-            str: The command's output or an empty string if `daemon` is True. Remember that
+            str: The     command's output or an empty string if `daemon` is True. Remember that
                  when `daemon` is True, use the `get_stdout_output` method to get the output.
         """
         if self.process is None:
