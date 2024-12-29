@@ -38,7 +38,7 @@ class Engineer2(RoleZero):
         "Plan",
         "Editor",
         "RoleZero",
-        "Terminal:run_command",
+        "Terminal:run",
         "Browser:goto,scroll",
         "git_create_pull",
         "SearchEnhancedQA",
@@ -90,7 +90,7 @@ class Engineer2(RoleZero):
             "Engineer2.write_new_code": self.write_new_code,
             "CodeReview.review": cr.review,
             "CodeReview.fix": cr.fix,
-            "Terminal.run_command": self.terminal.run_command,
+            "Terminal.run": self.terminal.run,
             "Deployer.deploy_to_public": self._deploy_to_public,
             "SupabaseManager.execute_sql": supabase_manager.execute_sql,
             "SupabaseManager.get_session_schemas": supabase_manager.get_session_schemas,
@@ -102,7 +102,7 @@ class Engineer2(RoleZero):
                 {
                     "RoleZero.ask_human": self._end,
                     "RoleZero.reply_to_human": self._end,
-                    "Terminal.run_command": self._eval_terminal_run,  # Override terminal command in eval mode
+                    "Terminal.run": self._eval_terminal_run,  # Override terminal command in eval mode
                 }
             )
 
@@ -120,12 +120,10 @@ class Engineer2(RoleZero):
         return path
 
     @log_time
-    async def _tool_call(self, code: str):
+    async def _tool_call(self, code: str) -> tuple[str, list]:
         """Execute tool calls in code and replace with results."""
-        # Check the tool whether available
-        if not ImageGetter.is_available():
-            return code
-
+        if not self.code_tool_recommender:
+            return code, []
         # Regex pattern to match tool call tags like <tool_call.../>
         # Uses [\s\S] for multi-line matching and non-greedy *? to avoid over-matching
         # Supports optional $ prefix: $<tool_call.../>
@@ -230,7 +228,7 @@ class Engineer2(RoleZero):
             # Set self.rc.todo to None to stop the engineer.
             self._set_state(-1)
         else:
-            command_output = await self.terminal.run_command(cmd)
+            command_output = await self.terminal.run(cmd)
         return command_output
 
     async def _end(self):
