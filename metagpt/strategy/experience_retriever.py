@@ -783,7 +783,7 @@ Explanation: This is a project that needs to be implemented using Vue.js accordi
 ```json
 [
     {
-        "command_name": "Terminal.run_command",
+        "command_name": "Terminal.run",
         "args": {
             "cmd": "cp -r {{template_folder}}/* {{workspace}}/{{project_name}}/ && cd {{workspace}}/{{project_name}} && pwd && tree "
         }
@@ -890,7 +890,7 @@ Explanation: The project have been completed. This project is Vue/React Project,
 ```json
 [
     {
-        "command_name": "Terminal.run_command",
+        "command_name": "Terminal.run",
         "args": {
             "cmd": "pnpm install && pnpm run build"
         }

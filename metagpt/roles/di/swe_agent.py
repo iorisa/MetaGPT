@@ -53,7 +53,7 @@ class SWEAgent(RoleZero):
         """
         state_output = await self.terminal.run("state")
         bash_state = json.loads(state_output)
-        self.cmd_prompt_current_state = CURRENT_BASH_STATE.format(**bash_state).strip()
+        self.working_dir = CURRENT_BASH_STATE.format(**bash_state).strip()
 
     async def _act(self) -> Message:
         message = await super()._act()
