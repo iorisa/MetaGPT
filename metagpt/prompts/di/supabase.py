@@ -49,7 +49,7 @@ const {{ data: {{ user }} }} = await supabase.auth.getUser();
 
 - Note that emailRedirectTo MUST be set to the current origin, THIS IS CRUCIAL for user registration:
 ```jsx
-const { error } = await supabase.auth.signUp({email, password, options: {emailRedirectTo: `${window.location.origin}`} });
+const {{ error }} = await supabase.auth.signUp({{email, password, options: {{emailRedirectTo: `${{window.location.origin}}`}} }});
 ```
 
 """
