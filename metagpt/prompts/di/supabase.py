@@ -6,6 +6,7 @@ Supabase is enabled, use it as the backend service (provides Auth, Database, Sto
 Supabase Configuration:
 - Project URL: {project_url}
 - Project API Key: {project_key}
+- Project REF: {project_ref}
 
 ### CRITICAL: DATABASE SETUP MUST BE COMPLETED BEFORE ANY CODE IMPLEMENTATION OR MODIFICATION, Follow These Steps in Order:
 
@@ -46,6 +47,11 @@ const {{ data: {{ session }} }} = await supabase.auth.getSession();
 const {{ data: {{ user }} }} = await supabase.auth.getUser();
 ```
 
+- Note that emailRedirectTo MUST be set to the current origin, THIS IS CRUCIAL for user registration:
+```jsx
+const { error } = await supabase.auth.signUp({email, password, options: {emailRedirectTo: `${window.location.origin}`} });
+```
+
 """
 
 
@@ -57,6 +63,7 @@ def get_backend_prompt_for_fe() -> str:
         FE_SUPABASE_PROMPT.format(
             project_url=manager.config.project_url,
             project_key=manager.config.project_key,
+            project_ref=manager.config.project_ref,
             session_id=manager.config.session_id,
         )
         if manager.is_supabase_enabled
