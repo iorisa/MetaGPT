@@ -32,6 +32,9 @@ OTHER_TYPE = "other"
 DEFAULT_MIN_TOKEN_COUNT = 10000
 DEFAULT_MAX_TOKEN_COUNT = 100000000
 
+STRUCTURAL_DATA_SUFFIX = [".csv", ".xlsx"]
+TEXT_DOC_SUFFIX = [".txt", ".md", ".markdown", ".pdf", ".docx", ".doc"]
+
 
 class IndexRepoMeta(BaseModel):
     min_token_count: int
