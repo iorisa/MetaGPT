@@ -89,17 +89,17 @@ When using tools, please adhere to the following guidelines:
 ## Example: 
 1. Setting a Background Image:
 ```jsx
-// example.jsx
+// example_1.jsx
 // existing code
-backgroundImage: 'url(<tool_call> ImageGetter.get(search_term="a beautiful sunset", image_save_path="/absolute_path/to/public/images/sonnet-bj.png", mode="search") </tool_call>)',
+backgroundImage: 'url(<tool_call> ImageGetter.get(search_term="a beautiful sunset", image_save_path="/absolute_path/to/public/assets/images/sonnet-bj.png", mode="search") </tool_call>)',
 // existing code
 ```
 
 2. To use an image as a game character or element:
 ```jsx
-// example.jsx
+// example_2.jsx
 // existing code
-<img src=\"<tool_call> ImageGetter.get(search_term="a cute bird", image_save_path="/absolute_path/to/public/images/bird.png", mode="search") </tool_call>\" alt="bird" />
+<img src=\"<tool_call> ImageGetter.get(search_term="a cute bird", image_save_path="/absolute_path/to/public/assets/images/bird.png", mode="search") </tool_call>\" alt="bird" />
 // existing code
 ```
 
