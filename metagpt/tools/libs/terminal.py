@@ -20,10 +20,9 @@ You may operate on the new tab, or switch back to the detached tab {detached_tab
 """
 
 
-def is_service_process(output: list[str]) -> bool:
-    output_str = "\n".join(output)
+def is_service_process(output: str) -> bool:
     pattern = r"localhost:\d+|[\d.]+:\d+"  # match localhost:port or ip:port"
-    return bool(re.search(pattern, output_str))
+    return bool(re.search(pattern, output))
 
 
 class Tab(BaseModel):
@@ -234,13 +233,15 @@ class Terminal(BaseModel):
         await current_tab.execute(cmd)
 
         tmp = []
+        is_service_flag = False
         while True:
             try:
                 # shorter timeout for service process by detecting output patterns such as localhost:port, ip:port
-                timeout = self.timeout if not is_service_process(tmp) else 3
+                timeout = self.timeout if not is_service_flag else 3
                 line = await asyncio.wait_for(output_queue.get(), timeout=timeout)
                 if line is None:
                     break
+                is_service_flag = is_service_flag or is_service_process(line)  # if True already, skip checking
                 tmp.append(line)
             except asyncio.TimeoutError:
                 output_so_far = "".join(tmp)
