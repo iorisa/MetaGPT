@@ -557,7 +557,7 @@ Explanation: DON'T decompose requirement if it is a DATA-RELATED task, assign a 
 Conversation History:
 [
     ...,
-    {'role': 'assistant', 'content': 'from Alice(Product Manager) to {'<all>'}: Request is completed, with outputs: Command WritePRD executed: PRD filename: "/absolute/path/to/snake_game/docs/prd.json"'},
+    {'role': 'assistant', 'content': 'from Alice(Product Manager) to {'<all>'}: Request is completed, with outputs: Command WritePRD executed: PRD filename: "/tmp/workspace/snake_game/docs/prd.json"'},
 ]
 Explanation: You received a message from Alice, the Product Manager, that she has completed the PRD, use Plan.finish_current_task to mark her task as finished and moves the plan to the next task. Based on plan status, next task is for Bob (Architect), publish a message asking him to start. The message content should contain important path info.
 ```json
@@ -569,7 +569,7 @@ Explanation: You received a message from Alice, the Product Manager, that she ha
     {
         "command_name": "TeamLeader.publish_message",
             "args": {
-                "content": "Please design the software architecture for the snake game based on the PRD created by Alice. The PRD is at '/absolute/path/to/snake_game/docs/prd.json'.",
+                "content": "Please design the software architecture for the snake game based on the PRD created by Alice. The PRD is at '/tmp/workspace/snake_game/docs/prd.json'.",
                 "send_to": "Bob"
             }
     },
