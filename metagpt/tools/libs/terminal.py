@@ -20,6 +20,12 @@ You may operate on the new tab, or switch back to the detached tab {detached_tab
 """
 
 
+def is_service_process(output: list[str]) -> bool:
+    output_str = "\n".join(output)
+    pattern = r"localhost:\d+|[\d.]+:\d+"  # match localhost:port or ip:port"
+    return bool(re.search(pattern, output_str))
+
+
 class Tab(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -230,20 +236,21 @@ class Terminal(BaseModel):
         tmp = []
         while True:
             try:
-                line = await asyncio.wait_for(output_queue.get(), timeout=self.timeout)
+                # shorter timeout for service process by detecting output patterns such as localhost:port, ip:port
+                timeout = self.timeout if not is_service_process(tmp) else 3
+                line = await asyncio.wait_for(output_queue.get(), timeout=timeout)
                 if line is None:
                     break
                 tmp.append(line)
             except asyncio.TimeoutError:
                 output_so_far = "".join(tmp)
                 if (returncode := current_tab.process.returncode) is not None:
-                    # The command is running in detach at tab {detached_tab_id}, currently with output: {output_so_far}
                     msg = f"The terminal has exited with code {returncode}"
                     logger.warning(msg)
                     return f"{msg}, currently with output: {output_so_far}"
 
                 current_tab.update_cwd()  # update cwd for the command still running
-                logger.info("No more output, detached from current tab and switched to a new tab")
+                logger.info(f"No more output after {timeout}s, detached from current tab and switched to a new tab")
 
                 detached_tab_id = self.current_tab_id
                 new_tab_info = await self._create_new_tab()

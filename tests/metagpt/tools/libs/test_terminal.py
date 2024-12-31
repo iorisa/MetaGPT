@@ -1,7 +1,7 @@
 import pytest
 
 from metagpt.const import DATA_PATH, METAGPT_ROOT
-from metagpt.tools.libs.terminal import Terminal
+from metagpt.tools.libs.terminal import Terminal, is_service_process
 
 
 @pytest.mark.asyncio
@@ -40,6 +40,12 @@ async def test_terminal_typing():
     output2 = await terminal.run("2")
     print(output2)
     assert "4" in output2
+
+
+def test_is_service_process():
+    assert is_service_process(["some string", "some string localhost:3000 some string", "test string"])
+    assert is_service_process(["http://192.2.3.4:5000 abc", "test string"])
+    assert not is_service_process(["some string", "test string"])
 
 
 if __name__ == "__main__":

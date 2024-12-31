@@ -51,7 +51,7 @@ GENERAL_WEB_APP_TEMPLATE_PROMPT = """No template available"""
 
 EXRTA_INFO_PROMPT = """
 1. {template_style} template successfully copied to {target_dir}. Navigate to it before starting the project. 
-2. If the project root directory exists README.md, read it first.
+2. Watch Project Structure, if there exists README.md, read it first.
 3. Make sure you have understood the content of the code file before updating or writing the code.
 """
 
