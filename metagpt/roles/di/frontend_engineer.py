@@ -45,6 +45,13 @@ class FrontendEngineer(Engineer2):
     template_tool: BaseSearchTemplate = None
 
     @model_validator(mode="after")
+    def set_instruction(self):
+        self.instruction = FRONTEND_ENGINEER_PROMPT.format(
+            template_info=GENERAL_WEB_APP_TEMPLATE_PROMPT, backend_info=get_backend_prompt_for_fe()
+        )
+        return self
+
+    @model_validator(mode="after")
     def set_search_template_tool(self):
         if self.template_tool is None and self.use_search_template:
             self.template_tool = SearchTemplate()
@@ -54,10 +61,6 @@ class FrontendEngineer(Engineer2):
         return self
 
     async def _think(self) -> bool:
-        self.instruction = FRONTEND_ENGINEER_PROMPT.format(
-            template_info=GENERAL_WEB_APP_TEMPLATE_PROMPT, backend_info=get_backend_prompt_for_fe()
-        )
-
         # Check if the latest message is a development request
         send_msg = self.rc.memory.get()
 

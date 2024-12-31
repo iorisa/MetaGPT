@@ -15,7 +15,12 @@ from pydantic import BaseModel, ConfigDict, field_validator
 
 from metagpt.const import DEFAULT_WORKSPACE_ROOT
 from metagpt.logs import logger
-from metagpt.tools.libs.index_repo import DEFAULT_MIN_TOKEN_COUNT, IndexRepo
+from metagpt.tools.libs.index_repo import (
+    DEFAULT_MIN_TOKEN_COUNT,
+    STRUCTURAL_DATA_SUFFIX,
+    TEXT_DOC_SUFFIX,
+    IndexRepo,
+)
 from metagpt.tools.libs.linter import Linter
 from metagpt.tools.tool_registry import register_tool
 from metagpt.utils.common import awrite
@@ -150,14 +155,14 @@ class Editor(BaseModel):
             df = pd.read_excel(path)
         else:
             raise ValueError("The file must be a csv or excel file.")
-        return FileBlock(path=path, content=f"The data show as markdown:\n{df.head().to_string()}")
+        return FileBlock(path=path, content=f"Showing head of the data:\n{df.head().to_string()}")
 
     async def read(self, path: str) -> FileBlock:
         """Read the whole content of a file. Using an absolute path as the argument for specifying the file location."""
 
         path = self._try_fix_path(path)
 
-        if path.suffix in (".csv", ".xlsx"):
+        if path.suffix in STRUCTURAL_DATA_SUFFIX:
             return self._read_structural_data(str(path))
 
         error = FileBlock(
@@ -165,8 +170,12 @@ class Editor(BaseModel):
             content="The file is too large to read. Use `Editor.similarity_search` to read the file instead.",
         )
         path = Path(path)
-        if path.stat().st_size > 5 * DEFAULT_MIN_TOKEN_COUNT:
+
+        # Limit the size only for text documents
+        # TODO: Formulate a complete mechanism to handle files of all types and of any size
+        if path.stat().st_size > 5 * DEFAULT_MIN_TOKEN_COUNT and path.suffix in TEXT_DOC_SUFFIX:
             return error
+
         content = await File.read_text_file(path)
         if not content:
             return FileBlock(path=str(path), content="")
