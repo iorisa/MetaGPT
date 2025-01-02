@@ -47,6 +47,8 @@ class BaseImageProvider(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     # Common fields
     llm: BaseLLM = Field(default_factory=lambda: OpenAILLM(Config.default().llm))
+    working_dir: Path = Field(default=DEFAULT_WORKSPACE_ROOT, exclude=True)
+    project_folder: Path = Field(default=None, exclude=True)
 
     @property
     def gen_image(self) -> Callable:
@@ -54,14 +56,22 @@ class BaseImageProvider(BaseModel):
 
     def _process_save_path(self, image_save_path: str) -> tuple[str, str]:
         """Process and validate the save path."""
-        project_folder = os.listdir(DEFAULT_WORKSPACE_ROOT)[0]
+        if self.project_folder is None:
+            # Try to auto-detect project folder by finding the first non-hidden directory
+            # in working_dir. This has limitations:
+            # - Only uses first matching directory found
+            # - No validation that directory is actually a project
+            # - Will fail if no valid directories exist
+            # - Assumes project directories never start with "."
+            for path in os.listdir(self.working_dir):
+                if os.path.isdir(os.path.join(self.working_dir, path)) and not path.startswith("."):
+                    self.project_folder = os.path.join(self.working_dir, path)
+                    break
         if not Path(image_save_path).is_absolute():
-            save_dir = os.path.dirname(os.path.join(DEFAULT_WORKSPACE_ROOT, project_folder, image_save_path))
+            save_dir = os.path.dirname(os.path.join(self.project_folder, image_save_path))
         else:
             save_dir = os.path.dirname(image_save_path)
-            image_save_path = (
-                Path(image_save_path).relative_to(os.path.join(DEFAULT_WORKSPACE_ROOT, project_folder)).__str__()
-            )
+            image_save_path = Path(image_save_path).relative_to(self.project_folder).__str__()
         return save_dir, image_save_path
 
     async def _save_image(self, image: Image, image_save_path: str) -> str:
