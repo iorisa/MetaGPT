@@ -4,9 +4,9 @@ import os
 from abc import abstractmethod
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Callable, ClassVar, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
-import requests
+import aiohttp
 from PIL import Image
 from PIL.ImageFile import ImageFile
 from playwright.async_api import Browser as Browser_
@@ -159,6 +159,14 @@ class BaseImageProvider(BaseModel):
         image_save_path = await self._save_image(image, image_save_path)
         return image_save_path
 
+    async def download_image(self, url: str, connect_timeout: int = 20, read_timeout: int = 20) -> ImageFile | None:
+        """Download image from URL."""
+        async with aiohttp.ClientSession() as client:
+            timeout = aiohttp.ClientTimeout(connect=connect_timeout, sock_read=read_timeout)
+            async with client.get(url=url, verify_ssl=True, timeout=timeout) as resp:
+                if resp.status == 200:
+                    return Image.open(BytesIO(await resp.read()))
+
 
 class PixabayAPI(BaseImageProvider):
     """Image getter using Pixabay."""
@@ -180,18 +188,11 @@ class PixabayAPI(BaseImageProvider):
                 raise ImportError("Please install pixabay_python with `pip install pixabay_python`.")
         return self
 
-    def download_image(self, url: str, connect_timeout: int = 20, read_timeout: int = 20) -> ImageFile | None:
-        """Download image from URL."""
-        resp = requests.get(url=url, verify=True, timeout=(connect_timeout, read_timeout))
-        if resp.status_code == 200:
-            return Image.open(BytesIO(resp.content))
-        return None
-
     async def search_image(self, search_term: str) -> ImageFile | None:
         """Search for image using Pixabay API."""
         searchResult = self.client.searchImage(q=search_term, perPage=1)
         hitsList = list(searchResult.hits)
-        return self.download_image(hitsList[0].largeImageURL)
+        return await self.download_image(hitsList[0].largeImageURL)
 
 
 class UnsplashWeb(BaseImageProvider):
@@ -265,31 +266,23 @@ class UnsplashWeb(BaseImageProvider):
 class UnsplashApi(BaseImageProvider):
     """Image getter using Unsplash API."""
 
+    api_key: str
     api_base: str = "https://api.unsplash.com"
-    headers: ClassVar[Dict[str, str]] = Field(
-        default_factory=lambda: {"Authorization": f"Client-ID {Config.default().unsplash_api_key}"}
-    )
-
-    def download_image(self, url: str, connect_timeout: int = 20, read_timeout: int = 20) -> ImageFile | None:
-        """Download image from URL."""
-        resp = requests.get(url=url, verify=True, timeout=(connect_timeout, read_timeout))
-        if resp.status_code == 200:
-            return Image.open(BytesIO(resp.content))
-        return None
+    headers: Dict[str, str] = Field(default_factory=dict)
 
     async def search_image(self, search_term: str) -> ImageFile | None:
         """Search for image using Unsplash API."""
         params = {"query": search_term, "per_page": 1, "orientation": "landscape"}
-
-        response = requests.get(f"{self.api_base}/search/photos", headers=self.headers, params=params)
-
-        if response.status_code == 200:
-            results = response.json().get("results", [])
-            if results:
-                # Get regular sized image URL
-                image_url = results[0]["urls"]["regular"]
-                return self.download_image(image_url)
-        return None
+        headers = {"Authorization": f"Client-ID {self.api_key}"}
+        headers.update(self.headers)
+        async with aiohttp.ClientSession() as client:
+            async with client.get(f"{self.api_base}/search/photos", headers=headers, params=params) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if results := data.get("results"):
+                        # Get regular sized image URL
+                        image_url = results[0]["urls"]["regular"]
+                        return await self.download_image(image_url)
 
 
 @register_tool(include_functions=["get", "process"])
@@ -304,16 +297,17 @@ class ImageGetter(BaseModel):
         exclude=True,
         description="The image getter to use. Choose from Pixabay, Unsplash, or Unsplash API. Defaults to Unsplash API.",
     )
-    project_folder: Path = Field(default=None, exclude=True)
 
     @model_validator(mode="after")
     def set_provider(self) -> "ImageGetter":
         if self.image_provider is None:
-            config = Config.default()
-            if config.unsplash_api_key:
-                self.image_provider = UnsplashApi(project_folder=self.project_folder)
-            elif config.pixabay_api_key:
-                self.image_provider = PixabayAPI(project_folder=self.project_folder)
+            image_search_config = Config.default().image_search
+            api_type = image_search_config.api_type
+            params = image_search_config.model_dump(exclude=("api_type",), exclude_none=True, exclude_defaults=True)
+            if api_type == "unsplash":
+                self.image_provider = UnsplashApi(**params)
+            elif api_type == "pixabay":
+                self.image_provider = PixabayAPI(**params)
             else:
                 raise ValueError("No image provider configured. Please set either unsplash_api_key or pixabay_api_key.")
         return self
@@ -321,7 +315,11 @@ class ImageGetter(BaseModel):
     @classmethod
     def is_available(cls) -> bool:
         config = Config.default()
-        return config.pixabay_api_key is not None or config.unsplash_api_key is not None
+        return (
+            config.image_search.api_type == "unsplash"
+            and config.image_search.api_key
+            or config.image_search == "pixabay"
+        )
 
     async def get(self, search_term: str, image_save_path: str, mode="search") -> str:
         """Get an image either by searching online or generating with AI.
