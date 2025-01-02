@@ -57,6 +57,12 @@ class BaseImageProvider(BaseModel):
     def _process_save_path(self, image_save_path: str) -> tuple[str, str]:
         """Process and validate the save path."""
         if self.project_folder is None:
+            # Try to auto-detect project folder by finding the first non-hidden directory
+            # in working_dir. This has limitations:
+            # - Only uses first matching directory found
+            # - No validation that directory is actually a project
+            # - Will fail if no valid directories exist
+            # - Assumes project directories never start with "."
             for path in os.listdir(self.working_dir):
                 if os.path.isdir(os.path.join(self.working_dir, path)) and not path.startswith("."):
                     self.project_folder = os.path.join(self.working_dir, path)
