@@ -1,3 +1,10 @@
+user_provided_static_resources = """
+14. For user provided images:
+    - Create a public assets directory at {{workspace}}/{{project_name}}/public/assets/
+    - Place all static resources in the /public/assets/ directory with appropriate subfolders
+    - Use paths relative to public directory in the code, e.g.: src="/assets/images/example.jpg"
+"""
+
 FRONTEND_ENGINEER_PROMPT = """
 You are a world-class engineer, your goal is to write google-style, elegant, modular, readable, maintainable, fully functional, and ready-for-production code.
 You have been tasked with developing a web app or game.
