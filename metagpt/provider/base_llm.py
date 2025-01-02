@@ -282,7 +282,40 @@ class BaseLLM(ABC):
         # https://platform.deepseek.com/api-docs/#token--token-usage
         # The heuristics is a huge overestimate for English text, e.g., and should be overwrittem with accurate token count function in inherited class
         # logger.warning("Base count_tokens is not accurate and should be overwritten.")
+        model = self.config.model
+        if any(model.startswith(prefix) for prefix in ["gpt-", "openai/", "text-embedding"]):
+            try:
+                import tiktoken
+
+                encoding = tiktoken.encoding_for_model(model.replace("openai/", ""))
+                return sum([len(encoding.encode(msg["content"])) for msg in messages])
+            except Exception as e:
+                logger.warning(f"Failed to use tiktoken for {model}, fallback to basic count: {e}")
+        # for non-OpenAI models
         return sum([int(len(msg["content"]) * 0.5) for msg in messages])
+
+    def get_compressed_content(self, content: str, target_token_count: int, from_end: bool = True) -> str:
+        """use binary search to determine the compressed content that can meet the target token count
+        Args:
+            content: original content
+            target_token_count: target token count
+            from_end: whether to truncate from the end
+        Returns:
+            str: truncated content
+        """
+        left, right = 0, len(content)
+        result = ""
+        while left <= right:
+            mid = (left + right) // 2
+            mid_content = content[-mid:] if from_end else content[:mid]
+            token_count = self.count_tokens([{"role": "user", "content": mid_content}])
+            if token_count == target_token_count:
+                return mid_content
+            elif token_count < target_token_count:
+                left = mid + 1
+            else:
+                right = mid - 1
+        return result
 
     def compress_messages(
         self,
@@ -330,7 +363,10 @@ class BaseLLM(ABC):
                 else:
                     if compress_type == CompressType.POST_CUT_BY_TOKEN or len(compressed) == len(system_msgs):
                         # Truncate the message to fit within the remaining token count; Otherwise, discard the msg. If compressed has no user or assistant message, enforce cutting by token
-                        truncated_content = msg["content"][-(keep_token - current_token_count) :]
+                        truncated_token = keep_token - current_token_count
+                        truncated_content = self.get_compressed_content(
+                            msg["content"], truncated_token, from_end=True
+                        )  # truncate from end
                         compressed.insert(len(system_msgs), {"role": msg["role"], "content": truncated_content})
                     logger.warning(
                         f"Truncated messages with {compress_type} to fit within the token limit. "
@@ -348,7 +384,10 @@ class BaseLLM(ABC):
                 else:
                     if compress_type == CompressType.PRE_CUT_BY_TOKEN or len(compressed) == len(system_msgs):
                         # Truncate the message to fit within the remaining token count; Otherwise, discard the msg. If compressed has no user or assistant message, enforce cutting by token
-                        truncated_content = msg["content"][: keep_token - current_token_count]
+                        truncated_token = keep_token - current_token_count
+                        truncated_content = self.get_compressed_content(
+                            msg["content"], truncated_token, from_end=False
+                        )  # truncate from start
                         compressed.append({"role": msg["role"], "content": truncated_content})
                     logger.warning(
                         f"Truncated messages with {compress_type} to fit within the token limit. "
