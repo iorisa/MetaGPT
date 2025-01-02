@@ -298,6 +298,8 @@ class ImageGetter(BaseModel):
         description="The image getter to use. Choose from Pixabay, Unsplash, or Unsplash API. Defaults to Unsplash API.",
     )
 
+    project_folder: Path = Field(default=None, exclude=True)
+
     @model_validator(mode="after")
     def set_provider(self) -> "ImageGetter":
         if self.image_provider is None:
@@ -305,9 +307,9 @@ class ImageGetter(BaseModel):
             api_type = image_search_config.api_type
             params = image_search_config.model_dump(exclude=("api_type",), exclude_none=True, exclude_defaults=True)
             if api_type == "unsplash":
-                self.image_provider = UnsplashApi(**params)
+                self.image_provider = UnsplashApi(**params, project_folder=self.project_folder)
             elif api_type == "pixabay":
-                self.image_provider = PixabayAPI(**params)
+                self.image_provider = PixabayAPI(**params, project_folder=self.project_folder)
             else:
                 raise ValueError("No image provider configured. Please set either unsplash_api_key or pixabay_api_key.")
         return self
