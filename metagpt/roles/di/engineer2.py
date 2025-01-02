@@ -141,7 +141,7 @@ class Engineer2(RoleZero):
             func_call = func_match.group(0)
 
             # Create namespace with available tools
-            namespace = {"ImageGetter": ImageGetter()}
+            namespace = {"ImageGetter": ImageGetter(working_dir=self.working_dir)}
 
             # Execute the function call
             result = await eval(func_call, {"__builtins__": {}}, namespace)
