@@ -8,28 +8,24 @@ Below are instructions about templates.
 
 ## Template Management
 
-A guide for managing and using templates in the project.
-
-### Usage Guide
-
-#### 1. Template Setup
+### 1. Template Setup
 - Download the default web project template from [MGX Template Repository](https://gitlab.deepwisdomai.com/metagpt/mgx_template/-/tree/main/templates/default_web_project)
 - Place it in your project's `/template` directory following this structure:
   ```
-  /MetaGPT/template/
+  /path/to/your/project/template/
   └── default_web_project/
       ├── react_template/
       └── vue_template/
   ```
 - Reference path configuration in `MetaGPT/metagpt/const.py`
 
-#### 2. Download Tree package
+### 2. Download Tree package
 - On Ubuntu/Debian:
   - `sudo apt-get install tree`
 - On MacOS:
   - `brew install tree`
 
-#### 3. Using Template in Frontend Engineer
+### 3. Using Template in Frontend Engineer
 ```python
 # Import template tool
 from metagpt.tools.libs.search_template import FixedSearchTemplate
@@ -38,7 +34,7 @@ from metagpt.tools.libs.search_template import FixedSearchTemplate
 frontend_engineer = FrontendEngineer(template_tool=FixedSearchTemplate())
 ```
 
-#### 4. Available Templates
+### 4. Available Templates
 
 #### Default Web Project
 - **React Template**: Full-stack React.js project structure
