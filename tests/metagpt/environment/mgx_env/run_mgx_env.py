@@ -1,32 +1,30 @@
 import asyncio
-import os
 import re
 import threading
 import time
 
-import agentops
-
+from metagpt.const import REACT_TEMPLATE_PATH
 from metagpt.environment.mgx.mgx_env import MGXEnv
-from metagpt.roles import Architect, Engineer, ProductManager, ProjectManager
+from metagpt.roles import Architect, ProductManager
 from metagpt.roles.di.data_analyst import DataAnalyst
-from metagpt.roles.di.engineer2 import Engineer2
+
+# from metagpt.roles.di.engineer2 import Engineer2
+from metagpt.roles.di.frontend_engineer import FrontendEngineer
 from metagpt.roles.di.team_leader import TeamLeader
 from metagpt.schema import Message
+from metagpt.tools.libs.search_template import FixedSearchTemplate
 
 
-async def main(requirement="", enable_human_input=False, use_fixed_sop=False, allow_idle_time=30):
-    if use_fixed_sop:
-        engineer = Engineer(n_borg=5, use_code_review=False)
-    else:
-        engineer = Engineer2()
+async def main(requirement="", user_defined_recipient="", enable_human_input=False, allow_idle_time=30):
+    # engineer = Engineer2()
+    engineer = FrontendEngineer(template_tool=FixedSearchTemplate(template_path=REACT_TEMPLATE_PATH))
 
     env = MGXEnv()
     env.add_roles(
         [
             TeamLeader(),
-            ProductManager(use_fixed_sop=use_fixed_sop),
-            Architect(use_fixed_sop=use_fixed_sop),
-            ProjectManager(use_fixed_sop=use_fixed_sop),
+            ProductManager(),
+            Architect(),
             engineer,
             # QaEngineer(),
             DataAnalyst(),
@@ -39,9 +37,13 @@ async def main(requirement="", enable_human_input=False, use_fixed_sop=False, al
         human_input_thread = send_human_input(env, stop_event)
 
     if requirement:
-        env.publish_message(Message(content=requirement))
-        # user_defined_recipient = "Alex"
-        # env.publish_message(Message(content=requirement, send_to={user_defined_recipient}), user_defined_recipient=user_defined_recipient)
+        if user_defined_recipient:
+            env.publish_message(
+                Message(content=requirement, send_to={user_defined_recipient}),
+                user_defined_recipient=user_defined_recipient,
+            )
+        else:
+            env.publish_message(Message(content=requirement))
 
     allow_idle_time = allow_idle_time if enable_human_input else 1
     start_time = time.time()
@@ -86,7 +88,7 @@ GAME_REQ_ZH = "写一个贪吃蛇游戏"
 WEB_GAME_REQ = "Write a 2048 game using JavaScript without using any frameworks, user can play with keyboard."
 WEB_GAME_REQ_DEPLOY = "Write a 2048 game using JavaScript without using any frameworks, user can play with keyboard. When finished, deploy the game to public at port 8090."
 TODO_APP_REQ = "Create a website widget for TODO list management. Users should be able to add, mark as complete, and delete tasks. Include features like prioritization, due dates, and categories. Make it visually appealing, responsive, and user-friendly. Use HTML, CSS, and JavaScript. Consider additional features like notifications or task export. Keep it simple and enjoyable for users.dont use vue or react.dont use third party library, use localstorage to save data."
-FLAPPY_BIRD_REQ = "write a flappy bird game in pygame, code only"
+FLAPPY_BIRD_REQ = "write a flappy bird game in pygame, just use a circle to represent the bird"
 SIMPLE_DATA_REQ = "load sklearn iris dataset and print a statistic summary"
 WINE_REQ = "Run data analysis on sklearn Wine recognition dataset, and train a model to predict wine class (20% as validation), and show validation accuracy."
 PAPER_LIST_REQ = """
@@ -107,13 +109,12 @@ NEWS_36KR_REQ = """从36kr创投平台https://pitchhub.36kr.com/financing-flash 
 5. 将全部结果存在本地csv中
 **Notice: view the page element before writing scraping code**
 """
+MOVIE_REQ = "Get the top 10 popular streaming movies from https://www.rottentomatoes.com/, and save them to a csv file."
 data_path = "data/titanic"
 train_path = f"{data_path}/split_train.csv"
 eval_path = f"{data_path}/split_eval.csv"
 TITANIC_REQ = f"This is a titanic passenger survival dataset, your goal is to predict passenger survival outcome. The target column is Survived. Perform data analysis, data preprocessing, feature engineering, and modeling to predict the target. Report accuracy on the eval data. Train data path: '{train_path}', eval data path: '{eval_path}'."
-CALIFORNIA_HOUSING_REQ = """
-Analyze the 'Canifornia-housing-dataset' using https://scikit-learn.org/stable/modules/generated/sklearn.datasets.fetch_california_housing.html#sklearn.datasets.fetch_california_housing to predict the median house value. you need to perfrom data preprocessing, feature engineering and finally modeling to predict the target. Use machine learning techniques such as linear regression (including ridge regression and lasso regression), random forest, XGBoost. You also need to report the MSE on the test dataset
-"""
+CALIFORNIA_HOUSING_REQ = "Analyze sklearn 'Canifornia-housing-dataset' to predict the median house value. you need to perfrom data preprocessing, feature engineering and finally modeling to predict the target. Use machine learning techniques such as linear regression (including ridge regression and lasso regression), random forest, XGBoost. You also need to report the MSE on the test dataset"
 STOCK_REQ = """Import NVIDIA Corporation (NVDA) stock price data from Yahoo Finance, focusing on historical closing prices from the past 5 years.
 Summary statistics (mean, median, standard deviation, etc.) to understand the central tendency and dispersion of closingprices. Analyze the data for any noticeable trends, patterns, or anomalies over time, potentially using rolling averages or percentage changes.
 Create a pot to visualize all the data analysis. Reserve 20% of the dataset for validaation. Train a predictive model on the training set. Report the modeel's validation accuracy, and visualize the result of prediction result.
@@ -165,10 +166,17 @@ CODING_REQ3 = "python里的装饰器是怎么用的，给我个例子"
 
 
 if __name__ == "__main__":
-    # NOTE: Add access_token to test github issue fixing
-    os.environ["access_token"] = "ghp_xxx"
     # NOTE: Change the requirement to the one you want to test
     #       Set enable_human_input to True if you want to simulate sending messages in chatbox
-    agentops.init(api_key="", auto_start_session=False, skip_auto_end_session=True)
-    session = agentops.start_session()
-    asyncio.run(main(requirement="写一个2048游戏", enable_human_input=False, use_fixed_sop=False))
+    #       user_defined_recipient = "" means Mike (TL) by default, you can change to Alice, Bob, Alex, etc.
+    requirement = GAME_REQ
+    user_defined_recipient = ""
+
+    asyncio.run(
+        main(
+            requirement=requirement,
+            user_defined_recipient=user_defined_recipient,
+            enable_human_input=True,
+            allow_idle_time=600,
+        )
+    )
