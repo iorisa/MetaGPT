@@ -277,11 +277,16 @@ class BaseLLM(ABC):
         return timeout or self.config.timeout or LLM_API_TIMEOUT
 
     def count_tokens(self, messages: list[dict]) -> int:
+        """count the tokens of the messages
+        Using OpenAI's token calculation method (tiktoken) as default for OpenAI models
+        For non-OpenAI models, using a basic approximation (0.5 * character count)
+        """
         # A very raw heuristic to count tokens, taking reference from:
         # https://help.openai.com/en/articles/4936856-what-are-tokens-and-how-to-count-them
         # https://platform.deepseek.com/api-docs/#token--token-usage
         # The heuristics is a huge overestimate for English text, e.g., and should be overwrittem with accurate token count function in inherited class
         # logger.warning("Base count_tokens is not accurate and should be overwritten.")
+
         model = self.config.model
         if any(model.startswith(prefix) for prefix in ["gpt-", "openai/", "text-embedding"]):
             try:
@@ -295,7 +300,7 @@ class BaseLLM(ABC):
         return sum([int(len(msg["content"]) * 0.5) for msg in messages])
 
     def get_content_under_limit_token(self, content: str, target_token_count: int, from_end: bool = True) -> str:
-        """use binary search to determine the compressed content that can meet the target token count
+        """use binary search to truncate the content to meet the target token count
         Args:
             content: original content
             target_token_count: target token count

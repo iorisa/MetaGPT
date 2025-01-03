@@ -64,56 +64,40 @@ class MockBaseLLM(BaseLLM):
 
 
 def test_get_content_under_limit_token():
-    """测试二分查找确定内容长度的功能"""
+    """test the function of get_content_under_limit_token"""
     base_llm = MockBaseLLM()
     base_llm.config.model = "gpt-4-32k"
 
-    # 测试用例1：从开头截取（from_end=False）
+    # Test case 1: Truncate from beginning (from_end=False)
     content = "Hello, world! This is a test message."
     truncated = base_llm.get_content_under_limit_token(content, target_token_count=3, from_end=False)
-    print("\n测试用例1 (从开头截取):")
-    print(f"原始内容: {content}")
-    print("目标token数: 3")
-    print(f"截断内容: {truncated}")
     token_count = base_llm.count_tokens([{"role": "user", "content": truncated}])
-    print(f"实际token数: {token_count}")
+    print(f"\nTest case 1 - Original: '{content}' -> Truncated: '{truncated}' (tokens: {token_count})")
     assert isinstance(truncated, str)
     assert len(truncated) <= len(content)
     assert token_count <= 3
 
-    # 测试用例2：从末尾截取（from_end=True）
+    # Test case 2: Truncate from end (from_end=True)
     truncated = base_llm.get_content_under_limit_token(content, target_token_count=3, from_end=True)
-    print("\n测试用例2 (从末尾截取):")
-    print(f"原始内容: {content}")
-    print("目标token数: 3")
-    print(f"截断内容: {truncated}")
     token_count = base_llm.count_tokens([{"role": "user", "content": truncated}])
-    print(f"实际token数: {token_count}")
+    print(f"\nTest case 2 - Original: '{content}' -> Truncated: '{truncated}' (tokens: {token_count})")
     assert isinstance(truncated, str)
     assert len(truncated) <= len(content)
     assert token_count <= 3
 
-    # 测试用例3：长文本从开头截取
+    # Test case 3: Long text truncate from beginning
     long_content = "Hello, world! " * 100
     truncated = base_llm.get_content_under_limit_token(long_content, target_token_count=10, from_end=False)
-    print("\n测试用例3 (长文本从开头截取):")
-    print(f"原始内容长度: {len(long_content)}")
-    print("目标token数: 10")
-    print(f"截断内容: {truncated}")
     token_count = base_llm.count_tokens([{"role": "user", "content": truncated}])
-    print(f"实际token数: {token_count}")
+    print(f"\nTest case 3 - Original: '{content}' -> Truncated: '{truncated}' (tokens: {token_count})")
     assert isinstance(truncated, str)
     assert len(truncated) <= len(long_content)
     assert token_count <= 10
 
-    # 测试用例4：长文本从末尾截取
+    # Test case 4: Long text truncate from end
     truncated = base_llm.get_content_under_limit_token(long_content, target_token_count=10, from_end=True)
-    print("\n测试用例4 (长文本从末尾截取):")
-    print(f"原始内容长度: {len(long_content)}")
-    print("目标token数: 10")
-    print(f"截断内容: {truncated}")
     token_count = base_llm.count_tokens([{"role": "user", "content": truncated}])
-    print(f"实际token数: {token_count}")
+    print(f"\nTest case 4 - Original: '{content}' -> Truncated: '{truncated}' (tokens: {token_count})")
     assert isinstance(truncated, str)
     assert len(truncated) <= len(long_content)
     assert token_count <= 10
@@ -125,7 +109,7 @@ def test_count_tokens_o_model(model):
     base_llm.config.model = model
     content = "Hello, world! This is a test message."
     token_count = base_llm.count_tokens([{"role": "user", "content": content}])
-    print(f"实际token数: {token_count}")
+    print(f"token count: {token_count}")
     assert token_count == 18
 
 
@@ -135,7 +119,7 @@ def test_count_tokens_GPT(model):
     base_llm.config.model = model
     content = "Hello, world! This is a test message."
     token_count = base_llm.count_tokens([{"role": "user", "content": content}])
-    print(f"实际token数: {token_count}")
+    print(f"token count: {token_count}")
     assert token_count == 10
 
 
