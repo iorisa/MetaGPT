@@ -81,7 +81,7 @@ class RoleZero(Role):
     tools: list[str] = []  # Use special symbol ["<all>"] to indicate use of all registered tools
     tool_recommender: Optional[ToolRecommender] = None
     tool_execution_map: Annotated[dict[str, Callable], Field(exclude=True)] = {}
-    special_tool_commands: list[str] = ["Plan.finish_current_task", "end", "Terminal.run_command", "RoleZero.ask_human"]
+    special_tool_commands: list[str] = ["Plan.finish_current_task", "end", "Terminal.run", "RoleZero.ask_human"]
     # # List of exclusive tool commands. If multiple instances of these commands appear, only the first occurrence will be retained.
     # exclusive_tool_commands: list[str] = [
     #     "Editor.edit_file_by_replace",
@@ -582,7 +582,11 @@ class RoleZero(Role):
         elif cmd["command_name"] == "end":
             command_output = await self._end()
         elif cmd["command_name"] == "RoleZero.ask_human":
-            human_response = await self.ask_human(**cmd["args"])
+            args = cmd["args"]
+            # fault tolerance for llm hallucination
+            question = args.get("question") or args.get("content") or args.get("message")
+            assert question, "Use kwarg 'question' to provide the question."
+            human_response = await self.ask_human(question=question)
             if human_response.strip().lower().endswith(("stop", "<stop>")):
                 human_response += "The user has asked me to stop because I have encountered a problem."
                 self.rc.memory.add(UserMessage(content=human_response, cause_by=RunCommand))
@@ -591,7 +595,7 @@ class RoleZero(Role):
                 return end_output
             return human_response
         # output from bash.run may be empty, add decorations to the output to ensure visibility.
-        elif cmd["command_name"] == "Terminal.run_command":
+        elif cmd["command_name"] == "Terminal.run":
             tool_obj = self.tool_execution_map[cmd["command_name"]]
             tool_output = await tool_obj(**cmd["args"])
             if len(tool_output) <= 10:

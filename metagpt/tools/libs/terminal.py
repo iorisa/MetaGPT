@@ -16,8 +16,13 @@ from metagpt.utils.report import END_MARKER_VALUE, TerminalReporter
 DETACH_PROMPT = """
 The command is running in detach at tab {detached_tab_id}, currently with output: {output_so_far}
 New tab info: {new_tab_info}
-You may operate on the new tab, or switch back to the detached tab {detached_tab_id} and input command using switch_tab plus run_command
+You may operate on the new tab, or switch back to the detached tab {detached_tab_id} and input command using switch_tab plus run
 """
+
+
+def is_service_process(output: str) -> bool:
+    pattern = r"localhost:\d+|[\d.]+:\d+"  # match localhost:port or ip:port"
+    return bool(re.search(pattern, output))
 
 
 class Tab(BaseModel):
@@ -143,7 +148,7 @@ class Tab(BaseModel):
         self.cwd = psutil.Process(self.process.pid).cwd()
 
 
-@register_tool(include_functions=["run_command"])
+@register_tool(include_functions=["run"])
 class Terminal(BaseModel):
     """A tool for running terminal commands. Don't initialize a new instance of this class if one already exists."""
 
@@ -178,7 +183,7 @@ class Terminal(BaseModel):
     async def _create_new_tab(self) -> str:
         """create a new tab and switch to it"""
         new_tab_id = f"{len(self.tabs):02}"
-        new_tab = Tab(tab_id=new_tab_id)
+        new_tab = Tab(tab_id=new_tab_id, cwd=self.cwd)
         await new_tab.start()
         self.tabs.update({new_tab_id: new_tab})
         switch_tab_info = await self.switch_tab(new_tab_id)
@@ -188,7 +193,7 @@ class Terminal(BaseModel):
     def cwd(self):
         return self.current_tab.cwd if self.current_tab else str(DEFAULT_WORKSPACE_ROOT.absolute())
 
-    async def run_command(self, cmd: str) -> str:
+    async def run(self, cmd: str) -> str:
         """
         Executes a specified command in the terminal and streams the output back in real time.
 
@@ -228,22 +233,25 @@ class Terminal(BaseModel):
         await current_tab.execute(cmd)
 
         tmp = []
+        is_service_flag = False
         while True:
             try:
-                line = await asyncio.wait_for(output_queue.get(), timeout=self.timeout)
+                # shorter timeout for service process by detecting output patterns such as localhost:port, ip:port
+                timeout = self.timeout if not is_service_flag else 3
+                line = await asyncio.wait_for(output_queue.get(), timeout=timeout)
                 if line is None:
                     break
+                is_service_flag = is_service_flag or is_service_process(line)  # if True already, skip checking
                 tmp.append(line)
             except asyncio.TimeoutError:
                 output_so_far = "".join(tmp)
                 if (returncode := current_tab.process.returncode) is not None:
-                    # The command is running in detach at tab {detached_tab_id}, currently with output: {output_so_far}
                     msg = f"The terminal has exited with code {returncode}"
                     logger.warning(msg)
                     return f"{msg}, currently with output: {output_so_far}"
 
                 current_tab.update_cwd()  # update cwd for the command still running
-                logger.info("No more output, detached from current tab and switched to a new tab")
+                logger.info(f"No more output after {timeout}s, detached from current tab and switched to a new tab")
 
                 detached_tab_id = self.current_tab_id
                 new_tab_info = await self._create_new_tab()
@@ -272,11 +280,11 @@ class Terminal(BaseModel):
                  asynchronously in that case.
 
         Note:
-            This function wraps `run_command`, prepending the necessary Conda activation commands
+            This function wraps `run`, prepending the necessary Conda activation commands
             to ensure the specified environment is active for the command's execution.
         """
         cmd = f"conda run -n {env} {cmd}"
-        return await self.run_command(cmd)
+        return await self.run(cmd)
 
     async def close(self):
         for tab in self.tabs.values():
@@ -297,8 +305,8 @@ class Bash(Terminal):
         self.start_flag = False
 
     async def start(self):
-        await self.run_command(f"cd {Config.default().workspace.path}")
-        await self.run_command(f"source {SWE_SETUP_PATH}")
+        await super().run(f"cd {Config.default().workspace.path}")
+        await super().run(f"source {SWE_SETUP_PATH}")
 
     async def run(self, cmd) -> str:
         """
@@ -381,4 +389,4 @@ class Bash(Terminal):
             await self.start()
             self.start_flag = True
 
-        return await self.run_command(cmd)
+        return await super().run(cmd)
