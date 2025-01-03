@@ -7,7 +7,6 @@
 @Modified By: liushaojie, 2024/10/17.
 """
 # from agentops import track_agent
-from pydantic import model_validator
 
 from metagpt.actions import UserRequirement, WritePRD
 from metagpt.actions.prepare_documents import PrepareDocuments
@@ -54,16 +53,13 @@ class ProductManager(RoleZero):
             self._watch([UserRequirement, PrepareDocuments])
             self.rc.react_mode = RoleReactMode.BY_ORDER
 
-    @model_validator(mode="after")
-    def set_instruction(self):
-        self.instruction = PRODUCT_MANAGER_INSTRUCTION.format(backend_info=get_backend_prompt_for_pm())
-        return self
-
     def _update_tool_execution(self):
         wp = WritePRD()
         self.tool_execution_map.update(tool2name(WritePRD, ["run"], wp.run))
 
     async def _think(self) -> bool:
+        self.instruction = PRODUCT_MANAGER_INSTRUCTION.format(backend_info=get_backend_prompt_for_pm())
+
         if not self.use_fixed_sop:
             return await super()._think()
 

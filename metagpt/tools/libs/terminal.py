@@ -187,7 +187,7 @@ class Terminal(BaseModel):
     async def _create_new_tab(self) -> str:
         """create a new tab and switch to it"""
         new_tab_id = f"{len(self.tabs):02}"
-        new_tab = Tab(tab_id=new_tab_id)
+        new_tab = Tab(tab_id=new_tab_id, cwd=self.cwd)
         await new_tab.start()
         self.tabs.update({new_tab_id: new_tab})
         switch_tab_info = await self.switch_tab(new_tab_id)

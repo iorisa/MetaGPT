@@ -6,7 +6,7 @@
 @File    : architect.py
 """
 # from agentops import track_agent
-from pydantic import Field, model_validator
+from pydantic import Field
 
 from metagpt.actions.design_api import WriteDesign
 from metagpt.actions.write_prd import WritePRD
@@ -51,11 +51,11 @@ class Architect(RoleZero):
         # Set events or actions the Architect should watch or be aware of
         self._watch({WritePRD})
 
-    @model_validator(mode="after")
-    def set_instruction(self):
+    async def _think(self) -> bool:
         self.instruction = ARCHITECT_INSTRUCTION.format(
             backend_info=get_backend_prompt_for_architect(),
             system_design_example=SYSTEM_DESIGN_EXAMPLE,
             template_info=GENERAL_WEB_APP_TEMPLATE_PROMPT,
         )
-        return self
+
+        return await super()._think()
