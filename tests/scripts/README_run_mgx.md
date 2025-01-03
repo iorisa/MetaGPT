@@ -6,18 +6,12 @@ Here is the environment setup for running MGX.
 
 Below are instructions about templates.
 
-## Template Management
+## Prepare Template
 
 ### 1. Template Setup
 - Download the default web project template from [MGX Template Repository](https://gitlab.deepwisdomai.com/metagpt/mgx_template/-/tree/main/templates/default_web_project)
-- Place it in your project's `/template` directory following this structure:
-  ```
-  /path/to/your/project/template/
-  └── default_web_project/
-      ├── react_template/
-      └── vue_template/
-  ```
-- Reference path configuration in `MetaGPT/metagpt/const.py`
+- Place it in your project's `/template` directory.
+- The specific `/path/to/your/project/template/` is specified as the `TEMPLATE_FOLDER_PATH` in `metagpt/const.py`
 
 ### 2. Download Tree package
 - On Ubuntu/Debian:
@@ -39,3 +33,25 @@ frontend_engineer = FrontendEngineer(template_tool=FixedSearchTemplate())
 #### Default Web Project
 - **React Template**: Full-stack React.js project structure
 - **Vue Template**: Full-stack Vue.js project structure
+
+## Run MGX
+### 1. change to Frontend Engineer
+Change roles in ENV.roles. Replace Engineer with FrontendEngineer.
+```python
+from metagpt.roles.di.frontend_engineer import FrontendEngineer
+from metagpt.tools.libs.search_template import FixedSearchTemplate
+
+env = MGXEnv()
+env.roles = [FrontendEngineer(template_tool=FixedSearchTemplate())...]
+```
+### 2. Run MGX
+To run MGX, execute the following command in the terminal:
+```bash
+python ./tests/metagpt/environment/mgx_ops/run_mgx_env.py
+```
+### 3. Modify Recipient 
+If you want to send message to specific someone, you can modify the recipient in the script by changing this line:
+```python
+user_defined_recipient = "Alex"
+env.publish_message(Message(content=requirement, send_to={user_defined_recipient}), user_defined_recipient=user_defined_recipient)
+```
