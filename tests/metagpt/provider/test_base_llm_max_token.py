@@ -63,44 +63,53 @@ class MockBaseLLM(BaseLLM):
         pass
 
 
-def test_get_content_under_limit_token():
-    """test the function of get_content_under_limit_token"""
+@pytest.mark.parametrize(
+    "test_case",
+    [
+        {
+            "content": "Hello, world! This is a test message.",
+            "target_tokens": 3,
+            "from_end": False,
+            "description": "Short text truncated from start",
+        },
+        {
+            "content": "Hello, world! This is a test message.",
+            "target_tokens": 3,
+            "from_end": True,
+            "description": "Short text truncated from end",
+        },
+        {
+            "content": "Hello, world! " * 100,
+            "target_tokens": 10,
+            "from_end": False,
+            "description": "Long text truncated from start",
+        },
+        {
+            "content": "Hello, world! " * 100,
+            "target_tokens": 10,
+            "from_end": True,
+            "description": "Long text truncated from end",
+        },
+    ],
+)
+def test_get_content_under_limit_token(test_case):
+    """Test various scenarios for get_content_under_limit_token function"""
     base_llm = MockBaseLLM()
     base_llm.config.model = "gpt-4-32k"
 
-    # Test case 1: Truncate from beginning (from_end=False)
-    content = "Hello, world! This is a test message."
-    truncated = base_llm.get_content_under_limit_token(content, target_token_count=3, from_end=False)
+    truncated = base_llm.get_content_under_limit_token(
+        test_case["content"], target_token_count=test_case["target_tokens"], from_end=test_case["from_end"]
+    )
     token_count = base_llm.count_tokens([{"role": "user", "content": truncated}])
-    print(f"\nTest case 1 - Original: '{content}' -> Truncated: '{truncated}' (tokens: {token_count})")
-    assert isinstance(truncated, str)
-    assert len(truncated) <= len(content)
-    assert token_count <= 3
 
-    # Test case 2: Truncate from end (from_end=True)
-    truncated = base_llm.get_content_under_limit_token(content, target_token_count=3, from_end=True)
-    token_count = base_llm.count_tokens([{"role": "user", "content": truncated}])
-    print(f"\nTest case 2 - Original: '{content}' -> Truncated: '{truncated}' (tokens: {token_count})")
-    assert isinstance(truncated, str)
-    assert len(truncated) <= len(content)
-    assert token_count <= 3
+    print(
+        f"\n{test_case['description']} - original: '{test_case['content'][:50]}...' -> "
+        f"truncated: '{truncated}' (tokens: {token_count})"
+    )
 
-    # Test case 3: Long text truncate from beginning
-    long_content = "Hello, world! " * 100
-    truncated = base_llm.get_content_under_limit_token(long_content, target_token_count=10, from_end=False)
-    token_count = base_llm.count_tokens([{"role": "user", "content": truncated}])
-    print(f"\nTest case 3 - Original: '{content}' -> Truncated: '{truncated}' (tokens: {token_count})")
     assert isinstance(truncated, str)
-    assert len(truncated) <= len(long_content)
-    assert token_count <= 10
-
-    # Test case 4: Long text truncate from end
-    truncated = base_llm.get_content_under_limit_token(long_content, target_token_count=10, from_end=True)
-    token_count = base_llm.count_tokens([{"role": "user", "content": truncated}])
-    print(f"\nTest case 4 - Original: '{content}' -> Truncated: '{truncated}' (tokens: {token_count})")
-    assert isinstance(truncated, str)
-    assert len(truncated) <= len(long_content)
-    assert token_count <= 10
+    assert len(truncated) <= len(test_case["content"])
+    assert token_count == test_case["target_tokens"]
 
 
 @pytest.mark.parametrize("model", TEST_MODELS)
