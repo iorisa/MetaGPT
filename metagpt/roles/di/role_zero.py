@@ -449,7 +449,11 @@ class RoleZero(Role):
             # Normal response with thought contents are highly unlikely to reproduce
             # If an identical response is detected, it is a bad response, mostly due to LLM repeating generated content
             # In this case, ask human for help and regenerate
-            # TODO: switch to llm_cached_aask
+
+            # A special rule to skip checking
+            # Terminal commands such as pnpm * can be repeated for continuous deployment; detect commands that contain Terminal only without risky tools such as Editor and Plan
+            if "Terminal" in command_rsp and "Editor" not in command_rsp and "Plan" not in command_rsp:
+                return command_rsp
 
             #  Hard rule to ask human for help
             if past_rsp.count(command_rsp) >= 3:
