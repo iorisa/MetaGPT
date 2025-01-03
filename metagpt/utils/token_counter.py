@@ -268,11 +268,14 @@ def count_message_tokens(messages, model="gpt-3.5-turbo-0125"):
         tokens_per_message = 0  # ignore conversation message template prefix
         tokens_per_name = 0
     else:
-        raise NotImplementedError(
-            f"num_tokens_from_messages() is not implemented for model {model}. "
-            f"See https://cookbook.openai.com/examples/how_to_count_tokens_with_tiktoken "
-            f"for information on how messages are converted to tokens."
-        )
+        # raise NotImplementedError(
+        #     f"num_tokens_from_messages() is not implemented for model {model}. "
+        #     f"See https://cookbook.openai.com/examples/how_to_count_tokens_with_tiktoken "
+        #     f"for information on how messages are converted to tokens."
+        # )
+        logger.warning(f"num_tokens_from_messages() is not implemented for model {model}. Using default values.")
+        tokens_per_message = 3
+        tokens_per_name = 1
     num_tokens = 0
     for message in messages:
         num_tokens += tokens_per_message

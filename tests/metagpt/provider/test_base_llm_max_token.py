@@ -63,14 +63,14 @@ class MockBaseLLM(BaseLLM):
         pass
 
 
-def test_get_content_length():
+def test_get_content_under_limit_token():
     """测试二分查找确定内容长度的功能"""
     base_llm = MockBaseLLM()
     base_llm.config.model = "gpt-4-32k"
 
     # 测试用例1：从开头截取（from_end=False）
     content = "Hello, world! This is a test message."
-    truncated = base_llm.get_fixed_content(content, target_token_count=3, from_end=False)
+    truncated = base_llm.get_content_under_limit_token(content, target_token_count=3, from_end=False)
     print("\n测试用例1 (从开头截取):")
     print(f"原始内容: {content}")
     print("目标token数: 3")
@@ -82,7 +82,7 @@ def test_get_content_length():
     assert token_count <= 3
 
     # 测试用例2：从末尾截取（from_end=True）
-    truncated = base_llm.get_fixed_content(content, target_token_count=3, from_end=True)
+    truncated = base_llm.get_content_under_limit_token(content, target_token_count=3, from_end=True)
     print("\n测试用例2 (从末尾截取):")
     print(f"原始内容: {content}")
     print("目标token数: 3")
@@ -95,7 +95,7 @@ def test_get_content_length():
 
     # 测试用例3：长文本从开头截取
     long_content = "Hello, world! " * 100
-    truncated = base_llm.get_fixed_content(long_content, target_token_count=10, from_end=False)
+    truncated = base_llm.get_content_under_limit_token(long_content, target_token_count=10, from_end=False)
     print("\n测试用例3 (长文本从开头截取):")
     print(f"原始内容长度: {len(long_content)}")
     print("目标token数: 10")
@@ -107,7 +107,7 @@ def test_get_content_length():
     assert token_count <= 10
 
     # 测试用例4：长文本从末尾截取
-    truncated = base_llm.get_fixed_content(long_content, target_token_count=10, from_end=True)
+    truncated = base_llm.get_content_under_limit_token(long_content, target_token_count=10, from_end=True)
     print("\n测试用例4 (长文本从末尾截取):")
     print(f"原始内容长度: {len(long_content)}")
     print("目标token数: 10")

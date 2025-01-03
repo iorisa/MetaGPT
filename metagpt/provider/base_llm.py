@@ -294,7 +294,7 @@ class BaseLLM(ABC):
         # for non-OpenAI models
         return sum([int(len(msg["content"]) * 0.5) for msg in messages])
 
-    def get_compressed_content(self, content: str, target_token_count: int, from_end: bool = True) -> str:
+    def get_content_under_limit_token(self, content: str, target_token_count: int, from_end: bool = True) -> str:
         """use binary search to determine the compressed content that can meet the target token count
         Args:
             content: original content
@@ -364,7 +364,7 @@ class BaseLLM(ABC):
                     if compress_type == CompressType.POST_CUT_BY_TOKEN or len(compressed) == len(system_msgs):
                         # Truncate the message to fit within the remaining token count; Otherwise, discard the msg. If compressed has no user or assistant message, enforce cutting by token
                         truncated_token = keep_token - current_token_count
-                        truncated_content = self.get_compressed_content(
+                        truncated_content = self.get_content_under_limit_token(
                             msg["content"], truncated_token, from_end=True
                         )  # truncate from end
                         compressed.insert(len(system_msgs), {"role": msg["role"], "content": truncated_content})
@@ -385,7 +385,7 @@ class BaseLLM(ABC):
                     if compress_type == CompressType.PRE_CUT_BY_TOKEN or len(compressed) == len(system_msgs):
                         # Truncate the message to fit within the remaining token count; Otherwise, discard the msg. If compressed has no user or assistant message, enforce cutting by token
                         truncated_token = keep_token - current_token_count
-                        truncated_content = self.get_compressed_content(
+                        truncated_content = self.get_content_under_limit_token(
                             msg["content"], truncated_token, from_end=False
                         )  # truncate from start
                         compressed.append({"role": msg["role"], "content": truncated_content})
