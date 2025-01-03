@@ -27,7 +27,7 @@ class FrontendEngineer(Engineer2):
     tools: list[str] = [
         "Editor:read,write,edit_file_by_replace,append_file",
         "RoleZero",
-        "Terminal:run",
+        "Terminal:run,preview",
         "SearchEnhancedQA",
         "Deployer",
         "Engineer2",

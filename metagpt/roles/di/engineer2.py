@@ -92,6 +92,7 @@ class Engineer2(RoleZero):
             "CodeReview.fix": cr.fix,
             "Terminal.run": self.terminal.run,
             "Terminal.run_command": self.terminal.run,
+            "Terminal.preview": self.terminal.preview,
             "Deployer.deploy_to_public": self._deploy_to_public,
             "SupabaseManager.execute_sql": supabase_manager.execute_sql,
             "SupabaseManager.get_session_schemas": supabase_manager.get_session_schemas,

@@ -147,8 +147,12 @@ class Tab(BaseModel):
     def update_cwd(self):
         self.cwd = psutil.Process(self.process.pid).cwd()
 
+    async def preview(self, port: str, proj_name: str) -> str:
+        """Preview the service on this tab. To be implemented by users."""
+        return f"{proj_name} service can now be viewed at http://127.0.0.1.nip.io:{port}"
 
-@register_tool(include_functions=["run"])
+
+@register_tool(include_functions=["run", "preview"])
 class Terminal(BaseModel):
     """A tool for running terminal commands. Don't initialize a new instance of this class if one already exists."""
 
@@ -263,6 +267,12 @@ class Terminal(BaseModel):
                 # print(instruction)
                 return instruction
         return "".join(tmp)
+
+    async def preview(self, tab_id: str, port: int, proj_name: str) -> str:
+        """Preview a web project by forwarding a local port to public. Specify the tab_id that runs the service."""
+        if tab_id not in self.tabs:
+            return f"Tab {tab_id} not found, created tabs are {list(self.tabs.keys())}, specify the correct tab_id that runs the service."
+        return await self.tabs[tab_id].preview(port, proj_name)
 
     async def execute_in_conda_env(self, cmd: str, env) -> str:
         """

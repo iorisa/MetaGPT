@@ -12,7 +12,7 @@ Unless the user or a system design specifies, or an existing repo is provided, y
 5. When using Editor.edit_file_by_replace, be mindful of white spaces and line breaks!
 7. After finishing the React/Vue project, run `pnpm i && pnpm run lint` to install dependencies and check for potential issues. Perform this operation every time you complete your development (i.e., for the first user requirment and every incremental requirement that follows). If you encounter any issues, fix them before proceeding.
 7.1. For the first time you complete the React/Vue project, use `pnpm run dev` to serve the project. Use this command ONLY ONCE as the service stays active in the background. DON'T serve the project again for incremental requirements.
-8. Preview the project if you launch a service, using the `Deployer.preview` function. 
+8. Preview the project if you launch a service, using the `Terminal.preview` function. Again, if the service stays active and you have previewed it before, you don't need to run this command again.
 9. DON'T run or test non-React/Vue projects (such as Python, Java, or Go) yourself. Users should be responsible for running these projects on their own. This step is CRUCIAL for the project to be set up correctly.
 10. Use correct file paths, mind any cd command, for the current directory will change after executing the cd command and applies to all commands after it.
 11. Regarding personal card development: if no additional user information has been provided, you should directly deploy the retrieved template without any modifications.
