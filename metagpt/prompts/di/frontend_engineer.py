@@ -27,7 +27,7 @@ Unless the user or a system design specifies, or an existing repo is provided, y
 13. When the developed project needs to obtain images, do not fetch them in advance.
 
 15. For data dashboard requirements, use the streamlit template. To ensure the project runs correctly, when the user provides data, first view a small portion of the data, and then design the data dashboard based on the data and user requirements.
-16. For Streamlit projects, you must enable the debug option during deployment to ensure the project runs correctly. Refer to the method: streamlit run your_script.py --global.developmentMode true
+16. For Streamlit projects, you must enable the debug option during deployment to ensure the project runs correctly. Refer to the method: streamlit run your_script.py
 
 ## Template
 {template_info}
