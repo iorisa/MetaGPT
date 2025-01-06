@@ -4,12 +4,11 @@ import asyncio
 import re
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from metagpt.logs import logger
-
-# from metagpt.actions.write_code_review import ValidateAndRewriteCode
 from metagpt.prompts.di.engineer2 import ENGINEER2_INSTRUCTION, WRITE_CODE_PROMPT
+from metagpt.prompts.di.supabase import get_supabase_code_requirement
 from metagpt.roles.di.role_zero import RoleZero
 from metagpt.schema import UserMessage
 from metagpt.strategy.experience_retriever import ENGINEER_EXAMPLE
@@ -18,8 +17,10 @@ from metagpt.tools.libs.deployer import Deployer
 from metagpt.tools.libs.editor import FileBlock
 from metagpt.tools.libs.git import git_create_pull
 from metagpt.tools.libs.image_getter import ImageGetter
+from metagpt.tools.libs.supabase_manager import get_supabase_manager_instance
 from metagpt.tools.libs.terminal import Terminal
-from metagpt.tools.tool_registry import TOOL_REGISTRY, register_tool
+from metagpt.tools.tool_recommend import BM25ToolRecommender, ToolRecommender
+from metagpt.tools.tool_registry import register_tool
 from metagpt.utils.common import CodeParser, awrite, log_time
 from metagpt.utils.report import EditorReporter
 
@@ -31,83 +32,83 @@ class Engineer2(RoleZero):
     profile: str = "Engineer"
     goal: str = "Take on game, app, web development and deployment."
     instruction: str = ENGINEER2_INSTRUCTION
-    terminal: Terminal = Field(default_factory=Terminal, exclude=True)
+    terminal: Terminal = Field(default_factory=Terminal)
     deployer: Deployer = Field(default_factory=Deployer, exclude=True)
     tools: list[str] = [
         "Plan",
         "Editor",
         "RoleZero",
-        "Terminal:run_command",
+        "Terminal:run",
         "Browser:goto,scroll",
         "git_create_pull",
         "SearchEnhancedQA",
         "Engineer2",
         "CodeReview",
         "Deployer",
+        "SupabaseManager",
+        # "UserInfoParser",
     ]
+
     # SWE Agent parameter
     run_eval: bool = False
     output_diff: str = ""
     max_react_loop: int = 40
-    # Add a tag to track whether this is the first time receiving software development requirements.
-    autocall_tool_execution_list: list = []
-    autocall_tool: list[str] = [
-        "ImageGetter",
-    ]
+
+    # Code tools related attributes
+    code_tools: list[str] = ["ImageGetter"]
+    code_tool_execution_list: list[str] = ["ImageGetter.get", "ImageGetter.process"]
+    code_tool_recommender: ToolRecommender = None
 
     async def _think(self) -> bool:
         await self._update_workdir()
         res = await super()._think()
         return res
 
+    @model_validator(mode="after")
+    def set_code_tool(self) -> "Engineer2":
+        """Initialize code tool recommender if execution list exists."""
+        if self.code_tool_execution_list and not self.code_tool_recommender:
+            # Check if the code tools is available
+            if ImageGetter.is_available():
+                self.code_tool_recommender = BM25ToolRecommender(tools=self.code_tools, force=True)
+        return self
+
     async def _update_workdir(self):
         """
         Display the current terminal and editor state.
         This information will be dynamically added to the command prompt.
         """
-        if not self.terminal.initial_workdir:
-            # A special case to set terminal dir based on Role dir. This happens one time when Role is deserialized and terminal re-initialized
-            await self.terminal.set_initial_workdir(self.working_dir)
-        self.working_dir = (await self.terminal.run_command("pwd")).strip()
+        self.working_dir = self.terminal.cwd
         self.editor.set_workdir(self.working_dir)
 
     def _update_tool_execution(self):
-        # validate = ValidateAndRewriteCode()
         cr = CodeReview()
+        supabase_manager = get_supabase_manager_instance()
 
-        self.autocall_tool_execution_list.extend(
-            [
-                f"{class_name}.{tool_name}"
-                for class_name in self.autocall_tool
-                for tool_name in TOOL_REGISTRY.get_tool(class_name).schemas["methods"]
-            ]
-        )
-        if self.run_eval is True:
-            # Evalute tool map
-            self.tool_execution_map.update(
+        tool_execution = {
+            "git_create_pull": git_create_pull,
+            "Engineer2.write_new_code": self.write_new_code,
+            "CodeReview.review": cr.review,
+            "CodeReview.fix": cr.fix,
+            "Terminal.run": self.terminal.run,
+            "Terminal.run_command": self.terminal.run,
+            "Terminal.preview": self.terminal.preview,
+            "Deployer.deploy_to_public": self._deploy_to_public,
+            "SupabaseManager.execute_sql": supabase_manager.execute_sql,
+            "SupabaseManager.get_session_schemas": supabase_manager.get_session_schemas,
+        }
+
+        # Add additional tools only in evaluation mode
+        if self.run_eval:
+            tool_execution.update(
                 {
-                    "git_create_pull": git_create_pull,
-                    "Engineer2.write_new_code": self.write_new_code,
-                    "CodeReview.review": cr.review,
-                    "CodeReview.fix": cr.fix,
-                    "Terminal.run_command": self._eval_terminal_run,
                     "RoleZero.ask_human": self._end,
                     "RoleZero.reply_to_human": self._end,
-                    "Deployer.deploy_to_public": self._deploy_to_public,
+                    "Terminal.run": self._eval_terminal_run,  # Override terminal command in eval mode
                 }
             )
-        else:
-            # Default tool map
-            self.tool_execution_map.update(
-                {
-                    "git_create_pull": git_create_pull,
-                    "Engineer2.write_new_code": self.write_new_code,
-                    "CodeReview.review": cr.review,
-                    "CodeReview.fix": cr.fix,
-                    "Terminal.run_command": self.terminal.run_command,
-                    "Deployer.deploy_to_public": self._deploy_to_public,
-                }
-            )
+
+        self.tool_execution_map.update(tool_execution)
 
     def _retrieve_experience(self) -> str:
         return ENGINEER_EXAMPLE
@@ -121,17 +122,19 @@ class Engineer2(RoleZero):
         return path
 
     @log_time
-    async def _tool_call(self, code: str):
+    async def _tool_call(self, code: str) -> tuple[str, list]:
         """Execute tool calls in code and replace with results."""
+        if not self.code_tool_recommender:
+            return code, []
         # Regex pattern to match tool call tags like <tool_call.../>
         # Uses [\s\S] for multi-line matching and non-greedy *? to avoid over-matching
         # Supports optional $ prefix: $<tool_call.../>
-        tool_call_pattern = r"(?:\$)?<tool_call[\s\S]*?[\s\S]/>"
+        tool_call_pattern = r"(?:\$)?<tool_call>[\s\S]*?[\s\S]</tool_call>"
         tool_calls = re.findall(tool_call_pattern, code)
 
         async def execute_tool(tool_call: str):
             # Extract just the function call part
-            tool_name_str = r"|".join(self.autocall_tool_execution_list)
+            tool_name_str = r"|".join(self.code_tool_execution_list)
             func_match = re.search(rf"({tool_name_str})\(.*?\)", tool_call)
             if not func_match:
                 return None
@@ -139,7 +142,7 @@ class Engineer2(RoleZero):
             func_call = func_match.group(0)
 
             # Create namespace with available tools
-            namespace = {"ImageGetter": ImageGetter()}
+            namespace = {"ImageGetter": ImageGetter(project_folder=Path(self.working_dir))}
 
             # Execute the function call
             result = await eval(func_call, {"__builtins__": {}}, namespace)
@@ -165,9 +168,16 @@ class Engineer2(RoleZero):
             description (str): "Brief description and important notes of what and how to implement the files, including how they interact with each other if there will be multiple files.
             paths (list[str]): The paths of the files to be created.
         """
+        # Get recommended code tools and their usage examples.
+        if self.code_tool_recommender:
+            code_tool_info = await self.code_tool_recommender.get_recommended_tool_info()
+        else:
+            code_tool_info = "N/A"
         prompt = WRITE_CODE_PROMPT.format(
             file_path=paths,
             file_description=description,
+            available_code_tools=code_tool_info,
+            supabase_code_requirement=get_supabase_code_requirement(),
         )
         # Sometimes the Engineer repeats the last command to respond.
         # Replace the last command with a manual prompt to guide the Engineer to write new code.
@@ -220,7 +230,7 @@ class Engineer2(RoleZero):
             # Set self.rc.todo to None to stop the engineer.
             self._set_state(-1)
         else:
-            command_output = await self.terminal.run_command(cmd)
+            command_output = await self.terminal.run(cmd)
         return command_output
 
     async def _end(self):

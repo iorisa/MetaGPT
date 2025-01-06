@@ -6,6 +6,7 @@ from pydantic import model_validator
 
 from metagpt.logs import logger
 from metagpt.prompts.di.frontend_engineer import FE_EXAPMLE, FRONTEND_ENGINEER_PROMPT
+from metagpt.prompts.di.supabase import get_backend_prompt_for_fe
 from metagpt.prompts.di.template import (
     EXRTA_INFO_PROMPT,
     GENERAL_WEB_APP_TEMPLATE_PROMPT,
@@ -23,15 +24,16 @@ _ = FixedSearchTemplate  # avoid pre-commit error
 
 # @track_agent("FrontendEngineer")
 class FrontendEngineer(Engineer2):
-    instruction: str = FRONTEND_ENGINEER_PROMPT
     tools: list[str] = [
         "Editor:read,write,edit_file_by_replace,append_file",
         "RoleZero",
-        "Terminal:run_command",
+        "Terminal:run,preview",
         "SearchEnhancedQA",
         "Deployer",
         "Engineer2",
+        "SupabaseManager",
         "Browser:click,goto,scroll",
+        # "UserInfoParser",
     ]
 
     # Regarding template use:
@@ -41,6 +43,7 @@ class FrontendEngineer(Engineer2):
     use_search_template: bool = True
     is_first_dev_request: bool = True
     template_tool: BaseSearchTemplate = None
+    template_info: str = GENERAL_WEB_APP_TEMPLATE_PROMPT
 
     @model_validator(mode="after")
     def set_search_template_tool(self):
@@ -52,6 +55,10 @@ class FrontendEngineer(Engineer2):
         return self
 
     async def _think(self) -> bool:
+        self.instruction = FRONTEND_ENGINEER_PROMPT.format(
+            template_info=self.template_info, backend_info=get_backend_prompt_for_fe()
+        )
+
         # Check if the latest message is a development request
         send_msg = self.rc.memory.get()
 
@@ -75,9 +82,9 @@ class FrontendEngineer(Engineer2):
     def _retrieve_experience(self) -> str:
         return FE_EXAPMLE
 
-    async def set_template(self, template_info: str = "", extra_user_info: str = None, extra_info: str = None) -> None:
+    async def set_template(self, extra_user_info: str = None, extra_info: str = None) -> None:
         # Update template part in instruction
-        self.instruction = self.instruction.replace(GENERAL_WEB_APP_TEMPLATE_PROMPT, template_info)
+        self.instruction = self.instruction.replace(GENERAL_WEB_APP_TEMPLATE_PROMPT, self.template_info)
 
         content = extra_info
         if extra_user_info:
@@ -106,9 +113,9 @@ class FrontendEngineer(Engineer2):
                 cmd = f"cd {target_dir} && pnpm i"
                 subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-            template_info = await self.template_tool.get_template_info(template)
+            self.template_info = await self.template_tool.get_template_info(template)
             extra_info = EXRTA_INFO_PROMPT.format(template_style=template.style, target_dir=target_dir)
-            await self.set_template(template_info, extra_user_info, extra_info)
+            await self.set_template(extra_user_info, extra_info)
 
             return target_dir
         else:

@@ -520,7 +520,6 @@ Explanation: The requirement is about software development. Assign each tasks to
 ]
 ```
 
-
 ## example 2
 User Requirement: Run data analysis on sklearn Wine recognition dataset, include a plot, and train a model to predict wine class (20% as validation), and show validation accuracy.
 Explanation: DON'T decompose requirement if it is a DATA-RELATED task, assign a single task directly to Data Analyst David. He will manage the decomposition and implementation.
@@ -784,7 +783,7 @@ Explanation: This is a project that needs to be implemented using Vue.js accordi
 ```json
 [
     {
-        "command_name": "Terminal.run_command",
+        "command_name": "Terminal.run",
         "args": {
             "cmd": "cp -r {{template_folder}}/* {{workspace}}/{{project_name}}/ && cd {{workspace}}/{{project_name}} && pwd && tree "
         }
@@ -891,7 +890,7 @@ Explanation: The project have been completed. This project is Vue/React Project,
 ```json
 [
     {
-        "command_name": "Terminal.run_command",
+        "command_name": "Terminal.run",
         "args": {
             "cmd": "pnpm install && pnpm run build"
         }
@@ -1044,6 +1043,7 @@ Thought: Now that the changes have been pushed to the remote repository, due to 
 ]
 ```
 """
+
 
 WEB_SCRAPING_EXAMPLE = """
 ## action 1

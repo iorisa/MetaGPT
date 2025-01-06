@@ -90,6 +90,14 @@ role_zero:
   similarity_top_k: 5 # The number of long-term memories to retrieve.
   use_llm_ranker: false # Whether to use LLM Reranker to get better result. Default is `false`.
 
+supabase:
+  enable: false
+  project_url: YOUR_PROJECT_URL # Required. The endpoint URL for connecting to specific Supabase project. Such as https://PROJECT_REF.supabase.co
+  project_key: YOUR_PROJECT_KEY # Required. The anon/public key used for client API authentication. Such as xxx.yyy.zzz
+  access_token: YOUR_ACCESS_TOKEN # Required. The admin access token for Supabase management API. Such as sbp_xxx
+  session_id: YOUR_SESSION_ID # Optional. The chat id used for creating isolated database tables.
+  management_base_url: YOUR_MANAGEMENT_BASE_URL # Optional. The base URL for Supabase management API endpoints.
+
 azure_tts_subscription_key: "YOUR_SUBSCRIPTION_KEY"
 azure_tts_region: "eastus"
 
@@ -98,3 +106,8 @@ iflytek_api_key: "YOUR_API_KEY"
 iflytek_api_secret: "YOUR_API_SECRET"
 
 metagpt_tti_url: "YOUR_MODEL_URL"
+
+image_search:
+  api_type: "unsplash"  # unsplash/pixabay
+  api_key: "xxxxxx"
+  # api_base: ""

@@ -6,7 +6,7 @@ You are an autonomous programmer
 
 The special interface consists of a file editor that shows you 100 lines of a file at a time.
 
-You can use terminal commands (e.g., cat, ls, cd) by calling Terminal.run_command.
+You can use terminal commands (e.g., cat, ls, cd) by calling Terminal.run.
 
 You should carefully observe the behavior and results of the previous action, and avoid triggering repeated errors.
 
@@ -55,6 +55,7 @@ Note:
 26. Deploye the project to the public after you install and build the project, there will be a folder named "dist" in the current directory after the build.
 27. Use Engineer2.write_new_code to rewrite the whole file when you fail to use Editor.edit_file_by_replace more than three times.
 """
+
 ENGINEER2_INSTRUCTION = ROLE_INSTRUCTION + EXTRA_INSTRUCTION.strip()
 
 WRITE_CODE_SYSTEM_PROMPT = """
@@ -75,31 +76,35 @@ WRITE_CODE_PROMPT = """
 
 # Instruction
 Your task is to write the files listed in Files to Write. You must ensure the code is complete, correct, and bug-free.
-# Extra Instruction
-When you need to include images in your code, you can use ImageGetter.get tool. Here are examples:
+{supabase_code_requirement}
+# Tool Usage Guide
+When using tools, please adhere to the following guidelines:
 
-1. To set a background image (e.g., a sunset):
+1. **Tool Call Format:**
+    - Encapsulate each tool call within a `<tool_call>` tag.
+    - Use the format `ToolName.method_name(args)` for each call.
+2. **Embed file code block:** Place all tool calls within a code block(eg. ```jsx, ```html, ```css, ```js, ```python, etc.), this code block is the file content.
+
+
+## Example: 
+1. Setting a Background Image:
 ```jsx
-// Existing code
-backgroundImage: 'url(<tool_call ImageGetter.get(search_term="a beautiful sunset", image_save_path="/absolute_path/to/public/images/sonnet-bj.png", mode="search") />)',
-// Existing code
+// example_1.jsx
+// existing code
+backgroundImage: 'url(<tool_call> ImageGetter.get(search_term="a beautiful sunset", image_save_path="/absolute_path/to/public/assets/images/sonnet-bj.png", mode="search") </tool_call>)',
+// existing code
 ```
 
 2. To use an image as a game character or element:
 ```jsx
-<img src=\"<tool_call ImageGetter.get(search_term="a cute bird", image_save_path="/absolute_path/to/public/images/bird.png", mode="search") />\" alt="bird" />
+// example_2.jsx
+// existing code
+<img src=\"<tool_call> ImageGetter.get(search_term="a cute bird", image_save_path="/absolute_path/to/public/assets/images/bird.png", mode="search") </tool_call>\" alt="bird" />
+// existing code
 ```
 
-3. To create a image and use it in the code:
-```jsx
-<img src=\"<tool_call ImageGetter.get(search_term="a fly pig", image_save_path="/absolute_path/to/public/images/fly_pig.png", mode="create") />\" alt="pig" />
-```
-
-When you want process the image, you can use the ImageGetter.process tool. Here are examples:
-1. To remove the background of an image:
-```jsx
-<img src=\"<tool_call ImageGetter.process(image_path="/absolute_path/to/will/be/process/image.png", image_save_path="/absolute_path/to/public/images/image_rembg.png", mode="rembg") />\" alt="bird" />
-```
+## Available Tools
+{available_code_tools}
 
 # Output
 While some concise thoughts are helpful, code is absolutely required. DO NOT leave any TODO or placeholder.

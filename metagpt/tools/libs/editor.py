@@ -9,12 +9,18 @@ import tempfile
 from pathlib import Path
 from typing import List, Optional, Union
 
+import pandas as pd
 import tiktoken
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from metagpt.const import DEFAULT_WORKSPACE_ROOT
 from metagpt.logs import logger
-from metagpt.tools.libs.index_repo import DEFAULT_MIN_TOKEN_COUNT, IndexRepo
+from metagpt.tools.libs.index_repo import (
+    DEFAULT_MIN_TOKEN_COUNT,
+    STRUCTURAL_DATA_SUFFIX,
+    TEXT_DOC_SUFFIX,
+    IndexRepo,
+)
 from metagpt.tools.libs.linter import Linter
 from metagpt.tools.tool_registry import register_tool
 from metagpt.utils.common import awrite
@@ -141,18 +147,35 @@ class Editor(BaseModel):
         # self.resource.report(path, "path")
         return f"File successfully written and saved to {path}."
 
+    def _read_structural_data(self, path: str) -> FileBlock:
+        """Read the whole content of a csv file. Using an absolute path as the argument for specifying the file location."""
+        if path.endswith(".csv"):
+            df = pd.read_csv(path)
+        elif path.endswith(".xlsx"):
+            df = pd.read_excel(path)
+        else:
+            raise ValueError("The file must be a csv or excel file.")
+        return FileBlock(path=path, content=f"Showing head of the data:\n{df.head().to_string()}")
+
     async def read(self, path: str) -> FileBlock:
         """Read the whole content of a file. Using an absolute path as the argument for specifying the file location."""
 
         path = self._try_fix_path(path)
+
+        if path.suffix in STRUCTURAL_DATA_SUFFIX:
+            return self._read_structural_data(str(path))
 
         error = FileBlock(
             path=str(path),
             content="The file is too large to read. Use `Editor.similarity_search` to read the file instead.",
         )
         path = Path(path)
-        if path.stat().st_size > 5 * DEFAULT_MIN_TOKEN_COUNT:
+
+        # Limit the size only for text documents
+        # TODO: Formulate a complete mechanism to handle files of all types and of any size
+        if path.stat().st_size > 5 * DEFAULT_MIN_TOKEN_COUNT and path.suffix in TEXT_DOC_SUFFIX:
             return error
+
         content = await File.read_text_file(path)
         if not content:
             return FileBlock(path=str(path), content="")
@@ -1100,22 +1123,35 @@ class Editor(BaseModel):
         return "\n".join(res_list)
 
     def find_file(self, file_name: str, dir_path: str = "./") -> str:
-        """Finds all files with the given name in the specified directory.
+        """Finds all files with the given name or path in the specified directory.
 
         Args:
-            file_name: str: The name of the file to find.
+            file_name: str: The name or path of the file to find.
+                           If it's an absolute path, will match the exact path.
+                           If it's a relative path, will match the path suffix.
+                           If it's just a name, will match file names.
             dir_path: str: The path to the directory to search.
         """
-        file_name = self._try_fix_path(file_name)
         dir_path = self._try_fix_path(dir_path)
         if not dir_path.is_dir():
             raise FileNotFoundError(f"Directory {dir_path} not found")
 
+        file_path = Path(file_name)
+
         matches = []
         for root, _, files in os.walk(dir_path):
             for file in files:
-                if str(file_name) in file:
-                    matches.append(Path(root) / file)
+                current_path = Path(root) / file
+
+                if file_path.is_absolute():
+                    if current_path == file_path:
+                        matches.append(current_path)
+                elif "/" in str(file_path) or "\\" in str(file_path):
+                    if str(current_path).endswith(str(file_path)):
+                        matches.append(current_path)
+                else:
+                    if current_path.name == file_name:
+                        matches.append(current_path)
 
         res_list = []
         if matches:
