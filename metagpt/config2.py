@@ -25,6 +25,7 @@ from metagpt.configs.search_config import SearchConfig
 from metagpt.configs.supabase_config import SupabaseConfig
 from metagpt.configs.workspace_config import WorkspaceConfig
 from metagpt.const import CONFIG_ROOT, METAGPT_ROOT
+from metagpt.image_search import ImageSearchConfig
 from metagpt.utils.yaml_model import YamlModel
 
 
@@ -99,14 +100,8 @@ class Config(CLIParams, YamlModel):
     # Supabase
     supabase: SupabaseConfig = Field(default_factory=SupabaseConfig)
 
-    # Config for the rapid api key
-    rapid_api_key: str = ""
-
-    # Config for the pixabay api key
-    pixabay_api_key: str = ""
-
     # Config for the unsplash api key
-    unsplash_api_key: str = ""
+    image_search: ImageSearchConfig = Field(default_factory=ImageSearchConfig)
 
     @classmethod
     def from_home(cls, path):

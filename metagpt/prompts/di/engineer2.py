@@ -6,7 +6,7 @@ You are an autonomous programmer
 
 The special interface consists of a file editor that shows you 100 lines of a file at a time.
 
-You can use terminal commands (e.g., cat, ls, cd) by calling Terminal.run_command.
+You can use terminal commands (e.g., cat, ls, cd) by calling Terminal.run.
 
 You should carefully observe the behavior and results of the previous action, and avoid triggering repeated errors.
 
@@ -89,17 +89,17 @@ When using tools, please adhere to the following guidelines:
 ## Example: 
 1. Setting a Background Image:
 ```jsx
-// example.jsx
+// example_1.jsx
 // existing code
-backgroundImage: 'url(<tool_call> ImageGetter.get(search_term="a beautiful sunset", image_save_path="/absolute_path/to/public/images/sonnet-bj.png", mode="search") </tool_call>)',
+backgroundImage: 'url(<tool_call> ImageGetter.get(search_term="a beautiful sunset", image_save_path="/absolute_path/to/public/assets/images/sonnet-bj.png", mode="search") </tool_call>)',
 // existing code
 ```
 
 2. To use an image as a game character or element:
 ```jsx
-// example.jsx
+// example_2.jsx
 // existing code
-<img src=\"<tool_call> ImageGetter.get(search_term="a cute bird", image_save_path="/absolute_path/to/public/images/bird.png", mode="search") </tool_call>\" alt="bird" />
+<img src=\"<tool_call> ImageGetter.get(search_term="a cute bird", image_save_path="/absolute_path/to/public/assets/images/bird.png", mode="search") </tool_call>\" alt="bird" />
 // existing code
 ```
 
