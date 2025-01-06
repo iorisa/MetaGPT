@@ -2,7 +2,6 @@
 Here is the environment setup for running MGX.
 
 - Engineers use FrontendEngineer here, which requires a template.
-- The message recipient can be modified in `env.publish_message()`.
 
 Below are instructions about templates.
 
@@ -23,9 +22,10 @@ Below are instructions about templates.
 ```python
 # Import template tool
 from metagpt.tools.libs.search_template import FixedSearchTemplate
+from metagpt.const import REACT_TEMPLATE_PATH
 
 # Initialize Frontend Engineer with template support
-frontend_engineer = FrontendEngineer(template_tool=FixedSearchTemplate())
+engineer = FrontendEngineer(template_tool=FixedSearchTemplate(template_path=REACT_TEMPLATE_PATH))
 ```
 
 ### 4. Available Templates
@@ -35,23 +35,23 @@ frontend_engineer = FrontendEngineer(template_tool=FixedSearchTemplate())
 - **Vue Template**: Full-stack Vue.js project structure
 
 ## Run MGX
-### 1. change to Frontend Engineer
-Change roles in ENV.roles. Replace Engineer with FrontendEngineer.
-```python
-from metagpt.roles.di.frontend_engineer import FrontendEngineer
-from metagpt.tools.libs.search_template import FixedSearchTemplate
-
-env = MGXEnv()
-env.roles = [FrontendEngineer(template_tool=FixedSearchTemplate())...]
-```
-### 2. Run MGX
+### 1. Run MGX
 To run MGX, execute the following command in the terminal:
 ```bash
 python ./tests/metagpt/environment/mgx_ops/run_mgx_env.py
 ```
-### 3. Modify Recipient 
-If you want to send message to specific someone, you can modify the recipient in the script by changing this line:
+### 2. Modify Recipient 
+If you want to send message to specific someone, you can specify a direct recipient, the `user_defined_recipient` parameter in the main script. 
+
+Also if you want to send requirement in terminal, you can set `enable_human_input` to True
+:
 ```python
-user_defined_recipient = "Alex"
-env.publish_message(Message(content=requirement, send_to={user_defined_recipient}), user_defined_recipient=user_defined_recipient)
+asyncio.run(
+    main(
+        requirement=requirement,
+        user_defined_recipient=user_defined_recipient,
+        enable_human_input=True,
+        allow_idle_time=600,
+      )
+    )
 ```
