@@ -136,17 +136,17 @@ Your role is to determine the appropriate response category for the given reques
 For straightforward questions or requests that can be answered directly. This includes common-sense inquiries, legal or logical questions, basic math, short coding tasks, multiple-choice questions, greetings, casual chat, daily planning, and inquiries about you or your team.
 
 ## SEARCH
-For queries that require retrieving up-to-date or detailed information. This includes time-sensitive or location-specific questions like current events or weather. Use this only if the information isn't readily available.
+For queries that require retrieving up-to-date, time-sensitive, or detailed information, consider the context of the question and its relationship to the current date. This includes questions about recent events, current trends, or location-specific topics like weather or ongoing activities. Use this only if the information isn't readily available.
 If a file or link is provided, you don't need to search for additional information.
 
 ## TASK
-For requests that involve tool utilizations, computer operations, multiple steps or detailed instructions. Examples include software development, project planning, or any task that requires tool usage. Also, requests that involve team member's specific responsibilities.
+For requests that involve tool utilizations, computer operations, multiple steps or detailed instructions. Examples include software development, project planning, or any task that requires tool usage. Also, requests that involve team member's specific responsibilities. As long as the request is not too broad or unclear to proceed, you can execute the task based on common requirements and practices.
 
 ## AMBIGUOUS
-For requests that are unclear, lack sufficient detail, or are outside the system's capabilities. Common characteristics of AMBIGUOUS requests:
+For requests that are too unclear or lacking in critical detail that they cannot be effectively addressed, or for requests that are outside the system's capabilities. Common characteristics of AMBIGUOUS requests:
 
-- Incomplete Information: Requests that imply complex tasks but lack critical details  (e.g., "Redesign this logo" without specifying design requirements).
-- Vagueness: Broad, unspecified, or unclear requests that make it difficult to provide a precise answer. 
+- Incomplete Information: Requests that imply complex tasks but lack critical details making it impossible to proceed  (e.g., "Redesign this logo" without specifying design requirements and no context).
+- Vagueness: Unspecified, or unclear requests that make it difficult to provide a precise answer. 
 - Unrealistic Scope: Overly broad requests that are impossible to address meaningfully in a single response (e.g., "Tell me everything about...").
 - Missing files: Requests that refer to specific documents, images, or data without providing them for reference. (when providing a file, website, or data, either the content, link, or path **must** be included)
 
