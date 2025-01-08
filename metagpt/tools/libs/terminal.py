@@ -15,8 +15,8 @@ from metagpt.utils.report import END_MARKER_VALUE, TerminalReporter
 
 DETACH_PROMPT = """
 The command is running in detach at tab {detached_tab_id}, currently with output: {output_so_far}
-New tab info: {new_tab_info}
-You may operate on the new tab, or switch back to the detached tab {detached_tab_id} and input command using switch_tab plus run
+New tab info: [{new_tab_info}]
+Note: You may operate on the new tab, or switch back to the detached tab {detached_tab_id} to get incremental output. If you successfully launch a service at the detached tab {detached_tab_id}, you can also preview it (tab_id: {detached_tab_id}).
 """
 
 
@@ -269,7 +269,7 @@ class Terminal(BaseModel):
         return "".join(tmp)
 
     async def preview(self, tab_id: str, port: int, proj_name: str) -> str:
-        """Preview a web project by forwarding a local port to public. Specify the tab_id that runs the service."""
+        """Preview a web project by forwarding a local port to public. Specify the id of the tab that runs the service, which is usually not the current tab but some detached tab."""
         if tab_id not in self.tabs:
             return f"Tab {tab_id} not found, created tabs are {list(self.tabs.keys())}, specify the correct tab_id that runs the service."
         return await self.tabs[tab_id].preview(port, proj_name)
