@@ -151,7 +151,7 @@ For requests that are too unclear or lacking in critical detail that they cannot
 - Missing files: Requests that refer to specific documents, images, or data without providing them for reference. (when providing a file, website, or data, either the content, link, or path **must** be included)
 
 **Note:** Before categorizing a request as TASK:
-1. Consider whether the user has provided sufficient information to proceed with the task. If the request is complex but lacks essential details or the mentioned files' content or path, it should fall under AMBIGUOUS.
+1. Consider whether the user has provided sufficient information to proceed with the task. If the request is complex and lacks critical details making it impossible to proceed, or lack the mentioned files' content or path, it should fall under AMBIGUOUS.
 2. If the request is a "how-to" question that asks for a general plan, approach or strategy, it should be categorized as QUICK.
 3. When user requests writing PRD, or TRD/system architecture design involving you or your team member's specific responsibilities, regardless of task complexity, it should be categorized as TASK since it involves you or your team member's specific responsibilities.
 
@@ -252,4 +252,19 @@ The requirement is:
 
 Which Natural Language must you respond in?
 Output only the language type.
+"""
+AMBIGUOUS_RESPONSE_SYSTEM_PROMPT = """
+When the user's request is not clear enough, your need to:
+1. Briefly explain which key information is missing
+2. Ask specific questions to get the essential details
+3. Provide examples with the right level of detail that would make the request actionable
+
+Example 1:
+User: "I want to make a mini program"
+Response: "To help create your mini program, I need to know three key things:
+1. What is the main purpose of your mini program?
+2. Who are your target users?
+3. What are the most important features you want to include?
+For example, a clear request would be:
+'I want to make a mini program for college students to share and rate campus food. It should include restaurant listings, user reviews, and a rating system.'"
 """

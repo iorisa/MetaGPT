@@ -64,11 +64,11 @@ class TeamLeaderForTesting(TeamLeader):
         return await super()._act()
 
     # get intent result, mock SearchEnhancedQA.run
-    async def _quick_think(self) -> Tuple[Message, str]:
+    async def _quick_think(self, ambiguous_attempts: int = 0) -> Tuple[Message, str]:
         mock_search = AsyncMock(return_value="skip SearchEnhancedQA")
         # 使用 with patch 来 mock SearchEnhancedQA.run
         with patch("metagpt.actions.search_enhanced_qa.SearchEnhancedQA.run", mock_search):
-            rsp_msg, intent_result = await super()._quick_think()
+            rsp_msg, intent_result = await super()._quick_think(ambiguous_attempts)
             self.intent_result = intent_result
             return rsp_msg, intent_result
 

@@ -23,6 +23,7 @@ from metagpt.exp_pool.serializers import RoleZeroSerializer
 from metagpt.logs import logger
 from metagpt.memory.role_zero_memory import RoleZeroLongTermMemory
 from metagpt.prompts.di.role_zero import (
+    AMBIGUOUS_RESPONSE_SYSTEM_PROMPT,
     ASK_HUMAN_COMMAND,
     ASK_HUMAN_GUIDANCE_FORMAT,
     CMD_PROMPT,
@@ -56,6 +57,8 @@ from metagpt.utils.repair_llm_raw_output import (
     repair_llm_raw_output,
 )
 from metagpt.utils.report import ThoughtReporter
+
+MAX_AMBIGUOUS_ATTEMPTS = 2
 
 
 # @track_agent("RoleZero")
@@ -387,7 +390,7 @@ class RoleZero(Role):
         """Format the system prompt for quick thinking."""
         return QUICK_THINK_SYSTEM_PROMPT.format(examples=QUICK_THINK_EXAMPLES, role_info=self._get_prefix())
 
-    async def _quick_think(self) -> Tuple[Message, str]:
+    async def _quick_think(self, ambiguous_attempts: int = 0) -> Tuple[Message, str]:
         answer = ""
         rsp_msg = None
         if self.rc.news[-1].cause_by != any_to_str(UserRequirement):
@@ -401,33 +404,42 @@ class RoleZero(Role):
             await reporter.async_report({"type": "classify"})
             intent_result = await self.llm.aask(context, system_msgs=[self.format_quick_system_prompt()])
 
-        if "QUICK" in intent_result or "AMBIGUOUS" in intent_result:  # llm call with the original context
-            cleaned_memory = []
-            memory = self.get_memories(k=self.memory_k)
+        if "QUICK" in intent_result or "AMBIGUOUS" in intent_result:
+            if "AMBIGUOUS" in intent_result and ambiguous_attempts < MAX_AMBIGUOUS_ATTEMPTS:
+                # generate classification prompt
+                cleaned_memory = self._clean_memory(self.get_memories(k=self.memory_k))
+                async with ThoughtReporter(enable_llm_stream=True) as reporter:
+                    await reporter.async_report({"type": "quick"})
+                    clarification_question = await self.llm.aask(
+                        self.llm.format_msg(cleaned_memory),
+                        system_msgs=[AMBIGUOUS_RESPONSE_SYSTEM_PROMPT.format(role_info=self._get_prefix())],
+                    )
+                # wait for human response
+                user_clarification = await self.ask_human(clarification_question)
+                self.rc.memory.add(UserMessage(content=user_clarification, cause_by=QUICK_THINK_TAG))
+                return await self._quick_think(ambiguous_attempts + 1)
+            else:
+                # "QUICK" or "AMBIGUOUS" when ambiguous_attempts >= MAX_AMBIGUOUS_ATTEMPTS
+                answer = ""
+                if ambiguous_attempts >= MAX_AMBIGUOUS_ATTEMPTS:
+                    logger.warning(f"Reached maximum ambiguous attempts ({MAX_AMBIGUOUS_ATTEMPTS}), treating as QUICK")
+                    answer = "I have reached the maximum number of attempts to process ambiguous cases, I will stop thinking."
 
-            for element in memory:
-                # deep copy all element
-                copied_element = copy.deepcopy(element)
-
+                cleaned_memory = self._clean_memory(self.get_memories(k=self.memory_k))
+                async with ThoughtReporter(enable_llm_stream=True) as reporter:
+                    await reporter.async_report({"type": "quick"})
+                    answer += await self.llm.aask(
+                        self.llm.format_msg(cleaned_memory),
+                        system_msgs=[QUICK_RESPONSE_SYSTEM_PROMPT.format(role_info=self._get_prefix())],
+                    )
                 # If the answer contains the substring '[Message] from A to B:', remove it.
                 pattern = r"\[Message\] from .+? to .+?:\s*"
-                copied_element.content = re.sub(pattern, "", copied_element.content, count=1)
-                cleaned_memory.append(copied_element)
+                answer = re.sub(pattern, "", answer, count=1)
+                if "command_name" in answer:
+                    # an actual TASK intent misclassified as QUICK, correct it here, FIXME: a better way is to classify it correctly in the first place
+                    answer = ""
+                    intent_result = "TASK"
 
-            # cleaned_memory = self._clean_memory() # deep copy and
-            async with ThoughtReporter(enable_llm_stream=True) as reporter:
-                await reporter.async_report({"type": "quick"})
-                answer = await self.llm.aask(
-                    self.llm.format_msg(cleaned_memory),
-                    system_msgs=[QUICK_RESPONSE_SYSTEM_PROMPT.format(role_info=self._get_prefix())],
-                )
-            # If the answer contains the substring '[Message] from A to B:', remove it.
-            pattern = r"\[Message\] from .+? to .+?:\s*"
-            answer = re.sub(pattern, "", answer, count=1)
-            if "command_name" in answer:
-                # an actual TASK intent misclassified as QUICK, correct it here, FIXME: a better way is to classify it correctly in the first place
-                answer = ""
-                intent_result = "TASK"
         elif "SEARCH" in intent_result:
             query = "\n".join(str(msg) for msg in memory)
             answer = await SearchEnhancedQA().run(query)
@@ -442,6 +454,17 @@ class RoleZero(Role):
             )
 
         return rsp_msg, intent_result
+
+    def _clean_memory(self, memory: List[Message]) -> List[Message]:
+        """Helper method to clean message format from memory"""
+        cleaned_memory = []
+        for element in memory:
+            copied_element = copy.deepcopy(element)
+            pattern = r"\[Message\] from .+? to .+?:\s*"
+            copied_element.content = re.sub(pattern, "", copied_element.content, count=1)
+            cleaned_memory.append(copied_element)
+        # cleaned_memory = self._clean_memory() # deep copy and
+        return cleaned_memory
 
     async def _check_duplicates(self, req: list[dict], command_rsp: str, check_window: int = 10):
         past_rsp = [mem.content for mem in self.rc.memory.get(check_window)]
