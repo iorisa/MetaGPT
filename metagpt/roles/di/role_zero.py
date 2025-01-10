@@ -401,7 +401,7 @@ class RoleZero(Role):
             await reporter.async_report({"type": "classify"})
             intent_result = await self.llm.aask(context, system_msgs=[self.format_quick_system_prompt()])
 
-        if "QUICK" in intent_result or "AMBIGUOUS" in intent_result:  # llm call with the original context
+        if "QUICK" in intent_result:  # llm call with the original context
             cleaned_memory = []
             memory = self.get_memories(k=self.memory_k)
 
@@ -431,6 +431,10 @@ class RoleZero(Role):
         elif "SEARCH" in intent_result:
             query = "\n".join(str(msg) for msg in memory)
             answer = await SearchEnhancedQA().run(query)
+        elif "AMBIGUOUS" in intent_result:
+            # FIXME: a temp solution, treat it as TASK
+            answer = ""
+            intent_result = "TASK"
 
         if answer:
             self.rc.memory.add(AIMessage(content=answer, cause_by=QUICK_THINK_TAG))
