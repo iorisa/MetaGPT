@@ -412,9 +412,6 @@ class RoleZero(Role):
                     self.llm.format_msg(cleaned_memory),
                     system_msgs=[AMBIGUOUS_RESPONSE_SYSTEM_PROMPT.format(role_info=self._get_prefix())],
                 )
-            # wait for human response
-            user_clarification = await self.reply_to_human(clarification_question)
-            self.rc.memory.add(UserMessage(content=user_clarification, cause_by=QUICK_THINK_TAG))
             answer = clarification_question
             # return await self._quick_think()
         elif "QUICK" in intent_result:
