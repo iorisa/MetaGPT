@@ -166,7 +166,7 @@ class Terminal(BaseModel):
         # serve cmd have a space behind it,
         "serve ": "Use Deployer.deploy_to_public instead.",
     }
-    timeout: float = 20.0  # timeout for reading output
+    timeout: float = 60.0  # timeout for reading output
 
     @model_validator(mode="after")
     def valid_current_tab(self):
