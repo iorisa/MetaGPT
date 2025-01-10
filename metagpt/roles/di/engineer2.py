@@ -91,6 +91,7 @@ class Engineer2(RoleZero):
             "CodeReview.review": cr.review,
             "CodeReview.fix": cr.fix,
             "Terminal.run": self.terminal.run,
+            "Terminal": self.terminal.run,  # alias
             "Terminal.run_command": self.terminal.run,
             "Terminal.preview": self.terminal.preview,
             "Deployer.deploy_to_public": self._deploy_to_public,
