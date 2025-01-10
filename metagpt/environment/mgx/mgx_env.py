@@ -14,7 +14,7 @@ class MGXEnv(Environment, SerializationMixin):
 
     direct_chat_roles: set[str] = set()  # record direct chat: @role_name
     is_public_chat: bool = True
-    attach_image_k: int = 1  # encode up to k images provided in a message
+    attach_image_k: int = 3  # encode up to k images provided in a message
 
     def _publish_message(self, message: Message, peekable: bool = True) -> bool:
         if self.is_public_chat:
