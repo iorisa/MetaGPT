@@ -90,7 +90,7 @@ class FrontendEngineer(Engineer2):
         if extra_user_info:
             content = f"Additional information provided by the user:{extra_user_info}\n\n{content}"
         # Update memory
-        self.rc.memory.add(UserMessage(content=content))
+        self.rc.memory.add(UserMessage(content=content, cause_by="Alex"))
         logger.info("Template information, User info and extra info updated")
 
     async def search_template(self, requirement: str) -> str:
