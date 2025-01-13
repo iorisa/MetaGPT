@@ -19,6 +19,8 @@ from metagpt.utils.ahttp_client import apost
 
 @register_tool(include_functions=["execute_sql", "get_session_schemas"])
 class SupabaseManager(BaseModel):
+    """A management tool for interacting with Supabase database through Management API."""
+
     config: SupabaseConfig = Field(default_factory=lambda: Config.default().supabase, description="The Supabase config")
 
     @property
