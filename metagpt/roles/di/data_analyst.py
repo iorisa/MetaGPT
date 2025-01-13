@@ -64,7 +64,7 @@ class DataAnalyst(RoleZero):
         """Write a code block for current task and execute it in an interactive notebook environment.
 
         Args:
-            instruction (optional, str): Further hints or notice other than the current task instruction, must be very concise and can be empty. Defaults to "".
+            instruction (optional, str): Further hints or notice other than the current task instruction, must be very concise and can be empty. Write text guidance, NOT code. Defaults to "".
         """
         if self.planner.plan:
             logger.info(f"Current task {self.planner.plan.current_task}")
