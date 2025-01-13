@@ -37,7 +37,8 @@ from metagpt.prompts.di.role_zero import (
     REGENERATE_PROMPT,
     REPORT_TO_HUMAN_PROMPT,
     ROLE_INSTRUCTION,
-    SUMMARY_PROBLEM_WHEN_DUPLICATE,
+    SUMMARIZE_PROBLEM_WHEN_DUPLICATE,
+    SUMMARIZE_STATUS_WHEN_CONSECUTIVE,
     SUMMARY_PROMPT,
     SYSTEM_PROMPT,
 )
@@ -75,7 +76,10 @@ class RoleZero(Role):
 
     # React Mode
     react_mode: Literal["react"] = "react"
-    max_react_loop: int = 50  # used for react mode
+    max_react_loop: int = 50
+    # consecutive react count after receiving a message, used for triggering human intervention
+    consecutive_react_cnt: int = 0
+    max_consecutive_react_limit: int = 10
 
     # Tools
     tools: list[str] = []  # Use special symbol ["<all>"] to indicate use of all registered tools
@@ -358,10 +362,12 @@ class RoleZero(Role):
             return quick_rsp
 
         actions_taken = 0
+        self.consecutive_react_cnt = 0
         rsp = AIMessage(content="No actions taken yet", cause_by=Action)  # will be overwritten after Role _act
         while actions_taken < self.rc.max_react_loop:
             # NOTE: Diff 2: Keep observing within _react, news will go into memory, allowing adapting to new info
-            await self._observe()
+            if await self._observe():
+                self.consecutive_react_cnt = 0
 
             # think
             has_todo = await self._think()
@@ -371,6 +377,7 @@ class RoleZero(Role):
             logger.debug(f"{self._setting}: {self.rc.state=}, will do {self.rc.todo}")
             rsp = await self._act()
             actions_taken += 1
+            self.consecutive_react_cnt += 1
 
             # post-check
             if self.rc.max_react_loop >= 10 and actions_taken >= self.rc.max_react_loop:
@@ -381,6 +388,14 @@ class RoleZero(Role):
                 )
                 if "yes" in human_rsp.lower():
                     actions_taken = 0
+            if self.consecutive_react_cnt >= self.max_consecutive_react_limit:
+                memory = self.get_memories(k=self.memory_k)
+                context = self.llm.format_msg(memory + [UserMessage(content=SUMMARIZE_STATUS_WHEN_CONSECUTIVE)])
+                question = await self.llm.aask(context)
+                human_rsp = await self.ask_human(question)
+                self.rc.memory.add(UserMessage(content="User's extra instruction: " + human_rsp, cause_by=RunCommand))
+                self.consecutive_react_cnt = 0
+
         return rsp  # return output from the last action
 
     def format_quick_system_prompt(self) -> str:
@@ -461,9 +476,10 @@ class RoleZero(Role):
                     # Detect the duplicate of the 'Plan.finish_current_task' command, and use the 'end' command to finish the task.
                     logger.warning(f"Duplicate response detected: {command_rsp}")
                     return END_COMMAND
-                problem = await self.llm.aask(
-                    req + [UserMessage(content=SUMMARY_PROBLEM_WHEN_DUPLICATE.format(language=self.respond_language))]
+                context = self.llm.format_msg(
+                    req + [UserMessage(content=SUMMARIZE_PROBLEM_WHEN_DUPLICATE.format(language=self.respond_language))]
                 )
+                problem = await self.llm.aask(context)
                 ASK_HUMAN_COMMAND[0]["args"]["question"] = ASK_HUMAN_GUIDANCE_FORMAT.format(problem=problem).strip()
                 ask_human_command = "```json\n" + json.dumps(ASK_HUMAN_COMMAND, indent=4, ensure_ascii=False) + "\n```"
                 return ask_human_command
@@ -591,6 +607,7 @@ class RoleZero(Role):
             question = args.get("question") or args.get("content") or args.get("message")
             assert question, "Use kwarg 'question' to provide the question."
             human_response = await self.ask_human(question=question)
+            self.consecutive_react_cnt = 0
             if human_response.strip().lower().endswith(("stop", "<stop>")):
                 human_response += "The user has asked me to stop because I have encountered a problem."
                 self.rc.memory.add(UserMessage(content=human_response, cause_by=RunCommand))
