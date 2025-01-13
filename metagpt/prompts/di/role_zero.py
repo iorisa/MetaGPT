@@ -148,7 +148,7 @@ For requests that are too unclear or lacking in critical detail that they cannot
 - Incomplete Information: Requests that imply complex tasks but lack critical details making it impossible to proceed  (e.g., "Redesign this logo" without specifying design requirements and no context).
 - Vagueness: Unspecified, or unclear requests that make it difficult to provide a precise answer. 
 - Unrealistic Scope: Overly broad requests that are impossible to address meaningfully in a single response (e.g., "Tell me everything about...").
-- Missing files: Requests that refer to specific documents, images, or data without providing them for reference. (when providing a file, website, or data, either the content, link, or path **must** be included)
+- Missing files: Requests that refer to specific documents, images, or data without providing them for reference. (when providing a file, website, or data, either the content, link, or path **must** be included). As long as a file path or directory is provided, the system will handle content access automatically - never classify these as AMBIGUOUS.
 
 **Note:** Before categorizing a request as TASK:
 1. Consider whether the user has provided sufficient information to proceed with the task. If the request is complex and lacks critical details making it impossible to proceed, or lack the mentioned files' content or path, it should fall under AMBIGUOUS.

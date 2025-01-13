@@ -402,20 +402,20 @@ class RoleZero(Role):
             await reporter.async_report({"type": "classify"})
             intent_result = await self.llm.aask(context, system_msgs=[self.format_quick_system_prompt()])
 
-        if "AMBIGUOUS" in intent_result:
-            # reply to human and go quick think again
-            cleaned_memory = self._clean_memory(self.get_memories(k=self.memory_k))
-            async with ThoughtReporter(enable_llm_stream=True) as reporter:
-                await reporter.async_report({"type": "quick"})
-                # generate classification prompt
-                clarification_question = await self.llm.aask(
-                    self.llm.format_msg(cleaned_memory),
-                    system_msgs=[AMBIGUOUS_RESPONSE_SYSTEM_PROMPT.format(role_info=self._get_prefix())],
-                )
-            answer = clarification_question
-            # return await self._quick_think()
-        elif "QUICK" in intent_result:
-            cleaned_memory = self._clean_memory(self.get_memories(k=self.memory_k))
+        if "QUICK" in intent_result:  # llm call with the original context
+            cleaned_memory = []
+            memory = self.get_memories(k=self.memory_k)
+
+            for element in memory:
+                # deep copy all element
+                copied_element = copy.deepcopy(element)
+
+                # If the answer contains the substring '[Message] from A to B:', remove it.
+                pattern = r"\[Message\] from .+? to .+?:\s*"
+                copied_element.content = re.sub(pattern, "", copied_element.content, count=1)
+                cleaned_memory.append(copied_element)
+
+            # cleaned_memory = self._clean_memory() # deep copy and
             async with ThoughtReporter(enable_llm_stream=True) as reporter:
                 await reporter.async_report({"type": "quick"})
                 answer = await self.llm.aask(
@@ -433,6 +433,17 @@ class RoleZero(Role):
         elif "SEARCH" in intent_result:
             query = "\n".join(str(msg) for msg in memory)
             answer = await SearchEnhancedQA().run(query)
+        elif "AMBIGUOUS" in intent_result:
+            # reply to human
+            cleaned_memory = self._clean_memory(self.get_memories(k=self.memory_k))
+            async with ThoughtReporter(enable_llm_stream=True) as reporter:
+                await reporter.async_report({"type": "quick"})
+                # generate classification prompt
+                clarification_question = await self.llm.aask(
+                    self.llm.format_msg(cleaned_memory),
+                    system_msgs=[AMBIGUOUS_RESPONSE_SYSTEM_PROMPT.format(role_info=self._get_prefix())],
+                )
+            answer = clarification_question
 
         if answer:
             self.rc.memory.add(AIMessage(content=answer, cause_by=QUICK_THINK_TAG))

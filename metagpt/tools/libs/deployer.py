@@ -8,7 +8,7 @@ class Deployer:
 
     async def static_server(self, src_path: str, proj_name: str) -> str:
         """This function will be implemented in the remote service."""
-        return "http://127.0.0.1:8000/index.html"
+        return f"Project {proj_name} deployed successfully to: http://127.0.0.1:8000/index.html"
 
     async def deploy_to_public(self, dist_dir: str, proj_name: str) -> str:
         """
@@ -19,5 +19,4 @@ class Deployer:
         >>>
             await Deployer().deploy_to_public("dist", "my-proj")
         """
-        url = await self.static_server(dist_dir, proj_name)
-        return f"Project {proj_name} deployed successfully to: {url}"
+        return await self.static_server(dist_dir, proj_name)
