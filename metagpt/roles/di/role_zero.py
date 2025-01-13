@@ -403,19 +403,7 @@ class RoleZero(Role):
             intent_result = await self.llm.aask(context, system_msgs=[self.format_quick_system_prompt()])
 
         if "QUICK" in intent_result:  # llm call with the original context
-            cleaned_memory = []
-            memory = self.get_memories(k=self.memory_k)
-
-            for element in memory:
-                # deep copy all element
-                copied_element = copy.deepcopy(element)
-
-                # If the answer contains the substring '[Message] from A to B:', remove it.
-                pattern = r"\[Message\] from .+? to .+?:\s*"
-                copied_element.content = re.sub(pattern, "", copied_element.content, count=1)
-                cleaned_memory.append(copied_element)
-
-            # cleaned_memory = self._clean_memory() # deep copy and
+            cleaned_memory = self._clean_memory(self.get_memories(k=self.memory_k))
             async with ThoughtReporter(enable_llm_stream=True) as reporter:
                 await reporter.async_report({"type": "quick"})
                 answer = await self.llm.aask(
