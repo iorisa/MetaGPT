@@ -102,14 +102,16 @@ END_COMMAND = """
 ```
 """
 
-SUMMARY_PROBLEM_WHEN_DUPLICATE = """You has meet a problem and cause duplicate command.Please directly tell me what is confusing or troubling you. Do Not output any command.Ouput you problem in {language} and within 30 words."""
+SUMMARIZE_PROBLEM_WHEN_DUPLICATE = """You have met a problem and cause duplicate command. Please directly tell me what is confusing or troubling you. Do Not output any command. Output your problem in {language} within 30 words."""
 ASK_HUMAN_GUIDANCE_FORMAT = """
 I am facing the following problem:
 {problem}
 Could you please provide me with some guidance?If you want to stop, please include "<STOP>" in your guidance.
 """
 ASK_HUMAN_COMMAND = [{"command_name": "RoleZero.ask_human", "args": {"question": ""}}]
-
+SUMMARIZE_STATUS_WHEN_CONSECUTIVE = """
+You received a requirement but take too long to complete it. Please summarize the current progress and explain what you are doing now. Ask the user if they want you to continue. Output in 30 words.
+"""
 JSON_REPAIR_PROMPT = """
 ## json data
 {json_data}
@@ -244,6 +246,7 @@ SUMMARY_PROMPT = """
 Summarize what you have accomplished lately. Be concise.
 If you produce any deliverables, include their short descriptions and file paths. If there are any metrics, url or quantitative results, include them, too.
 If the deliverable is code, only output the file path.
+Recommend three potential improvements that are easiest to achieve for the next steps, kindly ask users for their preference.
 """
 
 DETECT_LANGUAGE_PROMPT = """
