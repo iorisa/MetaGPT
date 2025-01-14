@@ -23,6 +23,7 @@ from metagpt.exp_pool.serializers import RoleZeroSerializer
 from metagpt.logs import logger
 from metagpt.memory.role_zero_memory import RoleZeroLongTermMemory
 from metagpt.prompts.di.role_zero import (
+    AMBIGUOUS_RESPONSE_SYSTEM_PROMPT,
     ASK_HUMAN_COMMAND,
     ASK_HUMAN_GUIDANCE_FORMAT,
     CMD_PROMPT,
@@ -401,20 +402,8 @@ class RoleZero(Role):
             await reporter.async_report({"type": "classify"})
             intent_result = await self.llm.aask(context, system_msgs=[self.format_quick_system_prompt()])
 
-        if "QUICK" in intent_result or "AMBIGUOUS" in intent_result:  # llm call with the original context
-            cleaned_memory = []
-            memory = self.get_memories(k=self.memory_k)
-
-            for element in memory:
-                # deep copy all element
-                copied_element = copy.deepcopy(element)
-
-                # If the answer contains the substring '[Message] from A to B:', remove it.
-                pattern = r"\[Message\] from .+? to .+?:\s*"
-                copied_element.content = re.sub(pattern, "", copied_element.content, count=1)
-                cleaned_memory.append(copied_element)
-
-            # cleaned_memory = self._clean_memory() # deep copy and
+        if "QUICK" in intent_result:  # llm call with the original context
+            cleaned_memory = self._clean_memory(self.get_memories(k=self.memory_k))
             async with ThoughtReporter(enable_llm_stream=True) as reporter:
                 await reporter.async_report({"type": "quick"})
                 answer = await self.llm.aask(
@@ -428,9 +417,21 @@ class RoleZero(Role):
                 # an actual TASK intent misclassified as QUICK, correct it here, FIXME: a better way is to classify it correctly in the first place
                 answer = ""
                 intent_result = "TASK"
+
         elif "SEARCH" in intent_result:
             query = "\n".join(str(msg) for msg in memory)
             answer = await SearchEnhancedQA().run(query)
+        elif "AMBIGUOUS" in intent_result:
+            # reply to human
+            cleaned_memory = self._clean_memory(self.get_memories(k=self.memory_k))
+            async with ThoughtReporter(enable_llm_stream=True) as reporter:
+                await reporter.async_report({"type": "quick"})
+                # generate classification prompt
+                clarification_question = await self.llm.aask(
+                    self.llm.format_msg(cleaned_memory),
+                    system_msgs=[AMBIGUOUS_RESPONSE_SYSTEM_PROMPT.format(role_info=self._get_prefix())],
+                )
+            answer = clarification_question
 
         if answer:
             self.rc.memory.add(AIMessage(content=answer, cause_by=QUICK_THINK_TAG))
@@ -443,13 +444,28 @@ class RoleZero(Role):
 
         return rsp_msg, intent_result
 
+    def _clean_memory(self, memory: List[Message]) -> List[Message]:
+        """Helper method to clean message format from memory"""
+        cleaned_memory = []
+        for element in memory:
+            copied_element = copy.deepcopy(element)
+            pattern = r"\[Message\] from .+? to .+?:\s*"
+            copied_element.content = re.sub(pattern, "", copied_element.content, count=1)
+            cleaned_memory.append(copied_element)
+        # cleaned_memory = self._clean_memory() # deep copy and
+        return cleaned_memory
+
     async def _check_duplicates(self, req: list[dict], command_rsp: str, check_window: int = 10):
         past_rsp = [mem.content for mem in self.rc.memory.get(check_window)]
         if command_rsp in past_rsp and '"command_name": "end"' not in command_rsp:
             # Normal response with thought contents are highly unlikely to reproduce
             # If an identical response is detected, it is a bad response, mostly due to LLM repeating generated content
             # In this case, ask human for help and regenerate
-            # TODO: switch to llm_cached_aask
+
+            # A special rule to skip checking
+            # Terminal commands such as pnpm * can be repeated for continuous deployment; detect commands that contain Terminal only without risky tools such as Editor and Plan
+            if "Terminal" in command_rsp and "Editor" not in command_rsp and "Plan" not in command_rsp:
+                return command_rsp
 
             #  Hard rule to ask human for help
             if past_rsp.count(command_rsp) >= 3:

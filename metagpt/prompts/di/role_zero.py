@@ -136,22 +136,22 @@ Your role is to determine the appropriate response category for the given reques
 For straightforward questions or requests that can be answered directly. This includes common-sense inquiries, legal or logical questions, basic math, short coding tasks, multiple-choice questions, greetings, casual chat, daily planning, and inquiries about you or your team.
 
 ## SEARCH
-For queries that require retrieving up-to-date or detailed information. This includes time-sensitive or location-specific questions like current events or weather. Use this only if the information isn't readily available.
+For queries that require retrieving up-to-date, time-sensitive, or detailed information, consider the context of the question and its relationship to the current date. This includes questions about recent events, current trends, or location-specific topics like weather or ongoing activities. Use this only if the information isn't readily available.
 If a file or link is provided, you don't need to search for additional information.
 
 ## TASK
-For requests that involve tool utilizations, computer operations, multiple steps or detailed instructions. Examples include software development, project planning, or any task that requires tool usage. Also, requests that involve team member's specific responsibilities.
+For requests that involve tool utilizations, computer operations, multiple steps or detailed instructions. Examples include software development, project planning, or any task that requires tool usage. Also, requests that involve team member's specific responsibilities. As long as the request is not too broad to proceed, you can execute the task based on common requirements and practices.
 
 ## AMBIGUOUS
-For requests that are unclear, lack sufficient detail, or are outside the system's capabilities. Common characteristics of AMBIGUOUS requests:
+For requests that are too unclear or lacking in critical detail that they cannot be addressed, or for requests that are outside the system's capabilities. Common characteristics of AMBIGUOUS requests:
 
-- Incomplete Information: Requests that imply complex tasks but lack critical details  (e.g., "Redesign this logo" without specifying design requirements).
-- Vagueness: Broad, unspecified, or unclear requests that make it difficult to provide a precise answer. 
+- Incomplete Information: Requests that imply complex tasks but lack critical details making it impossible to proceed  (e.g., "Redesign this logo" without specifying design requirements and no context).
+- Vagueness: Unspecified, or unclear requests that make it difficult to provide a precise answer. 
 - Unrealistic Scope: Overly broad requests that are impossible to address meaningfully in a single response (e.g., "Tell me everything about...").
-- Missing files: Requests that refer to specific documents, images, or data without providing them for reference. (when providing a file, website, or data, either the content, link, or path **must** be included)
+- Missing files: Requests that refer to specific documents, images, or data without providing them for reference. (when providing a file, website, or data, either the content, link, or path **must** be included). As long as a file path or directory is provided, the system will handle content access automatically - never classify these as AMBIGUOUS.
 
 **Note:** Before categorizing a request as TASK:
-1. Consider whether the user has provided sufficient information to proceed with the task. If the request is complex but lacks essential details or the mentioned files' content or path, it should fall under AMBIGUOUS.
+1. Consider whether the user has provided sufficient information to proceed with the task. If the request is complex and lacks critical details making it impossible to proceed, or lack the mentioned files' content or path, it should fall under AMBIGUOUS.
 2. If the request is a "how-to" question that asks for a general plan, approach or strategy, it should be categorized as QUICK.
 3. When user requests writing PRD, or TRD/system architecture design involving you or your team member's specific responsibilities, regardless of task complexity, it should be categorized as TASK since it involves you or your team member's specific responsibilities.
 
@@ -252,4 +252,19 @@ The requirement is:
 
 Which Natural Language must you respond in?
 Output only the language type.
+"""
+AMBIGUOUS_RESPONSE_SYSTEM_PROMPT = """
+When the user's request is not clear enough, your need to:
+1. Briefly explain which key information is missing
+2. Ask specific questions to get the essential details
+3. Provide examples with the right level of detail that would make the request actionable
+
+Example 1:
+User: "I want to make a mini program"
+Response: "To help create your mini program, I need to know three key things:
+1. What is the main purpose of your mini program?
+2. Who are your target users?
+3. What are the most important features you want to include?
+For example, a clear request would be:
+'I want to make a mini program for college students to share and rate campus food. It should include restaurant listings, user reviews, and a rating system.'"
 """

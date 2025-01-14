@@ -15,8 +15,8 @@ from metagpt.utils.report import END_MARKER_VALUE, TerminalReporter
 
 DETACH_PROMPT = """
 The command is running in detach at tab {detached_tab_id}, currently with output: {output_so_far}
-New tab info: {new_tab_info}
-You may operate on the new tab, or switch back to the detached tab {detached_tab_id} and input command using switch_tab plus run
+New tab info: [{new_tab_info}]
+Note: You may operate on the new tab, or switch back to the detached tab {detached_tab_id} to get incremental output. If you successfully launch a service at the detached tab {detached_tab_id}, you can also preview it (tab_id: {detached_tab_id}).
 """
 
 
@@ -147,8 +147,12 @@ class Tab(BaseModel):
     def update_cwd(self):
         self.cwd = psutil.Process(self.process.pid).cwd()
 
+    async def preview(self, port: str, proj_name: str) -> str:
+        """Preview the service on this tab. To be implemented by users."""
+        return f"{proj_name} service can now be viewed at http://127.0.0.1.nip.io:{port}"
 
-@register_tool(include_functions=["run"])
+
+@register_tool(include_functions=["run", "preview"])
 class Terminal(BaseModel):
     """A tool for running terminal commands. Don't initialize a new instance of this class if one already exists."""
 
@@ -162,7 +166,7 @@ class Terminal(BaseModel):
         # serve cmd have a space behind it,
         "serve ": "Use Deployer.deploy_to_public instead.",
     }
-    timeout: float = 20.0  # timeout for reading output
+    timeout: float = 60.0  # timeout for reading output
 
     @model_validator(mode="after")
     def valid_current_tab(self):
@@ -263,6 +267,12 @@ class Terminal(BaseModel):
                 # print(instruction)
                 return instruction
         return "".join(tmp)
+
+    async def preview(self, tab_id: str, port: int, proj_name: str) -> str:
+        """Preview a web project by forwarding a local port to public. Specify the id of the tab that runs the service, which is usually not the current tab but some detached tab."""
+        if tab_id not in self.tabs:
+            return f"Tab {tab_id} not found, created tabs are {list(self.tabs.keys())}, specify the correct tab_id that runs the service."
+        return await self.tabs[tab_id].preview(port, proj_name)
 
     async def execute_in_conda_env(self, cmd: str, env) -> str:
         """
