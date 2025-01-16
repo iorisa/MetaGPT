@@ -45,6 +45,9 @@ class FrontendEngineer(Engineer2):
     template_tool: BaseSearchTemplate = None
     template_info: str = GENERAL_WEB_APP_TEMPLATE_PROMPT
 
+    # a larger limit to allow for complex development
+    max_consecutive_react_limit: int = 20
+
     @model_validator(mode="after")
     def set_search_template_tool(self):
         if self.template_tool is None and self.use_search_template:

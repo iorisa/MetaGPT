@@ -7,7 +7,11 @@ from pathlib import Path
 from pydantic import Field, model_validator
 
 from metagpt.logs import logger
-from metagpt.prompts.di.engineer2 import ENGINEER2_INSTRUCTION, WRITE_CODE_PROMPT
+from metagpt.prompts.di.engineer2 import (
+    ENGINEER2_INSTRUCTION,
+    TOOL_USAGE_GUIDE,
+    WRITE_CODE_PROMPT,
+)
 from metagpt.prompts.di.supabase import get_supabase_code_requirement
 from metagpt.roles.di.role_zero import RoleZero
 from metagpt.schema import UserMessage
@@ -172,12 +176,13 @@ class Engineer2(RoleZero):
         # Get recommended code tools and their usage examples.
         if self.code_tool_recommender:
             code_tool_info = await self.code_tool_recommender.get_recommended_tool_info()
+            tool_usage_guide = TOOL_USAGE_GUIDE.format(available_code_tools=code_tool_info)
         else:
-            code_tool_info = "N/A"
+            tool_usage_guide = "N/A"
         prompt = WRITE_CODE_PROMPT.format(
             file_path=paths,
             file_description=description,
-            available_code_tools=code_tool_info,
+            tool_usage_guide=tool_usage_guide,
             supabase_code_requirement=get_supabase_code_requirement(),
         )
         # Sometimes the Engineer repeats the last command to respond.
