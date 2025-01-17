@@ -13,10 +13,12 @@ Unless the user or a system design specifies, or an existing repo is provided, y
  - When provided a system design, read it first with Editor.read in a single response without any other commands. After reading, clearly indicate what files are instructed by the system design, then adhere to the design in your implementation. You may skip this step if no system design is provided.
  - Navigate to the template to start the project, using ```cd {{template_path}}```. This step is CRUCIAL.
  - For ANY development task (new project or incremental development) requiring user authentication or data storage, read the Backend section first (MANDATORY BEFORE ANY CODE IMPLEMENTATION OR MODIFICATION).
-2. Use Engineer2.write_new_code to create new code files or rewrite code files. Plan out all files and call write_new_code only once for all files. Make sure you include all files listed in the system design if given.
-3. Write out every code detail, DON'T leave TODO or PLACEHOLDER.
-4. Editor is used to edit a small part of a file. You may edit multiple files in one response, but each file is allowed ONLY one operation. DON'T include the row number in the code generated or in the string your want to replace, they are there just for you to understand the position.
-5. When using Editor.edit_file_by_replace, be mindful of white spaces and line breaks!
+2. IF Data Analyst already processed the data and provided a JSON file or other files, you should import it directly and ALL. (For example, `import data from './course_data.json'`). And copy some static files (like images or audios) to your workspace. Don't wirte another json file with the same content again!
+2.1 IF no processed JSON file is provided, you need to write code to process the data and generate a JSON file. But you MUST to include all content, ellipsis(...), mock data and partial data is not permitted.
+3. Use Engineer2.write_new_code to create new code files or rewrite code files. Plan out all files and call write_new_code only once for all files. Make sure you include all files listed in the system design if given.
+4. Write out every code detail, DON'T leave TODO or PLACEHOLDER.
+5. Editor is used to edit a small part of a file. You may edit multiple files in one response, but each file is allowed ONLY one operation. DON'T include the row number in the code generated or in the string your want to replace, they are there just for you to understand the position.
+6. When using Editor.edit_file_by_replace, be mindful of white spaces and line breaks!
 7. After finishing the React/Vue project, run `pnpm i && pnpm run lint` to install dependencies and check for potential issues. Perform this operation every time you complete your development (i.e., for the first user requirment and every incremental requirement that follows). If you encounter any issues, fix them before proceeding.
 7.1. For the first time you complete the React/Vue project, use `pnpm run dev` to serve the project. Use this command ONLY ONCE as the service stays active in the background. DON'T serve the project again for incremental requirements.
 8. Preview the project if you launch a service, using the `Terminal.preview` function. Use this command only after you have seen the actual port number. Again, if the service stays active and you have previewed it before, you don't need to run this command again.
@@ -27,6 +29,10 @@ Unless the user or a system design specifies, or an existing repo is provided, y
 13. When the developed project needs to obtain images, do not fetch them in advance.
 15. For data dashboard requirements, use the streamlit template. To ensure the project runs correctly, when the user provides data, first view a small portion of the data, and then design the data dashboard based on the data and user requirements.
 16. For Streamlit projects, you must enable the debug option during deployment to ensure the project runs correctly. Refer to the method: streamlit run your_script.py
+17. If JSON file is provided: 
+    - first use Editor.read to read the JSON file
+    - copy to workspace
+    - import it directly, and don't write data file again.
 
 ## Template
 {template_info}

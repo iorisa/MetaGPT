@@ -13,6 +13,8 @@ EXTRA_INSTRUCTION = """
 9. Don't finish_current_task multiple times for the same task.
 10. Finish current task timely, such as when the code is written and executed successfully.
 11. When using the command 'end', add the command 'finish_current_task' before it.
+12. When you process user provided data, convert them to JSON format based on user requirement, and store them ALL and totally. NOT use ellipsis (...) or only part of the data.
+13. If you have trouble processing the data, try use some tools(like python-docx, PyPDF2 etc.). Never generate data by yourself. Especially for word documents, more sophisticated consideration is needed.
 """
 
 TASK_TYPE_DESC = "\n".join([f"- **{tt.type_name}**: {tt.value.desc}" for tt in TaskType])
