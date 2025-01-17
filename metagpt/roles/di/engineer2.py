@@ -178,10 +178,11 @@ class Engineer2(RoleZero):
             description (str): "Brief description and important notes of what and how to implement the files, including how they interact with each other if there will be multiple files.
             paths (list[str]): The paths of the files to be created.
         """
-        # check files is not banned
+        # check banned files
         for path in paths:
-            if self._is_banned_file(path.lower()):
-                raise Exception(f"The following file types are not allowed: {self.baned_files}")
+            banned_file_type = self._is_banned_file(path.lower())
+            if banned_file_type:
+                raise Exception(f"The following file types are not allowed: {banned_file_type}")
 
         # Get recommended code tools and their usage examples.
         if self.code_tool_recommender:
