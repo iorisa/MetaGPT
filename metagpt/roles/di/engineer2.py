@@ -166,6 +166,11 @@ class Engineer2(RoleZero):
 
         return code, replaced
 
+    def _is_baned_file(self, path: str) -> bool:
+        """通过正则表达式判断文件是否属于禁止的文件类型。禁止类型包括：图片、音频、视频、压缩包以及pdf等文件"""
+        parttern = r"\.(jpg|jpeg|png|gif|svg|mp3|mp4|wav|webm|pdf)$"
+        return re.search(parttern, path)
+
     async def write_new_code(self, description: str, paths: list[str]) -> str:
         """Write one or more new code files.
 
@@ -173,6 +178,11 @@ class Engineer2(RoleZero):
             description (str): "Brief description and important notes of what and how to implement the files, including how they interact with each other if there will be multiple files.
             paths (list[str]): The paths of the files to be created.
         """
+        # check files is not banned
+        for path in paths:
+            if self._is_baned_file(path.lower()):
+                raise Exception(f"The following file types are not allowed: {self.baned_files}")
+
         # Get recommended code tools and their usage examples.
         if self.code_tool_recommender:
             code_tool_info = await self.code_tool_recommender.get_recommended_tool_info()
