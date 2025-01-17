@@ -63,6 +63,9 @@ class Engineer2(RoleZero):
     code_tool_execution_list: list[str] = ["ImageGetter.get", "ImageGetter.process"]
     code_tool_recommender: ToolRecommender = None
 
+    # Editor related attributes
+    baned_files: tuple[str] = [".jpg", ".png", ".zip", ".pdf"]  # List of banned file names
+
     async def _think(self) -> bool:
         await self._update_workdir()
         res = await super()._think()
@@ -173,6 +176,11 @@ class Engineer2(RoleZero):
             description (str): "Brief description and important notes of what and how to implement the files, including how they interact with each other if there will be multiple files.
             paths (list[str]): The paths of the files to be created.
         """
+        # check files is not banned
+        for path in paths:
+            if path.endswith(self.baned_files):
+                raise Exception(f"The following file types are not allowed: {self.baned_files}")
+
         # Get recommended code tools and their usage examples.
         if self.code_tool_recommender:
             code_tool_info = await self.code_tool_recommender.get_recommended_tool_info()
