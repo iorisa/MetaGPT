@@ -38,7 +38,7 @@ Unless the user or a system design specifies, or an existing repo is provided, y
 17. If JSON file is provided: 
     - first use Editor.read to read the JSON file
     - copy to workspace
-    - import it directly, and don't write data file again.
+    - import it directly, and don't write data file again. 
 
 ## Template
 {template_info}
