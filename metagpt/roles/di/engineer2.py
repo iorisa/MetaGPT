@@ -167,7 +167,7 @@ class Engineer2(RoleZero):
         return code, replaced
 
     def _is_banned_file(self, path: str) -> bool:
-        """通过正则表达式判断文件是否属于禁止的文件类型。禁止类型包括：图片、音频、视频、压缩包以及pdf等文件"""
+        """Determine whether the file belongs to a prohibited file type using regular expressions. Prohibited types include: images, audio, video, compressed files, and PDFs."""
         parttern = r"\.(jpg|jpeg|png|gif|svg|mp3|mp4|wav|webm|pdf)$"
         return re.search(parttern, path)
 
