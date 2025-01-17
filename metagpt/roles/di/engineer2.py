@@ -166,6 +166,11 @@ class Engineer2(RoleZero):
 
         return code, replaced
 
+    def _is_banned_file(self, path: str) -> bool:
+        """Determine whether the file belongs to a prohibited file type using regular expressions. Prohibited types include: images, audio, video, compressed files, and PDFs."""
+        parttern = r"\.(jpg|jpeg|png|gif|svg|mp3|mp4|wav|webm|pdf)$"
+        return re.search(parttern, path)
+
     async def write_new_code(self, description: str, paths: list[str]) -> str:
         """Write one or more new code files.
 
@@ -173,6 +178,11 @@ class Engineer2(RoleZero):
             description (str): "Brief description and important notes of what and how to implement the files, including how they interact with each other if there will be multiple files.
             paths (list[str]): The paths of the files to be created.
         """
+        # check files is not banned
+        for path in paths:
+            if self._is_banned_file(path.lower()):
+                raise Exception(f"The following file types are not allowed: {self.baned_files}")
+
         # Get recommended code tools and their usage examples.
         if self.code_tool_recommender:
             code_tool_info = await self.code_tool_recommender.get_recommended_tool_info()
