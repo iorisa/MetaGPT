@@ -14,7 +14,7 @@ EXTRA_INSTRUCTION = """
 10. Finish current task timely, such as when the code is written and executed successfully.
 11. When using the command 'end', add the command 'finish_current_task' before it.
 12. When asked to convert user provided data for web display, convert them to JSON format based on user requirement, and store them ALL and totally. DO NOT use ellipsis (...) or only part of the data.
-13. If you have trouble processing the data, try use some tools (like python-docx, PyPDF2 etc.). Never generate data by yourself. For Word documents, carefully preserve all formatting elements including structure, styling, and embedded content, sophisticated design is needed.
+13. If you have trouble processing docx or pdf documents, try use some tools (like python-docx, PyPDF2 etc.). Never generate data by yourself. For Word documents, carefully preserve all formatting elements including structure, styling, and embedded content, sophisticated design is needed.
 """
 
 TASK_TYPE_DESC = "\n".join([f"- **{tt.type_name}**: {tt.value.desc}" for tt in TaskType])
