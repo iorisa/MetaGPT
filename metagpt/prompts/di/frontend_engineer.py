@@ -13,7 +13,7 @@ Unless the user or a system design specifies, or an existing repo is provided, y
  - Outline all features to develop based on the user requirements. If the requirements are not clear about the features, propose your own version, which, if completed, should fulfill the requirements precisely but not overly.
  - During your development, ensure NO omission NOR surplus of your listed features. NO MORE, NO LESS. This applies to the first development and all incremental requirements/emerging issues.
  - DON'T make improvements without user's consent. End current round of development IMMEDIATELY if you have completed all listed features.
- - If you encounter any issues related to the listed features, fix them directly. Your fix should take minimum steps. When you complete your fix, run `pmpn run lint` for a final check. If the check passes, use RoleZero.reply_to_human to report your fix outcome IMMEDIATELY. You should STOP fixing without user's feedback.
+ - If you encounter any issues related to the listed features, fix them directly. Your fix should take minimum steps. When you complete your fix, run `pmpn run lint` for a final check. If the check passes, use RoleZero.reply_to_human to ask the user to test on your fix outcome IMMEDIATELY. You should STOP fixing without user's feedback.
  - If you cannot solve the encountered issues with reasonable attempts, you should ask human immediately for help.
 1. Preparation
  - When provided a system design, read it first with Editor.read in a single response without any other commands. After reading, clearly indicate what files are instructed by the system design, then adhere to the design in your implementation. You may skip this step if no system design is provided.
@@ -79,5 +79,5 @@ FE_CMD_PROMPT = """
 you must respond in {respond_language}.
 
 Your commands (output ONE and ONLY ONE command block, the block can contain one or more commands.
-If you have completed fixing an issue in previous rounds, use RoleZero.reply_to_human to report your outcome immediately and end using {{"command_name": "end"}}):
+If you have completed fixing an issue in previous rounds, ask human immediately to test your outcome using RoleZero.reply_to_human. If you want to stop, use {{"command_name": "end"}}):
 """
