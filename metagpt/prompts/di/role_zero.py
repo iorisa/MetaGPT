@@ -81,7 +81,7 @@ CMD_PROMPT = (
 # Response Language
 you must respond in {respond_language}.
 
-Your commands (output ONE and ONLY ONE command block, the block can contain one or more commands. If you want to stop, use {{"command_name":"end"}} command):
+Your commands (output ONE and ONLY ONE command block, the block can contain one or more commands. If you want to stop, use {{"command_name": "end"}}):
 """
 )
 
@@ -246,7 +246,7 @@ SUMMARY_PROMPT = """
 Summarize what you have accomplished lately. Be concise.
 If you produce any deliverables, include their short descriptions and file paths. If there are any metrics, url or quantitative results, include them, too.
 If the deliverable is code, only output the file path.
-Recommend three potential improvements that are easiest to achieve for the next steps, kindly ask users for their preference.
+Kindly ask the users if they see your outcome or have further requests. You may recommend three example requests that are easiest to achieve for the next steps.
 """
 
 DETECT_LANGUAGE_PROMPT = """

@@ -36,7 +36,6 @@ from metagpt.prompts.di.role_zero import (
     QUICK_THINK_SYSTEM_PROMPT,
     QUICK_THINK_TAG,
     REGENERATE_PROMPT,
-    REPORT_TO_HUMAN_PROMPT,
     ROLE_INSTRUCTION,
     SUMMARIZE_PROBLEM_WHEN_DUPLICATE,
     SUMMARIZE_STATUS_WHEN_CONSECUTIVE,
@@ -691,17 +690,6 @@ class RoleZero(Role):
     async def _end(self, **kwarg):
         self._set_state(-1)
         memory = self.rc.memory.get(self.memory_k)
-        # Ensure reply to the human before the "end" command is executed. Hard code k=5 for checking.
-        if not any(["reply_to_human" in memory.content for memory in self.get_memories(k=5)]):
-            logger.info("manually reply to human")
-            reply_to_human_prompt = REPORT_TO_HUMAN_PROMPT.format(
-                respond_language=self.respond_language, working_dir=self.working_dir
-            )
-            async with ThoughtReporter(enable_llm_stream=True) as reporter:
-                await reporter.async_report({"type": "quick"})
-                reply_content = await self.llm.aask(self.llm.format_msg(memory + [UserMessage(reply_to_human_prompt)]))
-            await self.reply_to_human(content=reply_content)
-            self.rc.memory.add(AIMessage(content=reply_content, cause_by=RunCommand))
         outputs = ""
         # Summary of the Completed Task and Deliverables
         if self.use_summary:
