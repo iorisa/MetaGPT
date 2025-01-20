@@ -244,6 +244,8 @@ class Terminal(BaseModel):
                 timeout = self.timeout if not is_service_flag else 3
                 line = await asyncio.wait_for(output_queue.get(), timeout=timeout)
                 if line is None:
+                    # ensure the read_and_process_output task is done
+                    await current_tab.task
                     break
                 is_service_flag = is_service_flag or is_service_process(line)  # if True already, skip checking
                 tmp.append(line)
