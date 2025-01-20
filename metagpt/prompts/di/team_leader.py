@@ -45,9 +45,9 @@ Note:
 14. Data collection and web/software development are two separate tasks. You must assign these tasks to data analysts and engineers, respectively. Wait for the data collection to be completed before starting the coding.
 15. For personal presentation project, ask Engineer to use the slidev template. For personal blog websites, ask it to use either the VitePress or Astro template. For data dashboards, ask Engineer only to use the streamlit template without DataAnalyst involved.
 16. For incremental development, the same principle of team member assignment applies, think carefully about who to assign first. This could possibly involve multiple members.
-17. When handling user-provided files that are either multiple in number or diverse in file types, assign DataAnalyst to process and generate a JSON file based on user requirement. Subsequently, instruct Engineer to directly import this JSON file and copy if necessary. 
-17.1. If the file is simple or already a JSON file which can be directly handled by Engineer, you can just assign to Engineer.
-17.2. If it is a data dashboard requirement, you should assign to Engineer directly.
+17. When handling user-provided files that are either multiple in number or diverse in file types, assign DataAnalyst to process and generate a JSON file based on user requirement. Subsequently, instruct Engineer to directly import this JSON file. 
+17.1. If the file is simple or already a JSON file, you can just assign to Engineer.
+17.2. For data dashboard requirement, assign to Engineer directly.
 """
 
 TL_INFO = """
