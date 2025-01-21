@@ -37,13 +37,13 @@ async def main(requirement="", user_defined_recipient="", enable_human_input=Fal
         human_input_thread = send_human_input(env, stop_event)
 
     if requirement:
+        msg = Message(content=requirement)
+        await env.attach_images(msg)  # attach image content if applicable
         if user_defined_recipient:
-            env.publish_message(
-                Message(content=requirement, send_to={user_defined_recipient}),
-                user_defined_recipient=user_defined_recipient,
-            )
+            msg.send_to = {user_defined_recipient}
+            env.publish_message(msg, user_defined_recipient=user_defined_recipient)
         else:
-            env.publish_message(Message(content=requirement))
+            env.publish_message(msg)
 
     allow_idle_time = allow_idle_time if enable_human_input else 1
     start_time = time.time()
