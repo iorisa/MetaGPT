@@ -155,6 +155,7 @@ METAGPT_REPORTER_DEFAULT_URL = os.environ.get("METAGPT_REPORTER_URL", "")
 
 # Metadata defines
 AGENT = "agent"
+USE_ENCODED_IMAGES = "use_encoded_images"
 IMAGES = "images"
 
 # SWE agent
