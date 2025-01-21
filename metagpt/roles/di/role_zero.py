@@ -16,7 +16,7 @@ from pydantic import Field, model_validator
 from metagpt.actions import Action, UserRequirement
 from metagpt.actions.di.run_command import RunCommand
 from metagpt.actions.search_enhanced_qa import SearchEnhancedQA
-from metagpt.const import DEFAULT_WORKSPACE_ROOT, IMAGES
+from metagpt.const import DEFAULT_WORKSPACE_ROOT, IMAGES, USE_ENCODED_IMAGES
 from metagpt.exp_pool import exp_cache
 from metagpt.exp_pool.context_builders import RoleZeroContextBuilder
 from metagpt.exp_pool.serializers import RoleZeroSerializer
@@ -50,7 +50,12 @@ from metagpt.tools.libs.browser import Browser
 from metagpt.tools.libs.editor import Editor
 from metagpt.tools.tool_recommend import BM25ToolRecommender, ToolRecommender
 from metagpt.tools.tool_registry import register_tool
-from metagpt.utils.common import CodeParser, any_to_str, extract_and_encode_images
+from metagpt.utils.common import (
+    CodeParser,
+    any_to_str,
+    extract_and_encode_images,
+    use_encoded_images,
+)
 from metagpt.utils.repair_llm_raw_output import (
     RepairType,
     repair_escape_error,
@@ -262,7 +267,7 @@ class RoleZero(Role):
         memory = self.rc.memory.get(self.memory_k)
         memory = await self.parse_browser_actions(memory)
         memory = await self.parse_editor_result(memory)
-        memory = self.parse_images(memory)
+        memory = await self.parse_images(memory)
 
         req = self.llm.format_msg(memory + [UserMessage(content=prompt)])
 
@@ -313,15 +318,19 @@ class RoleZero(Role):
         new_memory.reverse()
         return new_memory
 
-    def parse_images(self, memory: list[Message]) -> list[Message]:
+    async def parse_images(self, memory: list[Message]) -> list[Message]:
         if not self.llm.support_image_input():
             return memory
         for msg in memory:
-            if IMAGES in msg.metadata or msg.role != "user":
+            if USE_ENCODED_IMAGES in msg.metadata or msg.role != "user":
+                # Skip if the message has been processed before or is not a UserMessage
                 continue
             images = extract_and_encode_images(msg.content)
             if images:
-                msg.add_metadata(IMAGES, images)
+                encode_flag = await use_encoded_images(msg.content, self.llm)
+                msg.add_metadata(USE_ENCODED_IMAGES, encode_flag)
+                if encode_flag:
+                    msg.add_metadata(IMAGES, images)
         return memory
 
     def _get_prefix(self) -> str:
