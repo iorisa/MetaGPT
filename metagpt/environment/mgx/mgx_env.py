@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pydantic import Field
-
 from metagpt.actions import UserRequirement
 from metagpt.const import (
     AGENT,
@@ -24,7 +22,6 @@ class MGXEnv(Environment, SerializationMixin):
     direct_chat_roles: set[str] = set()  # record direct chat: @role_name
     is_public_chat: bool = True
     attach_image_k: int = 3  # encode up to k images provided in a message
-    llm: LLM = Field(default_factory=LLM)
 
     def _publish_message(self, message: Message, peekable: bool = True) -> bool:
         if self.is_public_chat:
@@ -108,7 +105,7 @@ class MGXEnv(Environment, SerializationMixin):
         if message.role == "user":
             images = extract_and_encode_images(message.content)
             if images:
-                encode_flag = await use_encoded_images(message.content, self.llm)
+                encode_flag = await use_encoded_images(message.content, LLM())
                 message.add_metadata(USE_ENCODED_IMAGES, encode_flag)
                 if encode_flag:
                     message.add_metadata(IMAGES, images[: self.attach_image_k])
