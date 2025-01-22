@@ -1,12 +1,21 @@
 from __future__ import annotations
 
+from pydantic import Field
+
 from metagpt.actions import UserRequirement
-from metagpt.const import AGENT, IMAGES, MESSAGE_ROUTE_TO_ALL, TEAMLEADER_NAME
+from metagpt.const import (
+    AGENT,
+    IMAGES,
+    MESSAGE_ROUTE_TO_ALL,
+    TEAMLEADER_NAME,
+    USE_ENCODED_IMAGES,
+)
 from metagpt.environment.base_env import Environment
+from metagpt.llm import LLM
 from metagpt.logs import get_human_input, logger
 from metagpt.roles import Role
 from metagpt.schema import Message, SerializationMixin, any_to_str
-from metagpt.utils.common import extract_and_encode_images
+from metagpt.utils.common import extract_and_encode_images, use_encoded_images
 
 
 class MGXEnv(Environment, SerializationMixin):
@@ -15,6 +24,7 @@ class MGXEnv(Environment, SerializationMixin):
     direct_chat_roles: set[str] = set()  # record direct chat: @role_name
     is_public_chat: bool = True
     attach_image_k: int = 3  # encode up to k images provided in a message
+    llm: LLM = Field(default_factory=LLM)
 
     def _publish_message(self, message: Message, peekable: bool = True) -> bool:
         if self.is_public_chat:
@@ -27,7 +37,7 @@ class MGXEnv(Environment, SerializationMixin):
         if message.cause_by == any_to_str(UserRequirement):
             logger.info(f"User Requirement: {message.content}; Recipient: {user_defined_recipient}")
 
-        message = self.attach_images(message)  # for multi-modal message
+        # message = self.attach_images(message)  # original position to attach images, kept for backup
 
         tl = self.get_role(TEAMLEADER_NAME)  # TeamLeader's name is Mike
 
@@ -92,11 +102,16 @@ class MGXEnv(Environment, SerializationMixin):
         converted_msg.content = f"[Message] from {sent_from or 'User'} to {send_to}: {converted_msg.content}"
         return converted_msg
 
-    def attach_images(self, message: Message) -> Message:
+    async def attach_images(self, message: Message) -> Message:
+        # NOTE: You should call this method before publish_message if you want the image to be multi-modal
+        # Useful if the user requirement is image QA, write web code based on UI images, etc.
         if message.role == "user":
             images = extract_and_encode_images(message.content)
             if images:
-                message.add_metadata(IMAGES, images[: self.attach_image_k])
+                encode_flag = await use_encoded_images(message.content, self.llm)
+                message.add_metadata(USE_ENCODED_IMAGES, encode_flag)
+                if encode_flag:
+                    message.add_metadata(IMAGES, images[: self.attach_image_k])
         return message
 
     def __repr__(self):

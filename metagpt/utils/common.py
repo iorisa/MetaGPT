@@ -864,6 +864,19 @@ def extract_and_encode_images(content: str) -> list[str]:
     return images
 
 
+async def use_encoded_images(content: str, llm: "LLM") -> bool:
+    prompt = f"""
+Check if you need to understand the image included to fulfill the task.
+YES if the task is image QA, writing web code based on UI images, etc.
+NO if the task is about using/importing the image as an asset in web page code, etc.
+NO if the task is not an actual request but a statement containing an image.
+Task: {content}
+Your answer (some concise thoughts, no more than 20 words, then YES/NO):
+"""
+    rsp = await llm.aask(prompt)
+    return "YES" in rsp
+
+
 def log_and_reraise(retry_state: RetryCallState):
     logger.error(f"Retry attempts exhausted. Last exception: {retry_state.outcome.exception()}")
     logger.warning(
