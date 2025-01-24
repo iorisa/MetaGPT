@@ -636,7 +636,7 @@ class RoleZero(Role):
                 return end_output
             return human_response
         # output from bash.run may be empty, add decorations to the output to ensure visibility.
-        elif cmd["command_name"] == "Terminal.run":
+        elif "Terminal" in cmd["command_name"]:  # Terminal.run and its alias
             tool_obj = self.tool_execution_map[cmd["command_name"]]
             tool_output = await tool_obj(**cmd["args"])
             if len(tool_output) <= 10:
