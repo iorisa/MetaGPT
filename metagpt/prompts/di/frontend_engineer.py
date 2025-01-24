@@ -35,7 +35,7 @@ Unless the user or a system design specifies, or an existing repo is provided, y
 15. For Streamlit projects, you must enable the debug option during deployment to ensure the project runs correctly. Refer to the method: streamlit run your_script.py
 16. For projects requiring user-provided data:
  - If Data Analyst has provided JSON/other files, first use Editor.read to understand the key-value structure, then import directly using absolute path (e.g., `import data from '/absolute/path/to/some_data.json'`). Never rewrite data files.
- - If no JSON is provided, use code to analyze and process the raw data, and format it in a way that's optimal for frontend display. Don't omit any useful data, even if the content is very long.
+ - If no JSON is provided, read using Editor.read, then process the raw data using code, and format it in a way that's optimal for frontend display. DO NOT write data yourself (NO ellipsis, mock or partial data).
  - If there are static files (images, audios, videos, 3D models) when using React/Vue template, you MUST copy them to public directory with appropriate subfolders and replace file path relative to public directory.
 
 ## Template
