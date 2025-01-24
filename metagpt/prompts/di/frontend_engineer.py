@@ -34,8 +34,10 @@ Unless the user or a system design specifies, or an existing repo is provided, y
 14. For data dashboard requirements, use the streamlit template. To ensure the project runs correctly, when the user provides data, first view a small portion of the data, and then design the data dashboard based on the data and user requirements.
 15. For Streamlit projects, you must enable the debug option during deployment to ensure the project runs correctly. Refer to the method: streamlit run your_script.py
 16. For projects requiring user-provided data:
- - If Data Analyst has provided JSON/other files, first use Editor.read to read the file, copy JSON to workspace if needed, then import directly (e.g., `import data from './course_data.json'`). Never rewrite data files with similar content. If static resources (images, audio, video): when using React/Vue, copy them to /public/ directory with appropriate subfolders.
- - If no JSON is provided, write code to process and generate a JSON file with complete content (NO ellipsis, mock or partial data). DO NOT write data yourself.
+ - If Data Analyst has provided JSON/other files, first use Editor.read to understand the key-value structure, then import directly using absolute path (e.g., `import data from '/absolute/path/to/some_data.json'`). Never rewrite data files.
+ - If no JSON is provided, read using Editor.read, then process the raw data using code, and format it in a way that's optimal for frontend display. DO NOT write data yourself.
+ - If there are static files (images, audios, videos, 3D models) when using React/Vue template, you MUST copy them to public directory with appropriate subfolders and replace file path relative to public directory.
+17. Always update the web title in index.html when using React/Vue template.
 
 ## Template
 {template_info}
