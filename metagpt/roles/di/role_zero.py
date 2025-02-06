@@ -377,7 +377,8 @@ class RoleZero(Role):
             # NOTE: Diff 2: Keep observing within _react, news will go into memory, allowing adapting to new info
             if await self._observe():
                 self.consecutive_react_cnt = 0
-
+                # Reset state to 0 to override potential `end` command (state = -1) and ensure the loop continues.
+                self._set_state(0)
             # think
             has_todo = await self._think()
             if not has_todo:
