@@ -191,6 +191,7 @@ class Engineer2(RoleZero):
         else:
             tool_usage_guide = "N/A"
         prompt = WRITE_CODE_PROMPT.format(
+            current_dir=self.working_dir,
             file_path=paths,
             file_description=description,
             tool_usage_guide=tool_usage_guide,
