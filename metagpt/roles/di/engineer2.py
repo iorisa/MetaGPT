@@ -197,26 +197,33 @@ class Engineer2(RoleZero):
             tool_usage_guide=tool_usage_guide,
             supabase_code_requirement=get_supabase_code_requirement(),
         )
-        # Sometimes the Engineer repeats the last command to respond.
-        # Replace the last command with a manual prompt to guide the Engineer to write new code.
-        memory = self.rc.memory.get(self.memory_k)[:-1]
+        # # Sometimes the Engineer repeats the last command to respond.
+        # # Replace the last command with a manual prompt to guide the Engineer to write new code.
+        # memory = self.rc.memory.get(self.memory_k)[:-1]  # This is commented out because it was a logic to accomodate deepseek v2 and may no longer be needed.
+        memory = self.rc.memory.get(self.memory_k)
         context = self.llm.format_msg(memory + [UserMessage(content=prompt)])
 
         async with EditorReporter(enable_llm_stream=True) as reporter:
             await reporter.async_report({"type": "files", "paths": [str(self._fix_path(i)) for i in paths]}, "meta")
             rsp = await self.llm.aask(context, system_msgs=[self.instruction])
-            code_by_files = CodeParser.parse_multiple_code(text=rsp)
+            rsp_wo_bash = re.sub(r"```bash.+?```", "", rsp, flags=re.DOTALL)
+            code_by_files = CodeParser.parse_multiple_code(text=rsp_wo_bash)
 
             output_msg = ""
+            if re.search(r"```bash", rsp):
+                rm_bash_msg = "Bash commmands are not allowed in Engineer2.write_new_code and thus not executed, use Terminal.run command in a new response if necessary.\n"
+                logger.warning(rm_bash_msg)
+                output_msg += rm_bash_msg
             if len(paths) != len(code_by_files):
-                logger.warning("The number of paths and code blocks do not match.")
-                output_msg += f"The number of paths and code blocks do not match. Only {paths[:len(code_by_files)]} will be saved. If you want to save more code blocks, please call the function again with the remaining paths.\n"
+                block_mismatch_msg = f"The number of paths and code blocks do not match. Only {paths[:len(code_by_files)]} will be saved. If you want to save more code blocks, please call the function again with the remaining paths.\n"
+                logger.warning(block_mismatch_msg)
+                output_msg += block_mismatch_msg
             all_replaced_snippets = []
             for path, code in zip(paths, code_by_files):
                 code, replaced_snippets = await self._tool_call(code)
                 await awrite(self._fix_path(path), code)
                 file_block = FileBlock(path=str(path), content=code)
-                output_msg = f"{output_msg}File created successfully with \n{file_block}\n"
+                output_msg += f"File created successfully with \n{file_block}\n"
                 if len(replaced_snippets) > 0:
                     all_replaced_snippets.extend(replaced_snippets)
             if all_replaced_snippets:
