@@ -1128,12 +1128,12 @@ def log_time(method):
 
     def before_call():
         start_time, cpu_start_time = time.perf_counter(), time.process_time()
-        logger.info(f"[{method.__name__}] started at: " f"{datetime.now().strftime('%Y-%m-%d %H:%m:%S')}")
+        logger.debug(f"[{method.__name__}] started at: " f"{datetime.now().strftime('%Y-%m-%d %H:%m:%S')}")
         return start_time, cpu_start_time
 
     def after_call(start_time, cpu_start_time):
         end_time, cpu_end_time = time.perf_counter(), time.process_time()
-        logger.info(
+        logger.debug(
             f"[{method.__name__}] ended. "
             f"Time elapsed: {end_time - start_time:.4} sec, CPU elapsed: {cpu_end_time - cpu_start_time:.4} sec"
         )
