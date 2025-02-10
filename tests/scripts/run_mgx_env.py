@@ -168,7 +168,7 @@ CODING_REQ3 = "python里的装饰器是怎么用的，给我个例子"
 if __name__ == "__main__":
     # NOTE: Change the requirement to the one you want to test
     #       Set enable_human_input to True if you want to simulate sending messages in chatbox
-    #       user_defined_recipient = "" means Mike (TL) by default, you can change to Alice, Bob, Alex, etc.
+    #       user_defined_recipient = "" means Mike (TL) by default, you can change to Emma, Bob, Alex, etc.
     requirement = GAME_REQ
     user_defined_recipient = ""
 
