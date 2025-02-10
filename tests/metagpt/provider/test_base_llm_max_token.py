@@ -1,3 +1,5 @@
+import time
+
 import pytest
 
 from metagpt.configs.compress_msg_config import CompressType
@@ -123,8 +125,6 @@ class MockOpenAILLM(OpenAILLM):
 @pytest.mark.parametrize("test_case", BINARY_SEARCH_CONTENT_TEST_CASES)
 def test_get_content_under_limit_token(test_case):
     """Test various scenarios for get_content_under_limit_token function"""
-    import time
-
     start_time = time.time()
     base_llm = MockBaseLLM()
     base_llm.config.model = "gpt-4-32k"
@@ -195,8 +195,6 @@ def test_compress_messages_no_effect(compress_type, model):
 @pytest.mark.parametrize("compress_type", CompressType.cut_types())
 @pytest.mark.parametrize("compress_config", COMPRESS_MESSAGE_CONFIGS)
 def test_compress_messages_long(compress_type, compress_config):
-    import time
-
     start_time = time.time()
     openai_llm = MockOpenAILLM()
     model = "gpt-4o"
@@ -221,12 +219,6 @@ def test_compress_messages_long(compress_type, compress_config):
     end_time = time.time()
     elapsed_time = end_time - start_time
 
-    # save compressed messages to file
-    with open(f"compressed_{compress_type.name}_{compress_config['id']}.json", "w", encoding="utf-8") as f:
-        import json
-
-        json.dump(compressed, f, indent=2, ensure_ascii=False)
-
     print(f"original_token_count: {original_token_count}")
     print(f"one_message_token_count: {one_message_token_count}")
     print(f"compressed_token_count: {compressed_token_count}")
@@ -239,8 +231,6 @@ def test_compress_messages_long(compress_type, compress_config):
 
 @pytest.mark.parametrize("compress_type", CompressType.cut_types())
 def test_compress_messages_long_no_sys_msg(compress_type):
-    import time
-
     start_time = time.time()
     openai_llm = MockOpenAILLM()
     model = "gpt-4o"
@@ -259,12 +249,6 @@ def test_compress_messages_long_no_sys_msg(compress_type):
     end_time = time.time()
     elapsed_time = end_time - start_time
 
-    # save compressed messages to file
-    with open(f"no_sys_compressed_{compress_type.name}.json", "w", encoding="utf-8") as f:
-        import json
-
-        json.dump(compressed, f, indent=2, ensure_ascii=False)
-
     print(f"original_token_count: {original_token_count}")
     print(f"compressed_token_count: {compressed_token_count}")
     print(f"Time taken: {elapsed_time:.4f} seconds")
@@ -272,6 +256,13 @@ def test_compress_messages_long_no_sys_msg(compress_type):
     print(f"how many messages: {len_messages}")
     assert compressed
     assert len_messages < 1000
+
+
+def test_long_messages_no_compress():
+    base_llm = MockBaseLLM()
+    messages = [{"role": "user", "content": "1" * 10000}] * 10000
+    compressed = base_llm.compress_messages(messages)
+    assert len(compressed) == len(messages)
 
 
 if __name__ == "__main__":
