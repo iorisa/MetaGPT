@@ -206,31 +206,32 @@ class Engineer2(RoleZero):
         async with EditorReporter(enable_llm_stream=True) as reporter:
             await reporter.async_report({"type": "files", "paths": [str(self._fix_path(i)) for i in paths]}, "meta")
             rsp = await self.llm.aask(context, system_msgs=[self.instruction])
-            rsp_wo_bash = re.sub(r"```bash.+?```", "", rsp, flags=re.DOTALL)
-            code_by_files = CodeParser.parse_multiple_code(text=rsp_wo_bash)
 
-            output_msg = ""
-            if re.search(r"```bash", rsp):
-                rm_bash_msg = "Bash commmands are not allowed in Engineer2.write_new_code and thus not executed, use Terminal.run command in a new response if necessary.\n"
-                logger.warning(rm_bash_msg)
-                output_msg += rm_bash_msg
-            if len(paths) != len(code_by_files):
-                block_mismatch_msg = f"The number of paths and code blocks do not match. Only {paths[:len(code_by_files)]} will be saved. If you want to save more code blocks, please call the function again with the remaining paths.\n"
-                logger.warning(block_mismatch_msg)
-                output_msg += block_mismatch_msg
-            all_replaced_snippets = []
-            for path, code in zip(paths, code_by_files):
-                code, replaced_snippets = await self._tool_call(code)
-                await awrite(self._fix_path(path), code)
-                file_block = FileBlock(path=str(path), content=code)
-                output_msg += f"File created successfully with \n{file_block}\n"
-                if len(replaced_snippets) > 0:
-                    all_replaced_snippets.extend(replaced_snippets)
-            if all_replaced_snippets:
-                replaced_msg = "The following tool calls have been replaced with the call results:\n"
-                replaced_msg += "\n".join([f"Replaced {old} with {new}" for old, new in all_replaced_snippets])
-                # Add the content that the system automatically replaces and the fact that the tool call was executed automatically to memory.
-                self.rc.memory.add(UserMessage(content=replaced_msg))
+        rsp_wo_bash = re.sub(r"```bash.+?```", "", rsp, flags=re.DOTALL)
+        code_by_files = CodeParser.parse_multiple_code(text=rsp_wo_bash)
+
+        output_msg = ""
+        if re.search(r"```bash", rsp):
+            rm_bash_msg = "Bash commmands are not allowed in Engineer2.write_new_code and thus not executed, use Terminal.run command in a new response if necessary.\n"
+            logger.warning(rm_bash_msg)
+            output_msg += rm_bash_msg
+        if len(paths) != len(code_by_files):
+            block_mismatch_msg = f"The number of paths and code blocks do not match. Only {paths[:len(code_by_files)]} will be saved. If you want to save more code blocks, please call the function again with the remaining paths.\n"
+            logger.warning(block_mismatch_msg)
+            output_msg += block_mismatch_msg
+        all_replaced_snippets = []
+        for path, code in zip(paths, code_by_files):
+            code, replaced_snippets = await self._tool_call(code)
+            await awrite(self._fix_path(path), code)
+            file_block = FileBlock(path=str(path), content=code)
+            output_msg += f"File created successfully with \n{file_block}\n"
+            if len(replaced_snippets) > 0:
+                all_replaced_snippets.extend(replaced_snippets)
+        if all_replaced_snippets:
+            replaced_msg = "The following tool calls have been replaced with the call results:\n"
+            replaced_msg += "\n".join([f"Replaced {old} with {new}" for old, new in all_replaced_snippets])
+            # Add the content that the system automatically replaces and the fact that the tool call was executed automatically to memory.
+            self.rc.memory.add(UserMessage(content=replaced_msg))
 
         return output_msg
 
