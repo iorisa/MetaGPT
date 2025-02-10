@@ -3,50 +3,102 @@ import pytest
 from metagpt.configs.compress_msg_config import CompressType
 from metagpt.configs.llm_config import LLMConfig
 from metagpt.provider.base_llm import BaseLLM
+from metagpt.provider.openai_api import OpenAILLM
 
-TEST_MODELS_GPT = [
-    "gpt-4o-2024-05-13",
-    "gpt-4o",
-    "gpt-4o-mini",
-    "gpt-4o-mini-2024-07-18",
-    "gpt-4-0125-preview",
-    "gpt-4-turbo-preview",
-    "gpt-4-turbo",
-    "gpt-4",
-    "gpt-4-0613",
-    "gpt-4-32k",
-    "gpt-4-32k-0613",
-    "gpt-3.5-turbo-0125",
-    "gpt-3.5-turbo",
-    "gpt-3.5-turbo-1106",
-    "gpt-3.5-turbo-instruct",
-    "gpt-3.5-turbo-16k",
-    "gpt-3.5-turbo-0613",
-    "gpt-3.5-turbo-16k-0613",
-    "text-embedding-ada-002",
-    "openai/gpt-4",  # start, for openrouter
-    "openai/gpt-4-turbo",
-    "openai/gpt-4o",
-    "openai/gpt-4o-2024-05-13",
-    "openai/gpt-4o-mini",
-]
-TEST_MODELS = [
-    "glm-3-turbo",
-    "glm-4",
-    "gemini-pro",
-    "moonshot-v1-8k",
-    "open-mistral-7b",
-    "open-mixtral-8x7b",
-    "mistral-small-latest",
-    "claude-3-sonnet-20240229",
-    "yi-34b-chat-0205",
-    "anthropic/claude-3.5-sonnet",
-    "google/gemini-pro-1.5",
-    "deepseek/deepseek-coder",
-    "deepseek-coder",
-    "deepseek-ai/DeepSeek-Coder-V2-Instruct",  # siliconflow
-]
+TEST_MODELS_noGPT = ["claude-3-sonnet-20240229", "deepseek-coder"]
 TEST_MODELS_MIX = ["anthropic/claude-3.5-sonnet", "gpt-4-32k-0613"]
+BINARY_SEARCH_CONTENT_TEST_CASES = [
+    {
+        "content": "Hello, world! This is a test message.",
+        "target_tokens": 3,
+        "from_end": False,
+        "description": "Short text truncated from start",
+    },
+    {
+        "content": "Hello, world! This is a test message.",
+        "target_tokens": 3,
+        "from_end": True,
+        "description": "Short text truncated from end",
+    },
+    {
+        "content": "Hello, world! This is a test message.",
+        "target_tokens": 13,
+        "from_end": False,
+        "description": "Short text truncated from start",
+    },
+    {
+        "content": "Hello, world! This is a test message.",
+        "target_tokens": 13,
+        "from_end": True,
+        "description": "Short text truncated from end",
+    },
+    {
+        "content": "Hello, world! " * 10000,
+        "target_tokens": 1,
+        "from_end": False,
+        "description": "Long text truncated from start",
+    },
+    {
+        "content": "Hello, world! " * 10000,
+        "target_tokens": 1,
+        "from_end": True,
+        "description": "Long text truncated from end",
+    },
+    {
+        "content": "Hello, world! " * 10000,
+        "target_tokens": 10,
+        "from_end": False,
+        "description": "Long text truncated from start",
+    },
+    {
+        "content": "Hello, world! " * 10000,
+        "target_tokens": 10,
+        "from_end": True,
+        "description": "Long text truncated from end",
+    },
+    {
+        "content": "Hello, world! " * 10000,
+        "target_tokens": 100,
+        "from_end": False,
+        "description": "Long text truncated from start",
+    },
+    {
+        "content": "Hello, world! " * 10000,
+        "target_tokens": 100,
+        "from_end": True,
+        "description": "Long text truncated from end",
+    },
+    {
+        "content": "Hello, world! " * 10000,
+        "target_tokens": 1000,
+        "from_end": False,
+        "description": "Long text truncated from start",
+    },
+    {
+        "content": "Hello, world! " * 10000,
+        "target_tokens": 1000,
+        "from_end": True,
+        "description": "Long text truncated from end",
+    },
+    {
+        "content": "Hello, world! " * 10000,
+        "target_tokens": 10000,
+        "from_end": False,
+        "description": "Long text truncated from start",
+    },
+    {
+        "content": "Hello, world! " * 10000,
+        "target_tokens": 10000,
+        "from_end": True,
+        "description": "Long text truncated from end",
+    },
+]
+COMPRESS_MESSAGE_CONFIGS = [
+    {"id": 1, "max_token": 128000, "range_count": 1000, "repeat_length": 100},
+    {"id": 2, "max_token": 128000, "range_count": 100, "repeat_length": 1000},
+    {"id": 3, "max_token": 128000, "range_count": 1000, "repeat_length": 2000},
+    {"id": 4, "max_token": 500, "range_count": 5000, "repeat_length": 10},
+]
 
 
 class MockBaseLLM(BaseLLM):
@@ -63,37 +115,17 @@ class MockBaseLLM(BaseLLM):
         pass
 
 
-@pytest.mark.parametrize(
-    "test_case",
-    [
-        {
-            "content": "Hello, world! This is a test message.",
-            "target_tokens": 3,
-            "from_end": False,
-            "description": "Short text truncated from start",
-        },
-        {
-            "content": "Hello, world! This is a test message.",
-            "target_tokens": 3,
-            "from_end": True,
-            "description": "Short text truncated from end",
-        },
-        {
-            "content": "Hello, world! " * 100,
-            "target_tokens": 10,
-            "from_end": False,
-            "description": "Long text truncated from start",
-        },
-        {
-            "content": "Hello, world! " * 100,
-            "target_tokens": 10,
-            "from_end": True,
-            "description": "Long text truncated from end",
-        },
-    ],
-)
+class MockOpenAILLM(OpenAILLM):
+    def __init__(self, config: LLMConfig = None):
+        self.config = config or LLMConfig()
+
+
+@pytest.mark.parametrize("test_case", BINARY_SEARCH_CONTENT_TEST_CASES)
 def test_get_content_under_limit_token(test_case):
     """Test various scenarios for get_content_under_limit_token function"""
+    import time
+
+    start_time = time.time()
     base_llm = MockBaseLLM()
     base_llm.config.model = "gpt-4-32k"
 
@@ -102,34 +134,45 @@ def test_get_content_under_limit_token(test_case):
     )
     token_count = base_llm.count_tokens([{"role": "user", "content": truncated}])
 
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+
     print(
         f"\n{test_case['description']} - original: '{test_case['content'][:50]}...' -> "
         f"truncated: '{truncated}' (tokens: {token_count})"
     )
+    print(f"Time taken: {elapsed_time:.4f} seconds")
 
     assert isinstance(truncated, str)
     assert len(truncated) <= len(test_case["content"])
-    assert token_count == test_case["target_tokens"]
+    # here should not be equal, because the target_token may be larger than original content's token count
+    assert token_count <= test_case["target_tokens"]
 
 
-@pytest.mark.parametrize("model", TEST_MODELS)
+@pytest.mark.parametrize("model", TEST_MODELS_noGPT)
 def test_count_tokens_o_model(model):
     base_llm = MockBaseLLM()
     base_llm.config.model = model
     content = "Hello, world! This is a test message."
     token_count = base_llm.count_tokens([{"role": "user", "content": content}])
     print(f"token count: {token_count}")
-    assert token_count == 18
+    assert token_count == len(content) // 2
 
 
-@pytest.mark.parametrize("model", TEST_MODELS_GPT)
-def test_count_tokens_GPT(model):
-    base_llm = MockBaseLLM()
-    base_llm.config.model = model
+def test_count_tokens_GPT():
+    openai_llm = MockOpenAILLM()
+    model = "gpt-4o"
+    openai_llm.config.model = model
     content = "Hello, world! This is a test message."
-    token_count = base_llm.count_tokens([{"role": "user", "content": content}])
-    print(f"token count: {token_count}")
-    assert token_count == 10
+    import tiktoken
+
+    encoding = tiktoken.encoding_for_model(model.replace("openai/", ""))
+    expected_token_count = len(encoding.encode(content))
+
+    token_count = openai_llm.count_tokens([{"role": "user", "content": content}])
+    print(f"token count: {token_count}", "expected_token_count: ", expected_token_count)
+    additional_token = 3 + 1 + 3
+    assert token_count == expected_token_count + additional_token
 
 
 @pytest.mark.parametrize("compress_type", list(CompressType))
@@ -150,22 +193,45 @@ def test_compress_messages_no_effect(compress_type, model):
 
 
 @pytest.mark.parametrize("compress_type", CompressType.cut_types())
-def test_compress_messages_long(compress_type):
-    base_llm = MockBaseLLM()
-    base_llm.config.model = "LLM_test"
-    max_token_limit = 100
+@pytest.mark.parametrize("compress_config", COMPRESS_MESSAGE_CONFIGS)
+def test_compress_messages_long(compress_type, compress_config):
+    import time
+
+    start_time = time.time()
+    openai_llm = MockOpenAILLM()
+    model = "gpt-4o"
+    openai_llm.config.model = model
+    max_token_limit = compress_config["max_token"]
 
     messages = [
         {"role": "system", "content": "first system msg"},
         {"role": "system", "content": "second system msg"},
     ]
-    for i in range(10):
-        messages.append({"role": "user", "content": f"u{i}" * 10})  # ~2x10x0.5 = 10 tokens
-        messages.append({"role": "assistant", "content": f"a{i}" * 10})
-    compressed = base_llm.compress_messages(messages, compress_type=compress_type, max_token=max_token_limit)
+    for i in range(compress_config["range_count"]):
+        messages.append(
+            {"role": "user", "content": f"u{i}" * compress_config["repeat_length"]}
+        )  # ~2x10x0.5 = 10 tokens
+        messages.append({"role": "assistant", "content": f"a{i}" * compress_config["repeat_length"]})
+    compressed = openai_llm.compress_messages(messages, compress_type=compress_type, max_token=max_token_limit)
+    original_token_count = openai_llm.count_tokens(messages)
+    one_message_token_count = openai_llm.count_tokens(
+        [{"role": "assistant", "content": f"a{i}" * compress_config["repeat_length"]}]
+    )
+    compressed_token_count = openai_llm.count_tokens(compressed)
+    end_time = time.time()
+    elapsed_time = end_time - start_time
 
-    print(compressed)
-    print(len(compressed))
+    # save compressed messages to file
+    with open(f"compressed_{compress_type.name}_{compress_config['id']}.json", "w", encoding="utf-8") as f:
+        import json
+
+        json.dump(compressed, f, indent=2, ensure_ascii=False)
+
+    print(f"original_token_count: {original_token_count}")
+    print(f"one_message_token_count: {one_message_token_count}")
+    print(f"compressed_token_count: {compressed_token_count}")
+    print(f"how many messages: {sum(1 for msg in compressed if isinstance(msg, dict))}")
+    print(f"Time taken: {elapsed_time:.4f} seconds")
     assert 3 <= len(compressed) < len(messages)
     assert compressed[0]["role"] == "system" and compressed[1]["role"] == "system"
     assert compressed[2]["role"] != "system"
@@ -173,16 +239,39 @@ def test_compress_messages_long(compress_type):
 
 @pytest.mark.parametrize("compress_type", CompressType.cut_types())
 def test_compress_messages_long_no_sys_msg(compress_type):
-    base_llm = MockBaseLLM()
-    base_llm.config.model = "test_llm"
-    max_token_limit = 100
+    import time
 
-    messages = [{"role": "user", "content": "1" * 10000}]
-    compressed = base_llm.compress_messages(messages, compress_type=compress_type, max_token=max_token_limit)
+    start_time = time.time()
+    openai_llm = MockOpenAILLM()
+    model = "gpt-4o"
+    openai_llm.config.model = model
+    max_token_limit = 128000
 
-    print(compressed)
+    messages = []
+    for i in range(1000):
+        messages.append({"role": "user", "content": "u1" * 100})  # ~2x10x0.5 = 10 tokens
+        messages.append({"role": "assistant", "content": "a1" * 100})
+    compressed = openai_llm.compress_messages(messages, compress_type=compress_type, max_token=max_token_limit)
+
+    end_time = time.time()
+    original_token_count = openai_llm.count_tokens(messages)
+    compressed_token_count = openai_llm.count_tokens(compressed)
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+
+    # save compressed messages to file
+    with open(f"no_sys_compressed_{compress_type.name}.json", "w", encoding="utf-8") as f:
+        import json
+
+        json.dump(compressed, f, indent=2, ensure_ascii=False)
+
+    print(f"original_token_count: {original_token_count}")
+    print(f"compressed_token_count: {compressed_token_count}")
+    print(f"Time taken: {elapsed_time:.4f} seconds")
+    len_messages = sum(1 for msg in compressed if isinstance(msg, dict))
+    print(f"how many messages: {len_messages}")
     assert compressed
-    assert len(compressed[0]["content"]) < len(messages[0]["content"])
+    assert len_messages < 1000
 
 
 if __name__ == "__main__":

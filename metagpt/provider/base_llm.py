@@ -308,6 +308,10 @@ class BaseLLM(ABC):
         Returns:
             str: truncated content
         """
+        total_token_count = self.count_tokens([{"role": "user", "content": content}])
+        if total_token_count <= target_token_count:
+            return content
+
         left, right = 0, len(content)
         result = ""
         while left <= right:
