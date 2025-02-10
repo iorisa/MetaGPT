@@ -661,7 +661,7 @@ class RoleZero(Role):
         # format plan status
         # Example:
         # [GOAL] create a 2048 game
-        # [TASK_ID 1] (finished) Create a Product Requirement Document (PRD) for the 2048 game. This task depends on tasks[]. [Assign to Alice]
+        # [TASK_ID 1] (finished) Create a Product Requirement Document (PRD) for the 2048 game. This task depends on tasks[]. [Assign to Emma]
         # [TASK_ID 2] (        ) Design the system architecture for the 2048 game. This task depends on tasks[1]. [Assign to Bob]
         formatted_plan_status = f"[GOAL] {plan_status['goal']}\n"
         if len(plan_status["tasks"]) > 0:

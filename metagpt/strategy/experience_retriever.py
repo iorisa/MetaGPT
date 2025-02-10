@@ -480,7 +480,7 @@ Explanation: The requirement is about software development. Assign each tasks to
             "task_id": "1",
             "dependent_task_ids": [],
             "instruction": "Create a product requirement document (PRD) for the snake game",
-            "assignee": "Alice"
+            "assignee": "Emma"
         }
     },
     {
@@ -505,13 +505,13 @@ Explanation: The requirement is about software development. Assign each tasks to
         "command_name": "TeamLeader.publish_message",
         "args": {
             "content": "Use React, JavaScript and Tailwind CSS to create a web snake game.",
-            "send_to": "Alice"
+            "send_to": "Emma"
         }
     },
     {
         "command_name": "RoleZero.reply_to_human",
         "args": {
-            "content": "I have assigned the tasks to the team members. Alice will create the PRD, Bob will design the software architecture, Alex will implement the core game logic. The team will work on the project accordingly"
+            "content": "I have assigned the tasks to the team members. Emma will create the PRD, Bob will design the software architecture, Alex will implement the core game logic. The team will work on the project accordingly"
         }
     },
     {
@@ -557,9 +557,9 @@ Explanation: DON'T decompose requirement if it is a DATA-RELATED task, assign a 
 Conversation History:
 [
     ...,
-    {'role': 'assistant', 'content': 'from Alice(Product Manager) to {'<all>'}: Request is completed, with outputs: Command WritePRD executed: PRD filename: "/absolute/path/to/snake_game/docs/prd.json"'},
+    {'role': 'assistant', 'content': 'from Emma(Product Manager) to {'<all>'}: Request is completed, with outputs: Command WritePRD executed: PRD filename: "/absolute/path/to/snake_game/docs/prd.json"'},
 ]
-Explanation: You received a message from Alice, the Product Manager, that she has completed the PRD, use Plan.finish_current_task to mark her task as finished and moves the plan to the next task. Based on plan status, next task is for Bob (Architect), publish a message asking him to start. The message content should contain important path info.
+Explanation: You received a message from Emma, the Product Manager, that she has completed the PRD, use Plan.finish_current_task to mark her task as finished and moves the plan to the next task. Based on plan status, next task is for Bob (Architect), publish a message asking him to start. The message content should contain important path info.
 ```json
 [
     {
@@ -569,14 +569,14 @@ Explanation: You received a message from Alice, the Product Manager, that she ha
     {
         "command_name": "TeamLeader.publish_message",
             "args": {
-                "content": "Please design the software architecture for the snake game based on the PRD created by Alice. The PRD is at '/absolute/path/to/snake_game/docs/prd.json'.",
+                "content": "Please design the software architecture for the snake game based on the PRD created by Emma. The PRD is at '/absolute/path/to/snake_game/docs/prd.json'.",
                 "send_to": "Bob"
             }
     },
     {
         "command_name": "RoleZero.reply_to_human",
         "args": {
-            "content": "Alice has completed the PRD. I have marked her task as finished and sent the PRD to Bob. Bob will work on the software architecture."
+            "content": "Emma has completed the PRD. I have marked her task as finished and sent the PRD to Bob. Bob will work on the software architecture."
         }
     },
     {
@@ -625,8 +625,8 @@ Explanation: The current task has been accomplished previously.
 ```
 
 ## example 7
-OBSERVATION : the task assigned to Alice is still ongoing as it has not been marked as finished. The current task in the plan is for Alice to create the PRD.
-Explanation: "I attempted to locate historical records containing 'send to [<all>]', and discovered an entry stating 'PRD is finished and masked.' This indicates that Alice's task has been completed.
+OBSERVATION : the task assigned to Emma is still ongoing as it has not been marked as finished. The current task in the plan is for Emma to create the PRD.
+Explanation: "I attempted to locate historical records containing 'send to [<all>]', and discovered an entry stating 'PRD is finished and masked.' This indicates that Emma's task has been completed.
 ```json
 [
     {
