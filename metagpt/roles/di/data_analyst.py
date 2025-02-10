@@ -43,6 +43,8 @@ class DataAnalyst(RoleZero):
     custom_tools: list[str] = ["web scraping", "Terminal", "Editor:write,read,similarity_search"]
     custom_tool_recommender: ToolRecommender = None
     experience_retriever: Annotated[ExpRetriever, Field(exclude=True)] = KeywordExpRetriever()
+    # a larger limit to allow for complex development
+    max_consecutive_react_limit: int = 20
 
     use_reflection: bool = True
     write_code: WriteAnalysisCode = Field(default_factory=WriteAnalysisCode, exclude=True)
