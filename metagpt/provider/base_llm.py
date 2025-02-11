@@ -29,7 +29,7 @@ from metagpt.logs import logger
 from metagpt.provider.constant import MULTI_MODAL_MODELS
 from metagpt.utils.common import log_and_reraise
 from metagpt.utils.cost_manager import CostManager, Costs
-from metagpt.utils.token_counter import TOKEN_MAX
+from metagpt.utils.token_counter import TOKEN_MAX, count_message_tokens
 
 
 class BaseLLM(ABC):
@@ -288,12 +288,10 @@ class BaseLLM(ABC):
         # logger.warning("Base count_tokens is not accurate and should be overwritten.")
 
         model = self.config.model
+        # for OpenAI models
         if any(model.startswith(prefix) for prefix in ["gpt-", "openai/", "text-embedding"]):
             try:
-                import tiktoken
-
-                encoding = tiktoken.encoding_for_model(model.replace("openai/", ""))
-                return sum([len(encoding.encode(msg["content"])) for msg in messages])
+                return count_message_tokens(messages, model)
             except Exception as e:
                 logger.warning(f"Failed to use tiktoken for {model}, fallback to basic count: {e}")
         # for non-OpenAI models

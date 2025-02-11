@@ -1,4 +1,3 @@
-import json
 import time
 
 import pytest
@@ -7,55 +6,56 @@ from metagpt.configs.compress_msg_config import CompressType
 from metagpt.configs.llm_config import LLMConfig
 from metagpt.provider.base_llm import BaseLLM
 from metagpt.provider.openai_api import OpenAILLM
+from tests.metagpt.provider.mock_llm_config import mock_llm_config
 
 TEST_MODELS_noGPT = ["claude-3-sonnet-20240229", "deepseek-coder"]
 TEST_MODELS_MIX = ["anthropic/claude-3.5-sonnet", "gpt-4-32k-0613"]
 BINARY_SEARCH_CONTENT_TEST_CASES = [
     {
         "content": "Hello, world! This is a test message.",
-        "target_tokens": 3,
+        "target_tokens": 8,
         "from_end": False,
         "description": "Short text truncated from start",
     },
     {
         "content": "Hello, world! This is a test message.",
-        "target_tokens": 3,
+        "target_tokens": 8,
         "from_end": True,
         "description": "Short text truncated from end",
     },
     {
         "content": "Hello, world! This is a test message.",
-        "target_tokens": 13,
+        "target_tokens": 16,
         "from_end": False,
         "description": "Short text truncated from start",
     },
     {
         "content": "Hello, world! This is a test message.",
-        "target_tokens": 13,
+        "target_tokens": 16,
         "from_end": True,
         "description": "Short text truncated from end",
     },
     {
         "content": "Hello, world! " * 10000,
-        "target_tokens": 1,
+        "target_tokens": 6,
         "from_end": False,
         "description": "Long text truncated from start",
     },
     {
         "content": "Hello, world! " * 10000,
-        "target_tokens": 1,
+        "target_tokens": 6,
         "from_end": True,
         "description": "Long text truncated from end",
     },
     {
         "content": "Hello, world! " * 10000,
-        "target_tokens": 10,
+        "target_tokens": 50,
         "from_end": False,
         "description": "Long text truncated from start",
     },
     {
         "content": "Hello, world! " * 10000,
-        "target_tokens": 10,
+        "target_tokens": 50,
         "from_end": True,
         "description": "Long text truncated from end",
     },
@@ -104,9 +104,9 @@ COMPRESS_MESSAGE_CONFIGS = [
 ]
 
 
-class MockBaseLLM(BaseLLM):
+class TestBaseLLM(BaseLLM):
     def __init__(self, config: LLMConfig = None):
-        self.config = config or LLMConfig()
+        self.config = config or mock_llm_config
 
     async def _achat_completion(self, messages: list[dict], timeout=3):
         pass
@@ -118,16 +118,11 @@ class MockBaseLLM(BaseLLM):
         pass
 
 
-class MockOpenAILLM(OpenAILLM):
-    def __init__(self, config: LLMConfig = None):
-        self.config = config or LLMConfig()
-
-
 @pytest.mark.parametrize("test_case", BINARY_SEARCH_CONTENT_TEST_CASES)
 def test_get_content_under_limit_token(test_case):
     """Test various scenarios for get_content_under_limit_token function"""
     start_time = time.time()
-    base_llm = MockBaseLLM()
+    base_llm = OpenAILLM(mock_llm_config)
     base_llm.config.model = "gpt-4-32k"
 
     truncated = base_llm.get_content_under_limit_token(
@@ -152,7 +147,7 @@ def test_get_content_under_limit_token(test_case):
 
 @pytest.mark.parametrize("model", TEST_MODELS_noGPT)
 def test_count_tokens_o_model(model):
-    base_llm = MockBaseLLM()
+    base_llm = TestBaseLLM()
     base_llm.config.model = model
     content = "Hello, world! This is a test message."
     token_count = base_llm.count_tokens([{"role": "user", "content": content}])
@@ -161,7 +156,7 @@ def test_count_tokens_o_model(model):
 
 
 def test_count_tokens_GPT():
-    openai_llm = MockOpenAILLM()
+    openai_llm = OpenAILLM(mock_llm_config)
     model = "gpt-4o"
     openai_llm.config.model = model
     content = "Hello, world! This is a test message."
@@ -179,7 +174,7 @@ def test_count_tokens_GPT():
 @pytest.mark.parametrize("compress_type", list(CompressType))
 @pytest.mark.parametrize("model", TEST_MODELS_MIX)
 def test_compress_messages_no_effect(compress_type, model):
-    base_llm = MockBaseLLM()
+    base_llm = TestBaseLLM()
     base_llm.config.model = model
     messages = [
         {"role": "system", "content": "first system msg"},
@@ -196,7 +191,7 @@ def test_compress_messages_no_effect(compress_type, model):
 @pytest.mark.parametrize("compress_type", CompressType.cut_types())
 @pytest.mark.parametrize("compress_config", COMPRESS_MESSAGE_CONFIGS)
 def test_compress_messages_long(compress_type, compress_config):
-    openai_llm = MockOpenAILLM()
+    openai_llm = TestBaseLLM()
     model = "gpt-4o"
     openai_llm.config.model = model
     max_token_limit = compress_config["max_token"]
@@ -234,7 +229,7 @@ def test_compress_messages_long(compress_type, compress_config):
 
 @pytest.mark.parametrize("compress_type", CompressType.cut_types())
 def test_compress_messages_less_than_max_token(compress_type):
-    openai_llm = MockOpenAILLM()
+    openai_llm = TestBaseLLM()
     model = "gpt-4oo"
     openai_llm.config.model = model
     max_token_limit = 5000
@@ -263,13 +258,15 @@ def test_compress_messages_less_than_max_token(compress_type):
 
 @pytest.mark.parametrize("compress_type", CompressType.cut_types())
 def test_compress_messages_real(compress_type):
-    openai_llm = MockOpenAILLM()
+    openai_llm = TestBaseLLM()
     model = "gpt-4o"
     openai_llm.config.model = model
     max_token_limit = 128000
 
-    with open("./real_messages.json", "r") as f:
-        messages = json.load(f)
+    messages = [{"role": "system", "content": "first system msg"}]
+    for i in range(50):
+        messages.append({"role": "user", "content": "This is user I will ask a question" * 10})  # ~2x10x0.5 = 10 tokens
+        messages.append({"role": "assistant", "content": "This is assistant I will answer the question" * 10})
 
     start_time = time.time()
     compressed = openai_llm.compress_messages(messages, compress_type=compress_type, max_token=max_token_limit)
@@ -290,7 +287,7 @@ def test_compress_messages_real(compress_type):
 
 @pytest.mark.parametrize("compress_type", CompressType.cut_types())
 def test_compress_messages_long_no_sys_msg(compress_type):
-    openai_llm = MockOpenAILLM()
+    openai_llm = TestBaseLLM()
     model = "gpt-4o"
     openai_llm.config.model = model
     max_token_limit = 128000
@@ -319,7 +316,7 @@ def test_compress_messages_long_no_sys_msg(compress_type):
 
 
 def test_long_messages_no_compress():
-    base_llm = MockBaseLLM()
+    base_llm = TestBaseLLM()
     messages = [{"role": "user", "content": "1" * 10000}] * 10000
     compressed = base_llm.compress_messages(messages)
     assert len(compressed) == len(messages)
