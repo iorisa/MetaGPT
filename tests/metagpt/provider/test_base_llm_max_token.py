@@ -252,10 +252,10 @@ def test_compress_messages_long_no_sys_msg(compress_type):
     print(f"original_token_count: {original_token_count}")
     print(f"compressed_token_count: {compressed_token_count}")
     print(f"Time taken: {elapsed_time:.4f} seconds")
-    len_messages = sum(1 for msg in compressed if isinstance(msg, dict))
-    print(f"how many messages: {len_messages}")
+    len_compressed_messages = sum(1 for msg in compressed if isinstance(msg, dict))
+    print(f"how many messages: {len_compressed_messages}")
     assert compressed
-    assert len_messages < 1000
+    assert len_compressed_messages < 1000
 
 
 def test_long_messages_no_compress():
