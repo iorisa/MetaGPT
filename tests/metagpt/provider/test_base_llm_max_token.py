@@ -233,6 +233,35 @@ def test_compress_messages_long(compress_type, compress_config):
 
 
 @pytest.mark.parametrize("compress_type", CompressType.cut_types())
+def test_compress_messages_less_than_max_token(compress_type):
+    openai_llm = MockOpenAILLM()
+    model = "gpt-4oo"
+    openai_llm.config.model = model
+    max_token_limit = 5000
+    messages = [
+        {"role": "system", "content": "first system msg"},
+        {"role": "system", "content": "second system msg"},
+    ]
+    for i in range(50):
+        messages.append({"role": "user", "content": f"u{i}" * 10})  # ~2x10x0.5 = 10 tokens
+        messages.append({"role": "assistant", "content": f"a{i}" * 10})
+
+    start_time = time.time()
+    compressed = openai_llm.compress_messages(messages, compress_type=compress_type, max_token=max_token_limit)
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    original_token_count = openai_llm.count_tokens(messages)
+    one_message_token_count = openai_llm.count_tokens([{"role": "assistant", "content": f"a{i}" * 10}])
+    compressed_token_count = openai_llm.count_tokens(compressed)
+    print(f"Time taken: {elapsed_time:.4f} seconds")
+    print(f"original_token_count: {original_token_count}")
+    print(f"one_message_token_count: {one_message_token_count}")
+    print(f"compressed_token_count: {compressed_token_count}")
+    print(f"how many messages: {sum(1 for msg in compressed if isinstance(msg, dict))}")
+    assert len(compressed) == len(messages)
+
+
+@pytest.mark.parametrize("compress_type", CompressType.cut_types())
 def test_compress_messages_real(compress_type):
     openai_llm = MockOpenAILLM()
     model = "gpt-4o"
