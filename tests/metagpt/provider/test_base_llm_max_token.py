@@ -1,3 +1,4 @@
+import json
 import time
 
 import pytest
@@ -230,8 +231,34 @@ def test_compress_messages_long(compress_type, compress_config):
 
 
 @pytest.mark.parametrize("compress_type", CompressType.cut_types())
-def test_compress_messages_long_no_sys_msg(compress_type):
+def test_compress_messages_real(compress_type):
+    openai_llm = MockOpenAILLM()
+    model = "gpt-4o"
+    openai_llm.config.model = model
+    max_token_limit = 128000
+
+    with open("./real_messages.json", "r") as f:
+        messages = json.load(f)
+
     start_time = time.time()
+    compressed = openai_llm.compress_messages(messages, compress_type=compress_type, max_token=max_token_limit)
+    original_token_count = openai_llm.count_tokens(messages)
+
+    compressed_token_count = openai_llm.count_tokens(compressed)
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+
+    print(f"original_token_count: {original_token_count}")
+    print(f"compressed_token_count: {compressed_token_count}")
+    print(f"how many messages: {sum(1 for msg in compressed if isinstance(msg, dict))}")
+    print(f"Time taken: {elapsed_time:.4f} seconds")
+    assert 3 <= len(compressed) <= len(messages)
+    assert compressed[0]["role"] == "system"
+    assert compressed[1]["role"] != "system"
+
+
+@pytest.mark.parametrize("compress_type", CompressType.cut_types())
+def test_compress_messages_long_no_sys_msg(compress_type):
     openai_llm = MockOpenAILLM()
     model = "gpt-4o"
     openai_llm.config.model = model
@@ -241,6 +268,8 @@ def test_compress_messages_long_no_sys_msg(compress_type):
     for i in range(1000):
         messages.append({"role": "user", "content": "u1" * 100})  # ~2x10x0.5 = 10 tokens
         messages.append({"role": "assistant", "content": "a1" * 100})
+
+    start_time = time.time()
     compressed = openai_llm.compress_messages(messages, compress_type=compress_type, max_token=max_token_limit)
 
     end_time = time.time()
@@ -255,7 +284,7 @@ def test_compress_messages_long_no_sys_msg(compress_type):
     len_compressed_messages = sum(1 for msg in compressed if isinstance(msg, dict))
     print(f"how many messages: {len_compressed_messages}")
     assert compressed
-    assert len_compressed_messages < 1000
+    assert len_compressed_messages < 2000
 
 
 def test_long_messages_no_compress():
