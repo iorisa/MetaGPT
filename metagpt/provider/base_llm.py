@@ -325,9 +325,7 @@ class BaseLLM(ABC):
             for item in msg["content"]:
                 if isinstance(item, dict) and item.get("type") == "text":
                     text_content = item.get("text", "")
-                    truncated_item = item.copy()
-                    truncated_item["text"] = binary_search_truncate(text_content)
-                    truncated_content.append(truncated_item)
+                    truncated_content.append({"type": "text", "text": binary_search_truncate(text_content)})
                 else:
                     truncated_content.append(item)
             return {"role": msg["role"], "content": truncated_content}
