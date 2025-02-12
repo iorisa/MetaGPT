@@ -46,7 +46,10 @@ BINARY_SEARCH_CONTENT_TEST_CASES = [
         "description": "Image case truncated from start",
     },
     {
-        "content": [{"type": "text", "text": "Image case " * 10000}],
+        "content": [
+            {"type": "text", "text": "Image case " * 10000},
+            {"type": "image_url", "image_url": {"url": "https://example.com/image.jpg"}},
+        ],
         "role": "user",
         "target_tokens": 1000,
         "from_end": True,
@@ -174,6 +177,7 @@ def test_compress_messages_long(compress_type, compress_config):
         )  # ~2x10x0.5 = 10 tokens
         messages.append({"role": "assistant", "content": f"a{i}" * compress_config["repeat_length"]})
 
+    compressed = openai_llm.compress_messages(messages, compress_type=compress_type, max_token=max_token_limit)
     start_time = time.time()
     compressed = openai_llm.compress_messages(messages, compress_type=compress_type, max_token=max_token_limit)
     end_time = time.time()

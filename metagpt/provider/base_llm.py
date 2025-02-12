@@ -302,11 +302,10 @@ class BaseLLM(ABC):
         """
 
         def binary_search_truncate(text: str) -> str:
-            total_token_count = self.count_tokens([{"role": "user", "content": text}])
+            total_token_count = self.count_tokens([{"role": msg["role"], "content": text}])
             if total_token_count <= target_token_count:
                 return text
             left, right = 0, len(text)
-            result = ""
             while left <= right:
                 mid = (left + right) // 2
                 mid_content = text[-mid:] if from_end else text[:mid]
@@ -317,21 +316,24 @@ class BaseLLM(ABC):
                     left = mid + 1
                 else:
                     right = mid - 1
-            return result
+            return ""
 
         # Handle GPT-4V case where content might be a list of dicts
         if isinstance(msg["content"], list):
+            truncated_content = []
             # Find the text content in the list
-            text_content = ""
             for item in msg["content"]:
                 if isinstance(item, dict) and item.get("type") == "text":
                     text_content = item.get("text", "")
-                    item["text"] = binary_search_truncate(text_content)
-                    return msg
+                    truncated_item = item.copy()
+                    truncated_item["text"] = binary_search_truncate(text_content)
+                    truncated_content.append(truncated_item)
+                else:
+                    truncated_content.append(item)
+            return {"role": msg["role"], "content": truncated_content}
 
         # for normal text content
-        msg["content"] = binary_search_truncate(msg["content"])
-        return msg
+        return {"role": msg["role"], "content": binary_search_truncate(msg["content"])}
 
     def compress_messages(
         self,
@@ -384,9 +386,13 @@ class BaseLLM(ABC):
                             msg, truncated_token, from_end=True
                         )  # truncate from end
                         compressed.insert(len(system_msgs), truncated_msg)
+                        # update current_token_count
+                        token_count = self.count_tokens([truncated_msg])
+                        current_token_count += token_count
                     logger.warning(
                         f"Truncated messages with {compress_type} to fit within the token limit. "
                         f"The first user or assistant message after truncation (originally the {i}-th message from last): {compressed[len(system_msgs)]}."
+                        f"current_token_count: {current_token_count}, keep_token: {keep_token}"
                     )
                     break
 
@@ -405,9 +411,13 @@ class BaseLLM(ABC):
                             msg, truncated_token, from_end=False
                         )  # truncate from start
                         compressed.append(truncated_msg)
+                        # update current_token_count
+                        token_count = self.count_tokens([truncated_msg])
+                        current_token_count += token_count
                     logger.warning(
                         f"Truncated messages with {compress_type} to fit within the token limit. "
                         f"The last user or assistant message after truncation (originally the {i}-th message): {compressed[-1]}."
+                        f"current_token_count: {current_token_count}, keep_token: {keep_token}"
                     )
                     break
 
