@@ -163,7 +163,7 @@ def test_compress_messages_no_effect(compress_type, model):
 @pytest.mark.parametrize("compress_config", COMPRESS_MESSAGE_CONFIGS)
 def test_compress_messages_long(compress_type, compress_config):
     openai_llm = TestBaseLLM()
-    model = "gpt-4o"
+    model = "gpt-4oo"
     openai_llm.config.model = model
     max_token_limit = compress_config["max_token"]
 
@@ -177,7 +177,6 @@ def test_compress_messages_long(compress_type, compress_config):
         )  # ~2x10x0.5 = 10 tokens
         messages.append({"role": "assistant", "content": f"a{i}" * compress_config["repeat_length"]})
 
-    compressed = openai_llm.compress_messages(messages, compress_type=compress_type, max_token=max_token_limit)
     start_time = time.time()
     compressed = openai_llm.compress_messages(messages, compress_type=compress_type, max_token=max_token_limit)
     end_time = time.time()
