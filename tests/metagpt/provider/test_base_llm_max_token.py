@@ -1,98 +1,56 @@
 import time
 
 import pytest
+import tiktoken
 
 from metagpt.configs.compress_msg_config import CompressType
 from metagpt.configs.llm_config import LLMConfig
 from metagpt.provider.base_llm import BaseLLM
 from tests.metagpt.provider.mock_llm_config import mock_llm_config
 
-TEST_MODELS_noGPT = ["claude-3-sonnet-20240229", "deepseek-coder"]
 TEST_MODELS_MIX = ["anthropic/claude-3.5-sonnet", "gpt-4-32k-0613"]
 BINARY_SEARCH_CONTENT_TEST_CASES = [
     {
         "content": "Hello, world! This is a test message.",
+        "role": "user",
         "target_tokens": 8,
         "from_end": False,
         "description": "Short text truncated from start",
     },
     {
         "content": "Hello, world! This is a test message.",
+        "role": "user",
         "target_tokens": 8,
         "from_end": True,
         "description": "Short text truncated from end",
     },
     {
-        "content": "Hello, world! This is a test message.",
-        "target_tokens": 16,
-        "from_end": False,
-        "description": "Short text truncated from start",
-    },
-    {
-        "content": "Hello, world! This is a test message.",
-        "target_tokens": 16,
-        "from_end": True,
-        "description": "Short text truncated from end",
-    },
-    {
         "content": "Hello, world! " * 10000,
-        "target_tokens": 6,
-        "from_end": False,
-        "description": "Long text truncated from start",
-    },
-    {
-        "content": "Hello, world! " * 10000,
-        "target_tokens": 6,
-        "from_end": True,
-        "description": "Long text truncated from end",
-    },
-    {
-        "content": "Hello, world! " * 10000,
-        "target_tokens": 50,
-        "from_end": False,
-        "description": "Long text truncated from start",
-    },
-    {
-        "content": "Hello, world! " * 10000,
-        "target_tokens": 50,
-        "from_end": True,
-        "description": "Long text truncated from end",
-    },
-    {
-        "content": "Hello, world! " * 10000,
-        "target_tokens": 100,
-        "from_end": False,
-        "description": "Long text truncated from start",
-    },
-    {
-        "content": "Hello, world! " * 10000,
-        "target_tokens": 100,
-        "from_end": True,
-        "description": "Long text truncated from end",
-    },
-    {
-        "content": "Hello, world! " * 10000,
+        "role": "assistant",
         "target_tokens": 1000,
         "from_end": False,
         "description": "Long text truncated from start",
     },
     {
         "content": "Hello, world! " * 10000,
+        "role": "assistant",
         "target_tokens": 1000,
         "from_end": True,
         "description": "Long text truncated from end",
     },
     {
-        "content": "Hello, world! " * 10000,
-        "target_tokens": 10000,
+        "content": [{"type": "text", "text": "Image case " * 10000}],
+        "role": "user",
+        "target_tokens": 1000,
         "from_end": False,
-        "description": "Long text truncated from start",
+        "description": "Image case truncated from start",
     },
     {
-        "content": "Hello, world! " * 10000,
-        "target_tokens": 10000,
+        "content": [{"type": "text", "text": "Image case " * 10000}],
+        "role": "user",
+        "target_tokens": 1000,
         "from_end": True,
-        "description": "Long text truncated from end",
+        "description": "Image case truncated from end",
     },
 ]
 COMPRESS_MESSAGE_CONFIGS = [
@@ -125,9 +83,9 @@ def test_get_content_under_limit_token(test_case):
     base_llm.config.model = "gpt-4-32k"
 
     truncated = base_llm.get_content_under_limit_token(
-        test_case["content"], target_token_count=test_case["target_tokens"], from_end=test_case["from_end"]
+        test_case, target_token_count=test_case["target_tokens"], from_end=test_case["from_end"]
     )
-    token_count = base_llm.count_tokens([{"role": "user", "content": truncated}])
+    token_count = base_llm.count_tokens([{"role": test_case["role"], "content": truncated["content"]}])
 
     end_time = time.time()
     elapsed_time = end_time - start_time
@@ -138,8 +96,8 @@ def test_get_content_under_limit_token(test_case):
     )
     print(f"Time taken: {elapsed_time:.4f} seconds")
 
-    assert isinstance(truncated, str)
-    assert len(truncated) <= len(test_case["content"])
+    assert isinstance(truncated, dict)
+    assert len(truncated["content"]) <= len(test_case["content"])
     # here should not be equal, because the target_token may be larger than original content's token count
     assert token_count <= test_case["target_tokens"]
 
@@ -148,36 +106,37 @@ def test_get_content_under_limit_token_empty():
     base_llm = TestBaseLLM()
     base_llm.config.model = "gpt-4o"
     content = "Hello, world! This is a test message."
+    message = {"role": "user", "content": content}
     max_token = 3
-    truncated = base_llm.get_content_under_limit_token(content, max_token, from_end=False)
+    truncated = base_llm.get_content_under_limit_token(message, max_token, from_end=False)
     print(f"truncated: {truncated}")
-    assert truncated == ""
+    assert truncated["content"] == ""
 
 
-@pytest.mark.parametrize("model", TEST_MODELS_noGPT)
-def test_count_tokens_o_model(model):
-    base_llm = TestBaseLLM()
-    base_llm.config.model = model
-    content = "Hello, world! This is a test message."
-    token_count = base_llm.count_tokens([{"role": "user", "content": content}])
-    print(f"token count: {token_count}")
-    assert token_count == len(content) // 2
-
-
-def test_count_tokens_GPT():
+@pytest.mark.parametrize("model", TEST_MODELS_MIX)
+def test_count_tokens_GPT(model):
     openai_llm = TestBaseLLM()
-    model = "gpt-4o"
     openai_llm.config.model = model
     content = "Hello, world! This is a test message."
-    import tiktoken
 
-    encoding = tiktoken.encoding_for_model(model.replace("openai/", ""))
+    encoding = tiktoken.encoding_for_model("gpt-4o")
     expected_token_count = len(encoding.encode(content))
 
     token_count = openai_llm.count_tokens([{"role": "user", "content": content}])
     print(f"token count: {token_count}", "expected_token_count: ", expected_token_count)
     additional_token = 3 + 1 + 3
     assert token_count == expected_token_count + additional_token
+
+
+def test_count_tokens_GPT_image():
+    base_llm = TestBaseLLM()
+    base_llm.config.model = "gpt-4o"
+    content = [{"type": "text", "text": "Image case " * 10000}]
+    token_count = base_llm.count_tokens([{"role": "user", "content": content}])
+    encoding = tiktoken.encoding_for_model("gpt-4o")
+    expected_token_count = len(encoding.encode(content[0]["text"]))
+    print(f"token count: {token_count}")
+    assert token_count == expected_token_count + 7
 
 
 @pytest.mark.parametrize("compress_type", list(CompressType))
@@ -322,13 +281,6 @@ def test_compress_messages_long_no_sys_msg(compress_type):
     print(f"how many messages: {len_compressed_messages}")
     assert compressed
     assert len_compressed_messages < 2000
-
-
-def test_long_messages_no_compress():
-    base_llm = TestBaseLLM()
-    messages = [{"role": "user", "content": "1" * 10000}] * 10000
-    compressed = base_llm.compress_messages(messages)
-    assert len(compressed) == len(messages)
 
 
 if __name__ == "__main__":

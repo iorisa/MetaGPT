@@ -291,7 +291,7 @@ class BaseLLM(ABC):
         # for non-OpenAI models
         # return sum([int(len(msg["content"]) * 0.5) for msg in messages])
 
-    def get_content_under_limit_token(self, content: str, target_token_count: int, from_end: bool = True) -> str:
+    def get_content_under_limit_token(self, msg: dict, target_token_count: int, from_end: bool = True) -> dict:
         """use binary search to truncate the content to meet the target token count
         Args:
             content: original content
@@ -300,23 +300,38 @@ class BaseLLM(ABC):
         Returns:
             str: truncated content
         """
-        total_token_count = self.count_tokens([{"role": "user", "content": content}])
-        if total_token_count <= target_token_count:
-            return content
 
-        left, right = 0, len(content)
-        result = ""
-        while left <= right:
-            mid = (left + right) // 2
-            mid_content = content[-mid:] if from_end else content[:mid]
-            token_count = self.count_tokens([{"role": "user", "content": mid_content}])
-            if token_count == target_token_count:
-                return mid_content
-            elif token_count < target_token_count:
-                left = mid + 1
-            else:
-                right = mid - 1
-        return result
+        def binary_search_truncate(text: str) -> str:
+            total_token_count = self.count_tokens([{"role": "user", "content": text}])
+            if total_token_count <= target_token_count:
+                return text
+            left, right = 0, len(text)
+            result = ""
+            while left <= right:
+                mid = (left + right) // 2
+                mid_content = text[-mid:] if from_end else text[:mid]
+                token_count = self.count_tokens([{"role": msg["role"], "content": mid_content}])
+                if token_count == target_token_count:
+                    return mid_content
+                elif token_count < target_token_count:
+                    left = mid + 1
+                else:
+                    right = mid - 1
+            return result
+
+        # Handle GPT-4V case where content might be a list of dicts
+        if isinstance(msg["content"], list):
+            # Find the text content in the list
+            text_content = ""
+            for item in msg["content"]:
+                if isinstance(item, dict) and item.get("type") == "text":
+                    text_content = item.get("text", "")
+                    item["text"] = binary_search_truncate(text_content)
+                    return msg
+
+        # for normal text content
+        msg["content"] = binary_search_truncate(msg["content"])
+        return msg
 
     def compress_messages(
         self,
@@ -365,10 +380,10 @@ class BaseLLM(ABC):
                     if compress_type == CompressType.POST_CUT_BY_TOKEN or len(compressed) == len(system_msgs):
                         # Truncate the message to fit within the remaining token count; Otherwise, discard the msg. If compressed has no user or assistant message, enforce cutting by token
                         truncated_token = keep_token - current_token_count
-                        truncated_content = self.get_content_under_limit_token(
-                            msg["content"], truncated_token, from_end=True
+                        truncated_msg = self.get_content_under_limit_token(
+                            msg, truncated_token, from_end=True
                         )  # truncate from end
-                        compressed.insert(len(system_msgs), {"role": msg["role"], "content": truncated_content})
+                        compressed.insert(len(system_msgs), truncated_msg)
                     logger.warning(
                         f"Truncated messages with {compress_type} to fit within the token limit. "
                         f"The first user or assistant message after truncation (originally the {i}-th message from last): {compressed[len(system_msgs)]}."
@@ -386,10 +401,10 @@ class BaseLLM(ABC):
                     if compress_type == CompressType.PRE_CUT_BY_TOKEN or len(compressed) == len(system_msgs):
                         # Truncate the message to fit within the remaining token count; Otherwise, discard the msg. If compressed has no user or assistant message, enforce cutting by token
                         truncated_token = keep_token - current_token_count
-                        truncated_content = self.get_content_under_limit_token(
-                            msg["content"], truncated_token, from_end=False
+                        truncated_msg = self.get_content_under_limit_token(
+                            msg, truncated_token, from_end=False
                         )  # truncate from start
-                        compressed.append({"role": msg["role"], "content": truncated_content})
+                        compressed.append(truncated_msg)
                     logger.warning(
                         f"Truncated messages with {compress_type} to fit within the token limit. "
                         f"The last user or assistant message after truncation (originally the {i}-th message): {compressed[-1]}."
