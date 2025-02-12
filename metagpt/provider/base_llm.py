@@ -287,15 +287,9 @@ class BaseLLM(ABC):
         # The heuristics is a huge overestimate for English text, e.g., and should be overwrittem with accurate token count function in inherited class
         # logger.warning("Base count_tokens is not accurate and should be overwritten.")
 
-        model = self.config.model
-        # for OpenAI models
-        if any(model.startswith(prefix) for prefix in ["gpt-", "openai/", "text-embedding"]):
-            try:
-                return count_message_tokens(messages, model)
-            except Exception as e:
-                logger.warning(f"Failed to use tiktoken for {model}, fallback to basic count: {e}")
+        return count_message_tokens(messages, "gpt-4o")
         # for non-OpenAI models
-        return sum([int(len(msg["content"]) * 0.5) for msg in messages])
+        # return sum([int(len(msg["content"]) * 0.5) for msg in messages])
 
     def get_content_under_limit_token(self, content: str, target_token_count: int, from_end: bool = True) -> str:
         """use binary search to truncate the content to meet the target token count
