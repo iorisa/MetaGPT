@@ -5,7 +5,6 @@ import pytest
 from metagpt.configs.compress_msg_config import CompressType
 from metagpt.configs.llm_config import LLMConfig
 from metagpt.provider.base_llm import BaseLLM
-from metagpt.provider.openai_api import OpenAILLM
 from tests.metagpt.provider.mock_llm_config import mock_llm_config
 
 TEST_MODELS_noGPT = ["claude-3-sonnet-20240229", "deepseek-coder"]
@@ -122,7 +121,7 @@ class TestBaseLLM(BaseLLM):
 def test_get_content_under_limit_token(test_case):
     """Test various scenarios for get_content_under_limit_token function"""
     start_time = time.time()
-    base_llm = OpenAILLM(mock_llm_config)
+    base_llm = TestBaseLLM()
     base_llm.config.model = "gpt-4-32k"
 
     truncated = base_llm.get_content_under_limit_token(
@@ -145,6 +144,16 @@ def test_get_content_under_limit_token(test_case):
     assert token_count <= test_case["target_tokens"]
 
 
+def test_get_content_under_limit_token_empty():
+    base_llm = TestBaseLLM()
+    base_llm.config.model = "gpt-4o"
+    content = "Hello, world! This is a test message."
+    max_token = 3
+    truncated = base_llm.get_content_under_limit_token(content, max_token, from_end=False)
+    print(f"truncated: {truncated}")
+    assert truncated == ""
+
+
 @pytest.mark.parametrize("model", TEST_MODELS_noGPT)
 def test_count_tokens_o_model(model):
     base_llm = TestBaseLLM()
@@ -156,7 +165,7 @@ def test_count_tokens_o_model(model):
 
 
 def test_count_tokens_GPT():
-    openai_llm = OpenAILLM(mock_llm_config)
+    openai_llm = TestBaseLLM()
     model = "gpt-4o"
     openai_llm.config.model = model
     content = "Hello, world! This is a test message."
