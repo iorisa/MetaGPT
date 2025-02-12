@@ -68,6 +68,9 @@ Pay attention to the conversation history and the following constraints:
 """
 
 WRITE_CODE_PROMPT = """
+# Current Directory
+You are already at {current_dir}, suitable for writing the specified files directly
+
 # Files to Write
 {file_path}
 
@@ -77,34 +80,9 @@ WRITE_CODE_PROMPT = """
 # Instruction
 Your task is to write the files listed in Files to Write. You must ensure the code is complete, correct, and bug-free.
 {supabase_code_requirement}
+
 # Tool Usage Guide
-When using tools, please adhere to the following guidelines:
-
-1. **Tool Call Format:**
-    - Encapsulate each tool call within a `<tool_call>` tag.
-    - Use the format `ToolName.method_name(args)` for each call.
-2. **Embed file code block:** Place all tool calls within a code block(eg. ```jsx, ```html, ```css, ```js, ```python, etc.), this code block is the file content.
-
-
-## Example: 
-1. Setting a Background Image:
-```jsx
-// example_1.jsx
-// existing code
-backgroundImage: 'url(<tool_call> ImageGetter.get(search_term="a beautiful sunset", image_save_path="/absolute_path/to/public/assets/images/sonnet-bj.png", mode="search") </tool_call>)',
-// existing code
-```
-
-2. To use an image as a game character or element:
-```jsx
-// example_2.jsx
-// existing code
-<img src=\"<tool_call> ImageGetter.get(search_term="a cute bird", image_save_path="/absolute_path/to/public/assets/images/bird.png", mode="search") </tool_call>\" alt="bird" />
-// existing code
-```
-
-## Available Tools
-{available_code_tools}
+{tool_usage_guide}
 
 # Output
 While some concise thoughts are helpful, code is absolutely required. DO NOT leave any TODO or placeholder.
@@ -122,3 +100,28 @@ your code for file 2 ... (if any)
 ```
 more code block ... (if any)
 """
+
+TOOL_USAGE_GUIDE = """
+When using tools, please adhere to the following guidelines:
+1. Tool Call Format: Encapsulate each tool call within a `<tool_call>` tag. Use the format `ToolName.method_name(args)` for each call.
+2. Place all tool calls within the actual code file, along with other normal code. Don't initiate tool calls in a standalone code block.
+
+## Example: 
+1. Setting a background image:
+```jsx
+// example_1.jsx
+// existing code
+backgroundImage: 'url(<tool_call> ImageGetter.get(search_term="a beautiful sunset", image_save_path="/absolute_path/to/public/assets/images/sonnet-bj.png", mode="search") </tool_call>)',
+// existing code
+```
+2. Using an image as a game character or element:
+```jsx
+// example_2.jsx
+// existing code
+<img src=\"<tool_call> ImageGetter.get(search_term="a cute bird", image_save_path="/absolute_path/to/public/assets/images/bird.png", mode="search") </tool_call>\" alt="bird" />
+// existing code
+```
+
+## Available Tools
+{available_code_tools}
+""".strip()

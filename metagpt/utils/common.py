@@ -864,6 +864,19 @@ def extract_and_encode_images(content: str) -> list[str]:
     return images
 
 
+async def use_encoded_images(content: str, llm: "LLM") -> bool:
+    prompt = f"""
+Check if you need to understand the image included to fulfill the task.
+YES if the task is image QA, writing web code based on UI images, etc.
+NO if the task is about using/importing the image as an asset in web page code, etc.
+NO if the task is not an actual request but a statement containing an image.
+Task: {content}
+Your answer (some concise thoughts, no more than 20 words, then YES/NO):
+"""
+    rsp = await llm.aask(prompt)
+    return "YES" in rsp
+
+
 def log_and_reraise(retry_state: RetryCallState):
     logger.error(f"Retry attempts exhausted. Last exception: {retry_state.outcome.exception()}")
     logger.warning(
@@ -1115,12 +1128,12 @@ def log_time(method):
 
     def before_call():
         start_time, cpu_start_time = time.perf_counter(), time.process_time()
-        logger.info(f"[{method.__name__}] started at: " f"{datetime.now().strftime('%Y-%m-%d %H:%m:%S')}")
+        logger.debug(f"[{method.__name__}] started at: " f"{datetime.now().strftime('%Y-%m-%d %H:%m:%S')}")
         return start_time, cpu_start_time
 
     def after_call(start_time, cpu_start_time):
         end_time, cpu_end_time = time.perf_counter(), time.process_time()
-        logger.info(
+        logger.debug(
             f"[{method.__name__}] ended. "
             f"Time elapsed: {end_time - start_time:.4} sec, CPU elapsed: {cpu_end_time - cpu_start_time:.4} sec"
         )

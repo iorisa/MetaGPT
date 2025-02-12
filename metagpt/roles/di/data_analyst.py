@@ -43,6 +43,8 @@ class DataAnalyst(RoleZero):
     custom_tools: list[str] = ["web scraping", "Terminal", "Editor:write,read,similarity_search"]
     custom_tool_recommender: ToolRecommender = None
     experience_retriever: Annotated[ExpRetriever, Field(exclude=True)] = KeywordExpRetriever()
+    # a larger limit to allow for complex development
+    max_consecutive_react_limit: int = 20
 
     use_reflection: bool = True
     write_code: WriteAnalysisCode = Field(default_factory=WriteAnalysisCode, exclude=True)
@@ -64,7 +66,7 @@ class DataAnalyst(RoleZero):
         """Write a code block for current task and execute it in an interactive notebook environment.
 
         Args:
-            instruction (optional, str): Further hints or notice other than the current task instruction, must be very concise and can be empty. Defaults to "".
+            instruction (optional, str): Further hints or notice other than the current task instruction, must be very concise and can be empty. Write text guidance, NOT code. Defaults to "".
         """
         if self.planner.plan:
             logger.info(f"Current task {self.planner.plan.current_task}")

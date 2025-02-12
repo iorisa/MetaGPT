@@ -5,7 +5,11 @@ import subprocess
 from pydantic import model_validator
 
 from metagpt.logs import logger
-from metagpt.prompts.di.frontend_engineer import FE_EXAPMLE, FRONTEND_ENGINEER_PROMPT
+from metagpt.prompts.di.frontend_engineer import (
+    FE_CMD_PROMPT,
+    FE_EXAPMLE,
+    FRONTEND_ENGINEER_PROMPT,
+)
 from metagpt.prompts.di.supabase import get_backend_prompt_for_fe
 from metagpt.prompts.di.template import (
     EXRTA_INFO_PROMPT,
@@ -24,6 +28,7 @@ _ = FixedSearchTemplate  # avoid pre-commit error
 
 # @track_agent("FrontendEngineer")
 class FrontendEngineer(Engineer2):
+    cmd_prompt: str = FE_CMD_PROMPT
     tools: list[str] = [
         "Editor:read,write,edit_file_by_replace,append_file",
         "RoleZero",
@@ -44,6 +49,9 @@ class FrontendEngineer(Engineer2):
     is_first_dev_request: bool = True
     template_tool: BaseSearchTemplate = None
     template_info: str = GENERAL_WEB_APP_TEMPLATE_PROMPT
+
+    # a larger limit to allow for complex development
+    max_consecutive_react_limit: int = 20
 
     @model_validator(mode="after")
     def set_search_template_tool(self):
@@ -90,7 +98,7 @@ class FrontendEngineer(Engineer2):
         if extra_user_info:
             content = f"Additional information provided by the user:{extra_user_info}\n\n{content}"
         # Update memory
-        self.rc.memory.add(UserMessage(content=content))
+        self.rc.memory.add(UserMessage(content=content, cause_by="SearchTemplate"))
         logger.info("Template information, User info and extra info updated")
 
     async def search_template(self, requirement: str) -> str:

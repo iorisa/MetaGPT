@@ -16,13 +16,14 @@ from pydantic import Field, model_validator
 from metagpt.actions import Action, UserRequirement
 from metagpt.actions.di.run_command import RunCommand
 from metagpt.actions.search_enhanced_qa import SearchEnhancedQA
-from metagpt.const import DEFAULT_WORKSPACE_ROOT, IMAGES
+from metagpt.const import DEFAULT_WORKSPACE_ROOT, IMAGES, USE_ENCODED_IMAGES
 from metagpt.exp_pool import exp_cache
 from metagpt.exp_pool.context_builders import RoleZeroContextBuilder
 from metagpt.exp_pool.serializers import RoleZeroSerializer
 from metagpt.logs import logger
 from metagpt.memory.role_zero_memory import RoleZeroLongTermMemory
 from metagpt.prompts.di.role_zero import (
+    AMBIGUOUS_RESPONSE_SYSTEM_PROMPT,
     ASK_HUMAN_COMMAND,
     ASK_HUMAN_GUIDANCE_FORMAT,
     CMD_PROMPT,
@@ -35,9 +36,9 @@ from metagpt.prompts.di.role_zero import (
     QUICK_THINK_SYSTEM_PROMPT,
     QUICK_THINK_TAG,
     REGENERATE_PROMPT,
-    REPORT_TO_HUMAN_PROMPT,
     ROLE_INSTRUCTION,
-    SUMMARY_PROBLEM_WHEN_DUPLICATE,
+    SUMMARIZE_PROBLEM_WHEN_DUPLICATE,
+    SUMMARIZE_STATUS_WHEN_CONSECUTIVE,
     SUMMARY_PROMPT,
     SYSTEM_PROMPT,
 )
@@ -49,7 +50,12 @@ from metagpt.tools.libs.browser import Browser
 from metagpt.tools.libs.editor import Editor
 from metagpt.tools.tool_recommend import BM25ToolRecommender, ToolRecommender
 from metagpt.tools.tool_registry import register_tool
-from metagpt.utils.common import CodeParser, any_to_str, extract_and_encode_images
+from metagpt.utils.common import (
+    CodeParser,
+    any_to_str,
+    extract_and_encode_images,
+    use_encoded_images,
+)
 from metagpt.utils.repair_llm_raw_output import (
     RepairType,
     repair_escape_error,
@@ -75,7 +81,10 @@ class RoleZero(Role):
 
     # React Mode
     react_mode: Literal["react"] = "react"
-    max_react_loop: int = 50  # used for react mode
+    max_react_loop: int = 50
+    # consecutive react count after receiving a message, used for triggering human intervention
+    consecutive_react_cnt: int = 0
+    max_consecutive_react_limit: int = 10
 
     # Tools
     tools: list[str] = []  # Use special symbol ["<all>"] to indicate use of all registered tools
@@ -258,7 +267,7 @@ class RoleZero(Role):
         memory = self.rc.memory.get(self.memory_k)
         memory = await self.parse_browser_actions(memory)
         memory = await self.parse_editor_result(memory)
-        memory = self.parse_images(memory)
+        memory = await self.parse_images(memory)
 
         req = self.llm.format_msg(memory + [UserMessage(content=prompt)])
 
@@ -309,15 +318,19 @@ class RoleZero(Role):
         new_memory.reverse()
         return new_memory
 
-    def parse_images(self, memory: list[Message]) -> list[Message]:
+    async def parse_images(self, memory: list[Message]) -> list[Message]:
         if not self.llm.support_image_input():
             return memory
         for msg in memory:
-            if IMAGES in msg.metadata or msg.role != "user":
+            if USE_ENCODED_IMAGES in msg.metadata or msg.role != "user":
+                # Skip if the message has been processed before or is not a UserMessage
                 continue
             images = extract_and_encode_images(msg.content)
             if images:
-                msg.add_metadata(IMAGES, images)
+                encode_flag = await use_encoded_images(msg.content, self.llm)
+                msg.add_metadata(USE_ENCODED_IMAGES, encode_flag)
+                if encode_flag:
+                    msg.add_metadata(IMAGES, images)
         return memory
 
     def _get_prefix(self) -> str:
@@ -358,11 +371,14 @@ class RoleZero(Role):
             return quick_rsp
 
         actions_taken = 0
+        self.consecutive_react_cnt = 0
         rsp = AIMessage(content="No actions taken yet", cause_by=Action)  # will be overwritten after Role _act
         while actions_taken < self.rc.max_react_loop:
             # NOTE: Diff 2: Keep observing within _react, news will go into memory, allowing adapting to new info
-            await self._observe()
-
+            if await self._observe():
+                self.consecutive_react_cnt = 0
+                # Reset state to 0 to override potential `end` command (state = -1) and ensure the loop continues.
+                self._set_state(0)
             # think
             has_todo = await self._think()
             if not has_todo:
@@ -371,6 +387,7 @@ class RoleZero(Role):
             logger.debug(f"{self._setting}: {self.rc.state=}, will do {self.rc.todo}")
             rsp = await self._act()
             actions_taken += 1
+            self.consecutive_react_cnt += 1
 
             # post-check
             if self.rc.max_react_loop >= 10 and actions_taken >= self.rc.max_react_loop:
@@ -381,6 +398,14 @@ class RoleZero(Role):
                 )
                 if "yes" in human_rsp.lower():
                     actions_taken = 0
+            if self.consecutive_react_cnt >= self.max_consecutive_react_limit:
+                memory = self.get_memories(k=self.memory_k)
+                context = self.llm.format_msg(memory + [UserMessage(content=SUMMARIZE_STATUS_WHEN_CONSECUTIVE)])
+                question = await self.llm.aask(context)
+                human_rsp = await self.ask_human(question)
+                self.rc.memory.add(UserMessage(content="User's extra instruction: " + human_rsp, cause_by=RunCommand))
+                self.consecutive_react_cnt = 0
+
         return rsp  # return output from the last action
 
     def format_quick_system_prompt(self) -> str:
@@ -401,20 +426,8 @@ class RoleZero(Role):
             await reporter.async_report({"type": "classify"})
             intent_result = await self.llm.aask(context, system_msgs=[self.format_quick_system_prompt()])
 
-        if "QUICK" in intent_result or "AMBIGUOUS" in intent_result:  # llm call with the original context
-            cleaned_memory = []
-            memory = self.get_memories(k=self.memory_k)
-
-            for element in memory:
-                # deep copy all element
-                copied_element = copy.deepcopy(element)
-
-                # If the answer contains the substring '[Message] from A to B:', remove it.
-                pattern = r"\[Message\] from .+? to .+?:\s*"
-                copied_element.content = re.sub(pattern, "", copied_element.content, count=1)
-                cleaned_memory.append(copied_element)
-
-            # cleaned_memory = self._clean_memory() # deep copy and
+        if "QUICK" in intent_result:  # llm call with the original context
+            cleaned_memory = self._clean_memory(self.get_memories(k=self.memory_k))
             async with ThoughtReporter(enable_llm_stream=True) as reporter:
                 await reporter.async_report({"type": "quick"})
                 answer = await self.llm.aask(
@@ -428,9 +441,21 @@ class RoleZero(Role):
                 # an actual TASK intent misclassified as QUICK, correct it here, FIXME: a better way is to classify it correctly in the first place
                 answer = ""
                 intent_result = "TASK"
+
         elif "SEARCH" in intent_result:
             query = "\n".join(str(msg) for msg in memory)
             answer = await SearchEnhancedQA().run(query)
+        elif "AMBIGUOUS" in intent_result:
+            # reply to human
+            cleaned_memory = self._clean_memory(self.get_memories(k=self.memory_k))
+            async with ThoughtReporter(enable_llm_stream=True) as reporter:
+                await reporter.async_report({"type": "quick"})
+                # generate classification prompt
+                clarification_question = await self.llm.aask(
+                    self.llm.format_msg(cleaned_memory),
+                    system_msgs=[AMBIGUOUS_RESPONSE_SYSTEM_PROMPT.format(role_info=self._get_prefix())],
+                )
+            answer = clarification_question
 
         if answer:
             self.rc.memory.add(AIMessage(content=answer, cause_by=QUICK_THINK_TAG))
@@ -442,6 +467,17 @@ class RoleZero(Role):
             )
 
         return rsp_msg, intent_result
+
+    def _clean_memory(self, memory: List[Message]) -> List[Message]:
+        """Helper method to clean message format from memory"""
+        cleaned_memory = []
+        for element in memory:
+            copied_element = copy.deepcopy(element)
+            pattern = r"\[Message\] from .+? to .+?:\s*"
+            copied_element.content = re.sub(pattern, "", copied_element.content, count=1)
+            cleaned_memory.append(copied_element)
+        # cleaned_memory = self._clean_memory() # deep copy and
+        return cleaned_memory
 
     async def _check_duplicates(self, req: list[dict], command_rsp: str, check_window: int = 10):
         past_rsp = [mem.content for mem in self.rc.memory.get(check_window)]
@@ -461,9 +497,10 @@ class RoleZero(Role):
                     # Detect the duplicate of the 'Plan.finish_current_task' command, and use the 'end' command to finish the task.
                     logger.warning(f"Duplicate response detected: {command_rsp}")
                     return END_COMMAND
-                problem = await self.llm.aask(
-                    req + [UserMessage(content=SUMMARY_PROBLEM_WHEN_DUPLICATE.format(language=self.respond_language))]
+                context = self.llm.format_msg(
+                    req + [UserMessage(content=SUMMARIZE_PROBLEM_WHEN_DUPLICATE.format(language=self.respond_language))]
                 )
+                problem = await self.llm.aask(context)
                 ASK_HUMAN_COMMAND[0]["args"]["question"] = ASK_HUMAN_GUIDANCE_FORMAT.format(problem=problem).strip()
                 ask_human_command = "```json\n" + json.dumps(ASK_HUMAN_COMMAND, indent=4, ensure_ascii=False) + "\n```"
                 return ask_human_command
@@ -591,6 +628,7 @@ class RoleZero(Role):
             question = args.get("question") or args.get("content") or args.get("message")
             assert question, "Use kwarg 'question' to provide the question."
             human_response = await self.ask_human(question=question)
+            self.consecutive_react_cnt = 0
             if human_response.strip().lower().endswith(("stop", "<stop>")):
                 human_response += "The user has asked me to stop because I have encountered a problem."
                 self.rc.memory.add(UserMessage(content=human_response, cause_by=RunCommand))
@@ -599,7 +637,7 @@ class RoleZero(Role):
                 return end_output
             return human_response
         # output from bash.run may be empty, add decorations to the output to ensure visibility.
-        elif cmd["command_name"] == "Terminal.run":
+        elif "Terminal" in cmd["command_name"]:  # Terminal.run and its alias
             tool_obj = self.tool_execution_map[cmd["command_name"]]
             tool_output = await tool_obj(**cmd["args"])
             if len(tool_output) <= 10:
@@ -623,7 +661,7 @@ class RoleZero(Role):
         # format plan status
         # Example:
         # [GOAL] create a 2048 game
-        # [TASK_ID 1] (finished) Create a Product Requirement Document (PRD) for the 2048 game. This task depends on tasks[]. [Assign to Alice]
+        # [TASK_ID 1] (finished) Create a Product Requirement Document (PRD) for the 2048 game. This task depends on tasks[]. [Assign to Emma]
         # [TASK_ID 2] (        ) Design the system architecture for the 2048 game. This task depends on tasks[1]. [Assign to Bob]
         formatted_plan_status = f"[GOAL] {plan_status['goal']}\n"
         if len(plan_status["tasks"]) > 0:
@@ -662,17 +700,6 @@ class RoleZero(Role):
     async def _end(self, **kwarg):
         self._set_state(-1)
         memory = self.rc.memory.get(self.memory_k)
-        # Ensure reply to the human before the "end" command is executed. Hard code k=5 for checking.
-        if not any(["reply_to_human" in memory.content for memory in self.get_memories(k=5)]):
-            logger.info("manually reply to human")
-            reply_to_human_prompt = REPORT_TO_HUMAN_PROMPT.format(
-                respond_language=self.respond_language, working_dir=self.working_dir
-            )
-            async with ThoughtReporter(enable_llm_stream=True) as reporter:
-                await reporter.async_report({"type": "quick"})
-                reply_content = await self.llm.aask(self.llm.format_msg(memory + [UserMessage(reply_to_human_prompt)]))
-            await self.reply_to_human(content=reply_content)
-            self.rc.memory.add(AIMessage(content=reply_content, cause_by=RunCommand))
         outputs = ""
         # Summary of the Completed Task and Deliverables
         if self.use_summary:

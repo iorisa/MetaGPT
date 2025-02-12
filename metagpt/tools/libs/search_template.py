@@ -295,6 +295,7 @@ class SearchTemplate(BaseSearchTemplate):
             if not self.templates:
                 init_tempalte_flag = await self._init_templates()
             if self.engine is None and init_tempalte_flag:
+                print("init_rag_flag")
                 init_rag_flag = True
             self._initialized = init_tempalte_flag and init_rag_flag
 

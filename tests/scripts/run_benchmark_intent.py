@@ -28,6 +28,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from sklearn.metrics import classification_report, confusion_matrix
+from tqdm import tqdm
 
 from metagpt.environment.mgx.mgx_env import MGXEnv
 from metagpt.roles import Architect, ProductManager, ProjectManager
@@ -35,6 +36,13 @@ from metagpt.roles.di.data_analyst import DataAnalyst
 from metagpt.roles.di.engineer2 import Engineer2
 from metagpt.roles.di.team_leader import TeamLeader
 from metagpt.schema import Message
+
+REQUIREMENT = "requirement"
+INTENTION_GROUND_TRUTH = "ground_truth_category"
+ASSIGNEE_GROUND_TRUTH = "ground_truth_assignee"
+INTENTION_PREDICT = "intention_pred"
+ASSIGNEE_PREDICT = "assignee_pred"
+INTENTION_ACCURATE = "is_intention_accurate"
 
 
 class TeamLeaderForTesting(TeamLeader):
@@ -98,31 +106,27 @@ async def process_batch(df_data: pd.DataFrame):
     category_list = []
     assignees_list = []
 
-    for index, row in df_data.iterrows():
-        intent_category, assignees = await run_mgx(requirement=row["requirement"])
+    for index, row in tqdm(df_data.iterrows(), total=len(df_data), desc="处理意图分类"):
+        intent_category, assignees = await run_mgx(requirement=row[REQUIREMENT])
         print(f"intent_category: {intent_category}, assignees: {assignees}")
         category_list.append(intent_category)
         assignees_list.append(assignees)
-    df_data["intention_pred"] = category_list
-    df_data["assignee_pred"] = assignees_list
+    df_data[INTENTION_PREDICT] = category_list
+    df_data[ASSIGNEE_PREDICT] = assignees_list
 
     return df_data
 
 
 def eval_intention(df_data):
-    # define intention map
-    INTENTION_MAP = {"0": "TASK", "1": "QUICK", "2": "SEARCH", "3": "AMBIGUOUS"}
-
-    # map intention to str
-    df_data["ground_truth"] = df_data["intention"].astype(str).map(INTENTION_MAP)
     # check if intention is correct
-    df_data["is_intention_accurate"] = (df_data["ground_truth"] == df_data["intention_pred"]).astype(int)
+    # INTENTION_GROUND_TRUTH should be TASK/QUICK/SEARCH/AMBIGUOUS
+    df_data[INTENTION_ACCURATE] = (df_data[INTENTION_GROUND_TRUTH] == df_data[INTENTION_PREDICT]).astype(int)
 
     # get all possible intention values
-    actual_classes = sorted(set(df_data["ground_truth"].unique()) | set(df_data["intention_pred"].unique()))
+    actual_classes = sorted(set(df_data[INTENTION_GROUND_TRUTH].unique()) | set(df_data[INTENTION_PREDICT].unique()))
 
     # confusion matrix
-    cm = confusion_matrix(df_data["ground_truth"], df_data["intention_pred"], labels=actual_classes)
+    cm = confusion_matrix(df_data[INTENTION_GROUND_TRUTH], df_data[INTENTION_PREDICT], labels=actual_classes)
 
     # create heatmap
     plt.figure(figsize=(8, 6))
@@ -134,7 +138,9 @@ def eval_intention(df_data):
     plt.close()
 
     # classification report
-    report = classification_report(df_data["ground_truth"], df_data["intention_pred"], target_names=actual_classes)
+    report = classification_report(
+        df_data[INTENTION_GROUND_TRUTH], df_data[INTENTION_PREDICT], target_names=actual_classes
+    )
     print("\n分类报告:")
     print(report)
 
@@ -153,7 +159,7 @@ async def main(input_csv_file, output_csv_file):
 
 
 if __name__ == "__main__":
-    input_csv_file = "/root/MetaGPT/intention_test2.xlsx"
-    output_csv_file = "/root/MetaGPT/intention-test2-result.xlsx"
+    input_csv_file = "/root/MetaGPT/intention_test.xlsx"
+    output_csv_file = "/root/MetaGPT/intention_test_result.xlsx"
 
     asyncio.run(main(input_csv_file, output_csv_file))
