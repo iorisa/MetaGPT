@@ -28,6 +28,7 @@ from metagpt.prompts.di.role_zero import (
     ASK_HUMAN_GUIDANCE_FORMAT,
     CMD_PROMPT,
     DETECT_LANGUAGE_PROMPT,
+    DOMAIN_INFO,
     END_COMMAND,
     JSON_REPAIR_PROMPT,
     QUICK_RESPONSE_SYSTEM_PROMPT,
@@ -42,6 +43,7 @@ from metagpt.prompts.di.role_zero import (
     SUMMARY_PROMPT,
     SYSTEM_PROMPT,
 )
+from metagpt.prompts.di.supabase import get_open_supabase_guidance
 from metagpt.roles import Role
 from metagpt.schema import AIMessage, Message, UserMessage
 from metagpt.strategy.experience_retriever import DummyExpRetriever, ExpRetriever
@@ -338,7 +340,7 @@ class RoleZero(Role):
         current_time = datetime.now(time_zone)
         # format time in Los Angeles
         formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S %A")
-        return f" The current time in Los Angeles is {formatted_time}." + super()._get_prefix()
+        return f" The current time in Los Angeles is {formatted_time}." + super()._get_prefix() + DOMAIN_INFO
 
     async def _act(self) -> Message:
         if self.use_fixed_sop:
@@ -408,10 +410,6 @@ class RoleZero(Role):
 
         return rsp  # return output from the last action
 
-    def format_quick_system_prompt(self) -> str:
-        """Format the system prompt for quick thinking."""
-        return QUICK_THINK_SYSTEM_PROMPT.format(examples=QUICK_THINK_EXAMPLES, role_info=self._get_prefix())
-
     async def _quick_think(self) -> Tuple[Message, str]:
         answer = ""
         rsp_msg = None
@@ -422,18 +420,21 @@ class RoleZero(Role):
         # routing
         memory = self.get_memories(k=self.memory_k)
         context = self.llm.format_msg(memory + [UserMessage(content=QUICK_THINK_PROMPT)])
+        cls_sys_msg = QUICK_THINK_SYSTEM_PROMPT.format(
+            examples=QUICK_THINK_EXAMPLES, role_info=self._get_prefix(), dynamic_rules=get_open_supabase_guidance()
+        )
         async with ThoughtReporter() as reporter:
             await reporter.async_report({"type": "classify"})
-            intent_result = await self.llm.aask(context, system_msgs=[self.format_quick_system_prompt()])
+            intent_result = await self.llm.aask(context, system_msgs=[cls_sys_msg])
 
         if "QUICK" in intent_result:  # llm call with the original context
             cleaned_memory = self._clean_memory(self.get_memories(k=self.memory_k))
+            rsp_sys_msg = QUICK_RESPONSE_SYSTEM_PROMPT.format(
+                role_info=self._get_prefix(), dynamic_rules=get_open_supabase_guidance()
+            )
             async with ThoughtReporter(enable_llm_stream=True) as reporter:
                 await reporter.async_report({"type": "quick"})
-                answer = await self.llm.aask(
-                    self.llm.format_msg(cleaned_memory),
-                    system_msgs=[QUICK_RESPONSE_SYSTEM_PROMPT.format(role_info=self._get_prefix())],
-                )
+                answer = await self.llm.aask(self.llm.format_msg(cleaned_memory), system_msgs=[rsp_sys_msg])
             # If the answer contains the substring '[Message] from A to B:', remove it.
             pattern = r"\[Message\] from .+? to .+?:\s*"
             answer = re.sub(pattern, "", answer, count=1)

@@ -1,5 +1,13 @@
 from metagpt.tools.libs.supabase_manager import get_supabase_manager_instance
 
+# used for RoleZero.quick_think
+ENABLE_SUPABASE_GUIDANCE = """
+For a web development requirement involving Auth, Database, Storage, and Real-time features
+ - Pay attention to the current Supabase status: Supabase is {status}
+ - If Supabase is enabled, start the task directly with Supabase as the backend (A TASK intent).
+ - Otherwise, ask the user if they want Supabase or simply localStorage as the backend. Inform the user they can connect to Supabase by clicking the Supabase button on the top right of the platform. However, if the user wants localStorage, they don't need any operation. Ask the user for their preference (A QUICK intent).
+"""
+
 FE_SUPABASE_PROMPT = """
 Supabase is enabled, use it as the backend service (provides Auth, Database, Storage, and Real-time features).
 
@@ -53,6 +61,12 @@ const {{ error }} = await supabase.auth.signUp({{email, password, options: {{ema
 ```
 
 """
+
+
+def get_open_supabase_guidance() -> str:
+    """Provide guidance on enabling Supabase if not enabled"""
+    manager = get_supabase_manager_instance()
+    return ENABLE_SUPABASE_GUIDANCE.format(status="enabled" if manager.is_supabase_enabled else "disabled")
 
 
 def get_backend_prompt_for_fe() -> str:
