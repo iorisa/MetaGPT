@@ -29,7 +29,7 @@ from metagpt.logs import logger
 from metagpt.provider.constant import MULTI_MODAL_MODELS
 from metagpt.utils.common import log_and_reraise
 from metagpt.utils.cost_manager import CostManager, Costs
-from metagpt.utils.token_counter import TOKEN_MAX
+from metagpt.utils.token_counter import TOKEN_MAX, count_message_tokens
 
 
 class BaseLLM(ABC):
@@ -277,12 +277,61 @@ class BaseLLM(ABC):
         return timeout or self.config.timeout or LLM_API_TIMEOUT
 
     def count_tokens(self, messages: list[dict]) -> int:
+        """count the tokens of the messages
+        Using OpenAI's token calculation method (tiktoken) as default for OpenAI models
+        For non-OpenAI models, using a basic approximation (0.5 * character count)
+        """
         # A very raw heuristic to count tokens, taking reference from:
         # https://help.openai.com/en/articles/4936856-what-are-tokens-and-how-to-count-them
         # https://platform.deepseek.com/api-docs/#token--token-usage
         # The heuristics is a huge overestimate for English text, e.g., and should be overwrittem with accurate token count function in inherited class
         # logger.warning("Base count_tokens is not accurate and should be overwritten.")
-        return sum([int(len(msg["content"]) * 0.5) for msg in messages])
+
+        return count_message_tokens(messages, "gpt-4o")
+        # for non-OpenAI models
+        # return sum([int(len(msg["content"]) * 0.5) for msg in messages])
+
+    def get_content_under_limit_token(self, msg: dict, target_token_count: int, from_end: bool = True) -> dict:
+        """use binary search to truncate the content to meet the target token count
+        Args:
+            content: original content
+            target_token_count: target token count
+            from_end: whether to truncate from the end
+        Returns:
+            str: truncated content
+        """
+
+        def binary_search_truncate(text: str) -> str:
+            total_token_count = self.count_tokens([{"role": msg["role"], "content": text}])
+            if total_token_count <= target_token_count:
+                return text
+            left, right = 0, len(text)
+            while left <= right:
+                mid = (left + right) // 2
+                mid_content = text[-mid:] if from_end else text[:mid]
+                token_count = self.count_tokens([{"role": msg["role"], "content": mid_content}])
+                if token_count == target_token_count:
+                    return mid_content
+                elif token_count < target_token_count:
+                    left = mid + 1
+                else:
+                    right = mid - 1
+            return ""
+
+        # Handle GPT-4V case where content might be a list of dicts
+        if isinstance(msg["content"], list):
+            truncated_content = []
+            # Find the text content in the list
+            for item in msg["content"]:
+                if isinstance(item, dict) and item.get("type") == "text":
+                    text_content = item.get("text", "")
+                    truncated_content.append({"type": "text", "text": binary_search_truncate(text_content)})
+                else:
+                    truncated_content.append(item)
+            return {"role": msg["role"], "content": truncated_content}
+
+        # for normal text content
+        return {"role": msg["role"], "content": binary_search_truncate(msg["content"])}
 
     def compress_messages(
         self,
@@ -330,11 +379,18 @@ class BaseLLM(ABC):
                 else:
                     if compress_type == CompressType.POST_CUT_BY_TOKEN or len(compressed) == len(system_msgs):
                         # Truncate the message to fit within the remaining token count; Otherwise, discard the msg. If compressed has no user or assistant message, enforce cutting by token
-                        truncated_content = msg["content"][-(keep_token - current_token_count) :]
-                        compressed.insert(len(system_msgs), {"role": msg["role"], "content": truncated_content})
+                        truncated_token = keep_token - current_token_count
+                        truncated_msg = self.get_content_under_limit_token(
+                            msg, truncated_token, from_end=True
+                        )  # truncate from end
+                        compressed.insert(len(system_msgs), truncated_msg)
+                        # update current_token_count
+                        token_count = self.count_tokens([truncated_msg])
+                        current_token_count += token_count
                     logger.warning(
                         f"Truncated messages with {compress_type} to fit within the token limit. "
                         f"The first user or assistant message after truncation (originally the {i}-th message from last): {compressed[len(system_msgs)]}."
+                        f"current_token_count: {current_token_count}, keep_token: {keep_token}"
                     )
                     break
 
@@ -348,11 +404,18 @@ class BaseLLM(ABC):
                 else:
                     if compress_type == CompressType.PRE_CUT_BY_TOKEN or len(compressed) == len(system_msgs):
                         # Truncate the message to fit within the remaining token count; Otherwise, discard the msg. If compressed has no user or assistant message, enforce cutting by token
-                        truncated_content = msg["content"][: keep_token - current_token_count]
-                        compressed.append({"role": msg["role"], "content": truncated_content})
+                        truncated_token = keep_token - current_token_count
+                        truncated_msg = self.get_content_under_limit_token(
+                            msg, truncated_token, from_end=False
+                        )  # truncate from start
+                        compressed.append(truncated_msg)
+                        # update current_token_count
+                        token_count = self.count_tokens([truncated_msg])
+                        current_token_count += token_count
                     logger.warning(
                         f"Truncated messages with {compress_type} to fit within the token limit. "
                         f"The last user or assistant message after truncation (originally the {i}-th message): {compressed[-1]}."
+                        f"current_token_count: {current_token_count}, keep_token: {keep_token}"
                     )
                     break
 
