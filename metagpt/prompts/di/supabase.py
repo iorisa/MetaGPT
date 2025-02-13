@@ -63,7 +63,7 @@ const {{ error }} = await supabase.auth.signUp({{email, password, options: {{ema
 """
 
 
-def get_open_supabase_guidance() -> str:
+def get_enable_supabase_guidance() -> str:
     """Provide guidance on enabling Supabase if not enabled"""
     manager = get_supabase_manager_instance()
     return ENABLE_SUPABASE_GUIDANCE.format(status="enabled" if manager.is_supabase_enabled else "disabled")

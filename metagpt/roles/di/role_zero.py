@@ -43,7 +43,7 @@ from metagpt.prompts.di.role_zero import (
     SUMMARY_PROMPT,
     SYSTEM_PROMPT,
 )
-from metagpt.prompts.di.supabase import get_open_supabase_guidance
+from metagpt.prompts.di.supabase import get_enable_supabase_guidance
 from metagpt.roles import Role
 from metagpt.schema import AIMessage, Message, UserMessage
 from metagpt.strategy.experience_retriever import DummyExpRetriever, ExpRetriever
@@ -421,7 +421,7 @@ class RoleZero(Role):
         memory = self.get_memories(k=self.memory_k)
         context = self.llm.format_msg(memory + [UserMessage(content=QUICK_THINK_PROMPT)])
         cls_sys_msg = QUICK_THINK_SYSTEM_PROMPT.format(
-            examples=QUICK_THINK_EXAMPLES, role_info=self._get_prefix(), dynamic_rules=get_open_supabase_guidance()
+            examples=QUICK_THINK_EXAMPLES, role_info=self._get_prefix(), dynamic_rules=get_enable_supabase_guidance()
         )
         async with ThoughtReporter() as reporter:
             await reporter.async_report({"type": "classify"})
@@ -430,7 +430,7 @@ class RoleZero(Role):
         if "QUICK" in intent_result:  # llm call with the original context
             cleaned_memory = self._clean_memory(self.get_memories(k=self.memory_k))
             rsp_sys_msg = QUICK_RESPONSE_SYSTEM_PROMPT.format(
-                role_info=self._get_prefix(), dynamic_rules=get_open_supabase_guidance()
+                role_info=self._get_prefix(), dynamic_rules=get_enable_supabase_guidance()
             )
             async with ThoughtReporter(enable_llm_stream=True) as reporter:
                 await reporter.async_report({"type": "quick"})
