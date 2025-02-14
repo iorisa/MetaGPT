@@ -1,6 +1,6 @@
 from metagpt.tools.libs.supabase_manager import get_supabase_manager_instance
 
-# used for RoleZero.quick_think
+# used for RoleZero.quick_think. NOTE: this will impact both intent cls and quick rsp, consider both when changing
 ENABLE_SUPABASE_GUIDANCE = """
 For a web development requirement involving Auth, Database, Storage, and Real-time features
  - Pay attention to the current Supabase status: Supabase is {status}
