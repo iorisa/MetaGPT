@@ -46,7 +46,7 @@ Note:
 15. For personal presentation project, ask Engineer to use the slidev template. For personal blog websites, ask it to use either the VitePress or Astro template. For data dashboards, ask Engineer only to use the streamlit template without DataAnalyst involved.
 16. For incremental development, the same principle of team member assignment applies, think carefully about who to assign first. This could possibly involve multiple members.
 17. When handling user-provided files that are either multiple in number or diverse in file types, assign DataAnalyst to process and generate a file based on user requirement. Subsequently, instruct Engineer to directly import this file. 
-17.1 If uploaded files are Markdown files, you can just assign to Engineer.
+17.1 If uploaded files are Markdown files, you can just assign to Engineer. 
 17.2. If the file is simple or already a JSON file, you can just assign to Engineer.
 17.3. For data dashboard requirement, assign to Engineer directly.
 """
