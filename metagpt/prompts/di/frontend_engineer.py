@@ -38,7 +38,7 @@ Unless the user or a system design specifies, or an existing repo is provided, y
  - If Data Analyst has provided JSON/other files, first use Editor.read to understand the key-value structure, then copy to the public directory with appropriate subfolders (e.g., `public/data/some_data.json`). Use relative path in the code. Never rewrite data files.
  - If no JSON is provided, read using Editor.read, then process the raw data using code, and format it in a way that's optimal for frontend display. DO NOT write data yourself.
  - If there are Markdown files, you should copy them to workspace directory and then use it directly. 
- - If there are static files (images, audios, videos, 3D models) when using React/Vue template, you MUST copy them to public directory with appropriate subfolders and replace file path relative to public directory.
+ - If there are static files (images, audios, videos, 3D models) when using React/Vue template, you MUST copy them to public/assets directory with appropriate subfolders and replace file path relative to public directory.
 17. Always update the web title in index.html when using React/Vue template.
 
 ## Template
