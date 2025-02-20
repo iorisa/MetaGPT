@@ -166,6 +166,11 @@ class Engineer2(RoleZero):
 
         return code, replaced
 
+    def _is_banned_file(self, path: str) -> bool:
+        """Determine whether the file belongs to a prohibited file type using regular expressions. Prohibited types include: images, audio, video, compressed files, and PDFs."""
+        parttern = r"\.(jpg|jpeg|png|gif|svg|mp3|mp4|wav|webm|pdf)$"
+        return re.search(parttern, path)
+
     async def write_new_code(self, description: str, paths: list[str]) -> str:
         """Write one or more new code files.
 
@@ -173,6 +178,12 @@ class Engineer2(RoleZero):
             description (str): "Brief description and important notes of what and how to implement the files, including how they interact with each other if there will be multiple files.
             paths (list[str]): The paths of the files to be created.
         """
+        # check banned files
+        for path in paths:
+            banned_file_type = self._is_banned_file(path.lower())
+            if banned_file_type:
+                raise Exception(f"The following file types are not allowed: {banned_file_type}")
+
         # Get recommended code tools and their usage examples.
         if self.code_tool_recommender:
             code_tool_info = await self.code_tool_recommender.get_recommended_tool_info()
@@ -180,38 +191,47 @@ class Engineer2(RoleZero):
         else:
             tool_usage_guide = "N/A"
         prompt = WRITE_CODE_PROMPT.format(
+            current_dir=self.working_dir,
             file_path=paths,
             file_description=description,
             tool_usage_guide=tool_usage_guide,
             supabase_code_requirement=get_supabase_code_requirement(),
         )
-        # Sometimes the Engineer repeats the last command to respond.
-        # Replace the last command with a manual prompt to guide the Engineer to write new code.
-        memory = self.rc.memory.get(self.memory_k)[:-1]
+        # # Sometimes the Engineer repeats the last command to respond.
+        # # Replace the last command with a manual prompt to guide the Engineer to write new code.
+        # memory = self.rc.memory.get(self.memory_k)[:-1]  # This is commented out because it was a logic to accomodate deepseek v2 and may no longer be needed.
+        memory = self.rc.memory.get(self.memory_k)
         context = self.llm.format_msg(memory + [UserMessage(content=prompt)])
 
         async with EditorReporter(enable_llm_stream=True) as reporter:
             await reporter.async_report({"type": "files", "paths": [str(self._fix_path(i)) for i in paths]}, "meta")
             rsp = await self.llm.aask(context, system_msgs=[self.instruction])
-            code_by_files = CodeParser.parse_multiple_code(text=rsp)
 
-            output_msg = ""
-            if len(paths) != len(code_by_files):
-                logger.warning("The number of paths and code blocks do not match.")
-                output_msg += f"The number of paths and code blocks do not match. Only {paths[:len(code_by_files)]} will be saved. If you want to save more code blocks, please call the function again with the remaining paths.\n"
-            all_replaced_snippets = []
-            for path, code in zip(paths, code_by_files):
-                code, replaced_snippets = await self._tool_call(code)
-                await awrite(self._fix_path(path), code)
-                file_block = FileBlock(path=str(path), content=code)
-                output_msg = f"{output_msg}File created successfully with \n{file_block}\n"
-                if len(replaced_snippets) > 0:
-                    all_replaced_snippets.extend(replaced_snippets)
-            if all_replaced_snippets:
-                replaced_msg = "The following tool calls have been replaced with the call results:\n"
-                replaced_msg += "\n".join([f"Replaced {old} with {new}" for old, new in all_replaced_snippets])
-                # Add the content that the system automatically replaces and the fact that the tool call was executed automatically to memory.
-                self.rc.memory.add(UserMessage(content=replaced_msg))
+        rsp_wo_bash = re.sub(r"```bash.+?```", "", rsp, flags=re.DOTALL)
+        code_by_files = CodeParser.parse_multiple_code(text=rsp_wo_bash)
+
+        output_msg = ""
+        if re.search(r"```bash", rsp):
+            rm_bash_msg = "Bash commmands are not allowed in Engineer2.write_new_code and thus not executed, use Terminal.run command in a new response if necessary.\n"
+            logger.warning(rm_bash_msg)
+            output_msg += rm_bash_msg
+        if len(paths) != len(code_by_files):
+            block_mismatch_msg = f"The number of paths and code blocks do not match. Only {paths[:len(code_by_files)]} will be saved. If you want to save more code blocks, please call the function again with the remaining paths.\n"
+            logger.warning(block_mismatch_msg)
+            output_msg += block_mismatch_msg
+        all_replaced_snippets = []
+        for path, code in zip(paths, code_by_files):
+            code, replaced_snippets = await self._tool_call(code)
+            await awrite(self._fix_path(path), code)
+            file_block = FileBlock(path=str(path), content=code)
+            output_msg += f"File created successfully with \n{file_block}\n"
+            if len(replaced_snippets) > 0:
+                all_replaced_snippets.extend(replaced_snippets)
+        if all_replaced_snippets:
+            replaced_msg = "The following tool calls have been replaced with the call results:\n"
+            replaced_msg += "\n".join([f"Replaced {old} with {new}" for old, new in all_replaced_snippets])
+            # Add the content that the system automatically replaces and the fact that the tool call was executed automatically to memory.
+            self.rc.memory.add(UserMessage(content=replaced_msg))
 
         return output_msg
 

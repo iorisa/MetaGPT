@@ -16,7 +16,7 @@ from pydantic import Field, model_validator
 from metagpt.actions import Action, UserRequirement
 from metagpt.actions.di.run_command import RunCommand
 from metagpt.actions.search_enhanced_qa import SearchEnhancedQA
-from metagpt.const import DEFAULT_WORKSPACE_ROOT, IMAGES
+from metagpt.const import DEFAULT_WORKSPACE_ROOT, IMAGES, USE_ENCODED_IMAGES
 from metagpt.exp_pool import exp_cache
 from metagpt.exp_pool.context_builders import RoleZeroContextBuilder
 from metagpt.exp_pool.serializers import RoleZeroSerializer
@@ -28,6 +28,7 @@ from metagpt.prompts.di.role_zero import (
     ASK_HUMAN_GUIDANCE_FORMAT,
     CMD_PROMPT,
     DETECT_LANGUAGE_PROMPT,
+    DOMAIN_INFO,
     END_COMMAND,
     JSON_REPAIR_PROMPT,
     QUICK_RESPONSE_SYSTEM_PROMPT,
@@ -36,13 +37,13 @@ from metagpt.prompts.di.role_zero import (
     QUICK_THINK_SYSTEM_PROMPT,
     QUICK_THINK_TAG,
     REGENERATE_PROMPT,
-    REPORT_TO_HUMAN_PROMPT,
     ROLE_INSTRUCTION,
     SUMMARIZE_PROBLEM_WHEN_DUPLICATE,
     SUMMARIZE_STATUS_WHEN_CONSECUTIVE,
     SUMMARY_PROMPT,
     SYSTEM_PROMPT,
 )
+from metagpt.prompts.di.supabase import get_enable_supabase_guidance
 from metagpt.roles import Role
 from metagpt.schema import AIMessage, Message, UserMessage
 from metagpt.strategy.experience_retriever import DummyExpRetriever, ExpRetriever
@@ -51,7 +52,12 @@ from metagpt.tools.libs.browser import Browser
 from metagpt.tools.libs.editor import Editor
 from metagpt.tools.tool_recommend import BM25ToolRecommender, ToolRecommender
 from metagpt.tools.tool_registry import register_tool
-from metagpt.utils.common import CodeParser, any_to_str, extract_and_encode_images
+from metagpt.utils.common import (
+    CodeParser,
+    any_to_str,
+    extract_and_encode_images,
+    use_encoded_images,
+)
 from metagpt.utils.repair_llm_raw_output import (
     RepairType,
     repair_escape_error,
@@ -263,7 +269,7 @@ class RoleZero(Role):
         memory = self.rc.memory.get(self.memory_k)
         memory = await self.parse_browser_actions(memory)
         memory = await self.parse_editor_result(memory)
-        memory = self.parse_images(memory)
+        memory = await self.parse_images(memory)
 
         req = self.llm.format_msg(memory + [UserMessage(content=prompt)])
 
@@ -314,15 +320,19 @@ class RoleZero(Role):
         new_memory.reverse()
         return new_memory
 
-    def parse_images(self, memory: list[Message]) -> list[Message]:
+    async def parse_images(self, memory: list[Message]) -> list[Message]:
         if not self.llm.support_image_input():
             return memory
         for msg in memory:
-            if IMAGES in msg.metadata or msg.role != "user":
+            if USE_ENCODED_IMAGES in msg.metadata or msg.role != "user":
+                # Skip if the message has been processed before or is not a UserMessage
                 continue
             images = extract_and_encode_images(msg.content)
             if images:
-                msg.add_metadata(IMAGES, images)
+                encode_flag = await use_encoded_images(msg.content, self.llm)
+                msg.add_metadata(USE_ENCODED_IMAGES, encode_flag)
+                if encode_flag:
+                    msg.add_metadata(IMAGES, images)
         return memory
 
     def _get_prefix(self) -> str:
@@ -330,7 +340,7 @@ class RoleZero(Role):
         current_time = datetime.now(time_zone)
         # format time in Los Angeles
         formatted_time = current_time.strftime("%Y-%m-%d %H:%M:%S %A")
-        return f" The current time in Los Angeles is {formatted_time}." + super()._get_prefix()
+        return f" The current time in Los Angeles is {formatted_time}." + super()._get_prefix() + DOMAIN_INFO
 
     async def _act(self) -> Message:
         if self.use_fixed_sop:
@@ -369,7 +379,8 @@ class RoleZero(Role):
             # NOTE: Diff 2: Keep observing within _react, news will go into memory, allowing adapting to new info
             if await self._observe():
                 self.consecutive_react_cnt = 0
-
+                # Reset state to 0 to override potential `end` command (state = -1) and ensure the loop continues.
+                self._set_state(0)
             # think
             has_todo = await self._think()
             if not has_todo:
@@ -399,10 +410,6 @@ class RoleZero(Role):
 
         return rsp  # return output from the last action
 
-    def format_quick_system_prompt(self) -> str:
-        """Format the system prompt for quick thinking."""
-        return QUICK_THINK_SYSTEM_PROMPT.format(examples=QUICK_THINK_EXAMPLES, role_info=self._get_prefix())
-
     async def _quick_think(self) -> Tuple[Message, str]:
         answer = ""
         rsp_msg = None
@@ -413,18 +420,21 @@ class RoleZero(Role):
         # routing
         memory = self.get_memories(k=self.memory_k)
         context = self.llm.format_msg(memory + [UserMessage(content=QUICK_THINK_PROMPT)])
+        cls_sys_msg = QUICK_THINK_SYSTEM_PROMPT.format(
+            examples=QUICK_THINK_EXAMPLES, role_info=self._get_prefix(), dynamic_rules=get_enable_supabase_guidance()
+        )
         async with ThoughtReporter() as reporter:
             await reporter.async_report({"type": "classify"})
-            intent_result = await self.llm.aask(context, system_msgs=[self.format_quick_system_prompt()])
+            intent_result = await self.llm.aask(context, system_msgs=[cls_sys_msg])
 
         if "QUICK" in intent_result:  # llm call with the original context
             cleaned_memory = self._clean_memory(self.get_memories(k=self.memory_k))
+            rsp_sys_msg = QUICK_RESPONSE_SYSTEM_PROMPT.format(
+                role_info=self._get_prefix(), dynamic_rules=get_enable_supabase_guidance()
+            )
             async with ThoughtReporter(enable_llm_stream=True) as reporter:
                 await reporter.async_report({"type": "quick"})
-                answer = await self.llm.aask(
-                    self.llm.format_msg(cleaned_memory),
-                    system_msgs=[QUICK_RESPONSE_SYSTEM_PROMPT.format(role_info=self._get_prefix())],
-                )
+                answer = await self.llm.aask(self.llm.format_msg(cleaned_memory), system_msgs=[rsp_sys_msg])
             # If the answer contains the substring '[Message] from A to B:', remove it.
             pattern = r"\[Message\] from .+? to .+?:\s*"
             answer = re.sub(pattern, "", answer, count=1)
@@ -628,7 +638,7 @@ class RoleZero(Role):
                 return end_output
             return human_response
         # output from bash.run may be empty, add decorations to the output to ensure visibility.
-        elif cmd["command_name"] == "Terminal.run":
+        elif "Terminal" in cmd["command_name"]:  # Terminal.run and its alias
             tool_obj = self.tool_execution_map[cmd["command_name"]]
             tool_output = await tool_obj(**cmd["args"])
             if len(tool_output) <= 10:
@@ -652,7 +662,7 @@ class RoleZero(Role):
         # format plan status
         # Example:
         # [GOAL] create a 2048 game
-        # [TASK_ID 1] (finished) Create a Product Requirement Document (PRD) for the 2048 game. This task depends on tasks[]. [Assign to Alice]
+        # [TASK_ID 1] (finished) Create a Product Requirement Document (PRD) for the 2048 game. This task depends on tasks[]. [Assign to Emma]
         # [TASK_ID 2] (        ) Design the system architecture for the 2048 game. This task depends on tasks[1]. [Assign to Bob]
         formatted_plan_status = f"[GOAL] {plan_status['goal']}\n"
         if len(plan_status["tasks"]) > 0:
@@ -691,17 +701,6 @@ class RoleZero(Role):
     async def _end(self, **kwarg):
         self._set_state(-1)
         memory = self.rc.memory.get(self.memory_k)
-        # Ensure reply to the human before the "end" command is executed. Hard code k=5 for checking.
-        if not any(["reply_to_human" in memory.content for memory in self.get_memories(k=5)]):
-            logger.info("manually reply to human")
-            reply_to_human_prompt = REPORT_TO_HUMAN_PROMPT.format(
-                respond_language=self.respond_language, working_dir=self.working_dir
-            )
-            async with ThoughtReporter(enable_llm_stream=True) as reporter:
-                await reporter.async_report({"type": "quick"})
-                reply_content = await self.llm.aask(self.llm.format_msg(memory + [UserMessage(reply_to_human_prompt)]))
-            await self.reply_to_human(content=reply_content)
-            self.rc.memory.add(AIMessage(content=reply_content, cause_by=RunCommand))
         outputs = ""
         # Summary of the Completed Task and Deliverables
         if self.use_summary:

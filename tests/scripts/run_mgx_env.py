@@ -37,13 +37,13 @@ async def main(requirement="", user_defined_recipient="", enable_human_input=Fal
         human_input_thread = send_human_input(env, stop_event)
 
     if requirement:
+        msg = Message(content=requirement)
+        await env.attach_images(msg)  # attach image content if applicable
         if user_defined_recipient:
-            env.publish_message(
-                Message(content=requirement, send_to={user_defined_recipient}),
-                user_defined_recipient=user_defined_recipient,
-            )
+            msg.send_to = {user_defined_recipient}
+            env.publish_message(msg, user_defined_recipient=user_defined_recipient)
         else:
-            env.publish_message(Message(content=requirement))
+            env.publish_message(msg)
 
     allow_idle_time = allow_idle_time if enable_human_input else 1
     start_time = time.time()
@@ -168,7 +168,7 @@ CODING_REQ3 = "python里的装饰器是怎么用的，给我个例子"
 if __name__ == "__main__":
     # NOTE: Change the requirement to the one you want to test
     #       Set enable_human_input to True if you want to simulate sending messages in chatbox
-    #       user_defined_recipient = "" means Mike (TL) by default, you can change to Alice, Bob, Alex, etc.
+    #       user_defined_recipient = "" means Mike (TL) by default, you can change to Emma, Bob, Alex, etc.
     requirement = GAME_REQ
     user_defined_recipient = ""
 

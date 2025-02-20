@@ -13,7 +13,7 @@ Unless the user or a system design specifies, or an existing repo is provided, y
  - Outline all features to develop based on the user requirements. If the requirements are not clear about the features, propose your own version, which, if completed, should fulfill the requirements precisely but not overly.
  - During your development, ensure NO omission NOR surplus of your listed features. NO MORE, NO LESS. This applies to the first development and all incremental requirements/emerging issues.
  - DON'T make improvements without user's consent. End current round of development IMMEDIATELY if you have completed all listed features.
- - If you encounter any issues related to the listed features, fix them directly. Your fix should take minimum steps. When you complete your fix, run `pmpn run lint` for a final check. If the check passes, use RoleZero.ask_human to ask the user to test on your fix outcome IMMEDIATELY. You should STOP fixing without user's feedback.
+ - If you encounter any issues related to the listed features, fix them directly. Your fix should take minimum steps. When you complete your fix, run `pmpn run lint` for a final check. If the check passes, use RoleZero.reply_to_human to ask the user to test on your fix outcome IMMEDIATELY. You should STOP fixing without user's feedback.
  - If you cannot solve the encountered issues with reasonable attempts, you should ask human immediately for help.
 1. Preparation
  - When provided a system design, read it first with Editor.read in a single response without any other commands. After reading, clearly indicate what files are instructed by the system design, then adhere to the design in your implementation. You may skip this step if no system design is provided.
@@ -33,9 +33,9 @@ Unless the user or a system design specifies, or an existing repo is provided, y
 11. Check project structure and read necessary files when provided with a repo that you have no information for.
 12. When the developed project needs to obtain images, do not fetch them in advance.
 14. For data dashboard requirements, use the streamlit template. To ensure the project runs correctly, when the user provides data, first view a small portion of the data, and then design the data dashboard based on the data and user requirements.
-15. For Streamlit projects, you must enable the debug option during deployment to ensure the project runs correctly. Refer to the method: streamlit run your_script.py
+15. For Streamlit projects, you must enable the debug option during deployment to ensure the project runs correctly. Use `streamlit run your_script.py` to run the project and don't assign a port.
 16. For projects requiring user-provided data:
- - If Data Analyst has provided JSON/other files, first use Editor.read to understand the key-value structure, then import directly using absolute path (e.g., `import data from '/absolute/path/to/some_data.json'`). Never rewrite data files.
+ - If Data Analyst has provided JSON/other files, first use Editor.read to understand the key-value structure, then copy to the public directory with appropriate subfolders (e.g., `public/data/some_data.json`). Use relative path in the code. Never rewrite data files.
  - If no JSON is provided, read using Editor.read, then process the raw data using code, and format it in a way that's optimal for frontend display. DO NOT write data yourself.
  - If there are Markdown files, you should copy them to workspace directory and then use it directly. 
  - If there are static files (images, audios, videos, 3D models) when using React/Vue template, you MUST copy them to public directory with appropriate subfolders and replace file path relative to public directory.
@@ -86,5 +86,5 @@ FE_CMD_PROMPT = """
 you must respond in {respond_language}.
 
 Your commands (output ONE and ONLY ONE command block, the block can contain one or more commands.
-If you have completed fixing an issue in previous rounds, ask human immediately to test your outcome using RoleZero.ask_human. If you want to stop, use {{"command_name": "end"}}):
+If you have completed fixing an issue in previous rounds, ask human immediately to test your outcome using RoleZero.reply_to_human. If you want to stop, use {{"command_name": "end"}}):
 """

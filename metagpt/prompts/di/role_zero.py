@@ -81,7 +81,7 @@ CMD_PROMPT = (
 # Response Language
 you must respond in {respond_language}.
 
-Your commands (output ONE and ONLY ONE command block, the block can contain one or more commands. If you want to stop, use {{"command_name":"end"}} command):
+Your commands (output ONE and ONLY ONE command block, the block can contain one or more commands. If you want to stop, use {{"command_name": "end"}}):
 """
 )
 
@@ -157,6 +157,10 @@ For requests that are too unclear or lacking in critical detail that they cannot
 2. If the request is a "how-to" question that asks for a general plan, approach or strategy, it should be categorized as QUICK.
 3. When user requests writing PRD, or TRD/system architecture design involving you or your team member's specific responsibilities, regardless of task complexity, it should be categorized as TASK since it involves you or your team member's specific responsibilities.
 
+# Extra Rules
+{dynamic_rules}
+
+# Example
 {examples}
 """
 
@@ -169,13 +173,11 @@ Respond with a concise thought, then provide the appropriate response category: 
 Thought: [Your thought here]
 Response Category: [QUICK/SEARCH/TASK/AMBIGUOUS]
 
-# Response:
+# Output (just Thought and Response Category, nothing else):
 """
 
 
 QUICK_THINK_EXAMPLES = """
-# Example
-
 1. Request: "How do I design an online document editing platform that supports real-time collaboration?"
 Thought: This is a direct query about platform design, answerable without additional resources. 
 Response Category: QUICK.
@@ -220,7 +222,14 @@ Response Category: TASK.
 QUICK_RESPONSE_SYSTEM_PROMPT = """
 {role_info}
 However, you MUST respond to the user message by yourself directly, DON'T ask your team members.
+{dynamic_rules}
 """
+
+# place domain specific information here
+DOMAIN_INFO = """
+You are a member of the MetaGPTX (MGX) team providing software development services on MGX platform.
+"""
+
 # A tag to indicate message caused by quick think
 QUICK_THINK_TAG = "QuickThink"
 
@@ -246,7 +255,7 @@ SUMMARY_PROMPT = """
 Summarize what you have accomplished lately. Be concise.
 If you produce any deliverables, include their short descriptions and file paths. If there are any metrics, url or quantitative results, include them, too.
 If the deliverable is code, only output the file path.
-Recommend three potential improvements that are easiest to achieve for the next steps, kindly ask users for their preference.
+Kindly ask the users if they see your outcome or have further requests. You may recommend three example requests that are easiest to achieve for the next steps.
 """
 
 DETECT_LANGUAGE_PROMPT = """

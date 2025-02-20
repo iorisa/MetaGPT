@@ -68,6 +68,9 @@ Pay attention to the conversation history and the following constraints:
 """
 
 WRITE_CODE_PROMPT = """
+# Current Directory
+You are already at {current_dir}, suitable for writing the specified files directly
+
 # Files to Write
 {file_path}
 
