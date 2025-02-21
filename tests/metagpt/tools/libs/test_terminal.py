@@ -43,9 +43,15 @@ async def test_terminal_typing():
 
 
 def test_is_service_process():
-    assert is_service_process(["some string", "some string localhost:3000 some string", "test string"])
-    assert is_service_process(["http://192.2.3.4:5000 abc", "test string"])
-    assert not is_service_process(["some string", "test string"])
+    assert not is_service_process("232.6/232.6 KB 4.9 MB/s eta 0:00:00")
+    assert not is_service_process("0:00:13")
+    assert is_service_process("localhost:3000")
+    assert is_service_process("http://localhost:3000")
+    assert is_service_process("http://127.0.0.1.nip.io:5173")
+    assert is_service_process("http://113.89.232.111:8501")
+    assert is_service_process("113.89.232.111:8501")
+    assert is_service_process("http://192.2.3.4:5000 abc")
+    assert not is_service_process("some string")
 
 
 if __name__ == "__main__":

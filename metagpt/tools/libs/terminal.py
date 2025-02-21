@@ -21,7 +21,9 @@ Note: You may operate on the new tab, or switch back to the detached tab {detach
 
 
 def is_service_process(output: str) -> bool:
-    pattern = r"localhost:\d+|[\d.]+:\d+"  # match localhost:port or ip:port"
+    pattern = (
+        r"(https?:\/\/)?(localhost|(?:\d{1,3}\.){3}\d{1,3}(?:\.[a-zA-Z0-9-]+)*):\d+"  # match localhost:port or ip:port"
+    )
     return bool(re.search(pattern, output))
 
 
