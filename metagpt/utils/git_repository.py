@@ -104,7 +104,7 @@ class GitRepository:
         self._repository = Repo.init(path=Path(local_path))
 
         gitignore_filename = Path(local_path) / ".gitignore"
-        ignores = ["__pycache__", "*.pyc"]
+        ignores = ["__pycache__", "*.pyc", ".vs"]
         with open(str(gitignore_filename), mode="w") as writer:
             writer.write("\n".join(ignores))
         self._repository.index.add([".gitignore"])
@@ -150,7 +150,7 @@ class GitRepository:
         return files
 
     @staticmethod
-    def is_git_dir(local_path):
+    def is_git_dir(local_path: Optional[Union[str, Path]]):
         """Check if the specified directory is a Git repository.
 
         :param local_path: The local path to check.
