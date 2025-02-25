@@ -7,16 +7,25 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 import tiktoken
-from llama_index.core.base.embeddings.base import BaseEmbedding
-from llama_index.core.schema import NodeWithScore
+
+try:
+    from llama_index.core.base.embeddings.base import BaseEmbedding
+    from llama_index.core.schema import NodeWithScore
+
+    from metagpt.rag.engines import SimpleEngine
+    from metagpt.rag.factories.embedding import RAGEmbeddingFactory
+    from metagpt.rag.schema import (
+        FAISSIndexConfig,
+        FAISSRetrieverConfig,
+        LLMRankerConfig,
+    )
+except Exception as e:
+    print(f"{e}, run `pip install -e .[rag]`")
 from pydantic import BaseModel, Field, model_validator
 
 from metagpt.config2 import Config
 from metagpt.context import Context
 from metagpt.logs import logger
-from metagpt.rag.engines import SimpleEngine
-from metagpt.rag.factories.embedding import RAGEmbeddingFactory
-from metagpt.rag.schema import FAISSIndexConfig, FAISSRetrieverConfig, LLMRankerConfig
 from metagpt.utils.common import aread, awrite, generate_fingerprint, list_files
 from metagpt.utils.file import File
 from metagpt.utils.report import EditorReporter
@@ -55,7 +64,7 @@ class IndexRepo(BaseModel):
     min_token_count: int = DEFAULT_MIN_TOKEN_COUNT
     max_token_count: int = DEFAULT_MAX_TOKEN_COUNT
     recall_count: int = 5
-    embedding: Optional[BaseEmbedding] = Field(default=None, exclude=True)
+    embedding: Optional["BaseEmbedding"] = Field(default=None, exclude=True)
     fingerprints: Dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -75,7 +84,7 @@ class IndexRepo(BaseModel):
 
     async def search(
         self, query: str, filenames: Optional[List[Path]] = None
-    ) -> Optional[List[Union[NodeWithScore, TextScore]]]:
+    ) -> Optional[List[Union["NodeWithScore", TextScore]]]:
         """Search for documents related to the given query.
 
         Args:
