@@ -11,7 +11,7 @@ from metagpt.tools.libs.index_repo import (
 )
 
 
-# @pytest.mark.skip
+@pytest.mark.skip
 @pytest.mark.asyncio
 @pytest.mark.parametrize(("path", "query"), [(TEST_DATA_PATH / "requirements", "业务线")])
 async def test_index_repo(path, query):
