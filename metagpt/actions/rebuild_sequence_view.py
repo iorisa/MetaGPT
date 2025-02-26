@@ -92,7 +92,6 @@ class RebuildSequenceView(Action):
             with_messages (Optional[Type]): An optional argument specifying messages to react to.
             format (str): The format for the prompt schema.
         """
-        format = format if format else self.config.prompt_schema
         repo = ProjectRepo(self.config.project_path)
         graph_repo_pathname = repo.workdir / GRAPH_REPO_FILE_REPO / repo.workdir.name
         self.graph_db = await DiGraphRepository.load_from(str(graph_repo_pathname.with_suffix(".json")))

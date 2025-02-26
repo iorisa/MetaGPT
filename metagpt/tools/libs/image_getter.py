@@ -185,7 +185,9 @@ class PixabayAPI(BaseImageProvider):
 
                 self.client = pxb.PixabayClient(apiKey=Config.default().pixabay_api_key)
             except ImportError:
-                raise ImportError("Please install pixabay_python with `pip install pixabay_python`.")
+                raise ImportError(
+                    "Please install pixabay_python with `pip install pixabay_python`, Requires: Python >=3.10."
+                )
         return self
 
     async def search_image(self, search_term: str) -> ImageFile | None:

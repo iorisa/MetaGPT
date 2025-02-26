@@ -57,8 +57,8 @@ def _is_python_package_root(package_root: Path) -> bool:
 
 async def reverse_engineering(package_root: Path, output_dir: Path):
     ctx = Context()
-    ctx.config.project_path = str(output_dir)
-    action = RebuildClassView(name="ReverseEngineering", i_context=str(package_root), llm=LLM(), context=ctx)
+    ctx.config.project_path = str(output_dir.resolve())
+    action = RebuildClassView(name="ReverseEngineering", i_context=str(package_root.resolve()), llm=LLM(), context=ctx)
     await action.run()
 
     action = RebuildSequenceView(name="ReverseEngineering", llm=LLM(), context=ctx)

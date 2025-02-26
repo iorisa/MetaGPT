@@ -5,11 +5,11 @@
 @Author  : alexanderwu
 @File    : project_management_an.py
 """
-from typing import List
+from typing import List, Optional
 
 from metagpt.actions.action_node import ActionNode
 
-REQUIRED_PYTHON_PACKAGES = ActionNode(
+REQUIRED_PACKAGES = ActionNode(
     key="Required packages",
     expected_type=Optional[List[str]],
     instruction="Provide required packages The response language should correspond to the context and requirements.",

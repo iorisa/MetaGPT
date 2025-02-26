@@ -271,6 +271,8 @@ class GraphRepository(ABC):
             # Updates 'my_graph_repo' with class information from the provided list of DotClassInfo objects.
         """
         for c in class_views:
+            if not c.package:
+                continue
             filename, _ = c.package.split(":", 1)
             await graph_db.insert(subject=filename, predicate=GraphKeyword.IS, object_=GraphKeyword.SOURCE_CODE)
             file_types = {".py": "python", ".js": "javascript"}

@@ -20,7 +20,7 @@ try:
         LLMRankerConfig,
     )
 except Exception as e:
-    print(f"{e}, run `pip install -e .[rag]`")
+    print(f"{e}, run `pip install -e .[rag]` if class `IndexRepo` is required.")
 from pydantic import BaseModel, Field, model_validator
 
 from metagpt.config2 import Config
@@ -138,8 +138,8 @@ class IndexRepo(BaseModel):
         return result + nodes
 
     async def merge(
-        self, query: str, indices_list: List[List[Union[NodeWithScore, TextScore]]]
-    ) -> List[Union[NodeWithScore, TextScore]]:
+        self, query: str, indices_list: List[List[Union["NodeWithScore", "TextScore"]]]
+    ) -> List[Union["NodeWithScore", "TextScore"]]:
         """Merge results from multiple indices based on the query.
 
         Args:
@@ -322,7 +322,7 @@ class IndexRepo(BaseModel):
         logger.debug(f"{pathnames}, excludes:{excludes})")
         return pathnames, excludes
 
-    async def _search(self, query: str, filters: Set[str]) -> List[NodeWithScore]:
+    async def _search(self, query: str, filters: Set[str]) -> List["NodeWithScore"]:
         """Perform a search for the given query using the index.
 
         Args:

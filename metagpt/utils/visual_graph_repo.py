@@ -54,10 +54,19 @@ class _VisualClassView(BaseModel):
 
         mermaid_txt = self.uml.get_mermaid(align=align)
         for i in self.generalizations:
+            i = self.refine_variable_name(i)
+            if not i:
+                continue
             mermaid_txt += f"{prefix}{i} <|-- {self.name}\n"
         for i in self.compositions:
+            i = self.refine_variable_name(i)
+            if not i:
+                continue
             mermaid_txt += f"{prefix}{i} *-- {self.name}\n"
         for i in self.aggregations:
+            i = self.refine_variable_name(i)
+            if not i:
+                continue
             mermaid_txt += f"{prefix}{i} o-- {self.name}\n"
         return mermaid_txt
 
@@ -65,6 +74,10 @@ class _VisualClassView(BaseModel):
     def name(self) -> str:
         """Returns the class name without the namespace prefix."""
         return split_namespace(self.package)[-1]
+
+    @staticmethod
+    def refine_variable_name(v: str) -> str:
+        return re.sub(r"[\\'\"].*", "", v)
 
 
 class VisualGraphRepo(ABC):

@@ -48,7 +48,6 @@ class RebuildClassView(Action):
             with_messages (Optional[Type]): An optional argument specifying messages to react to.
             format (str): The format for the prompt schema.
         """
-        format = format if format else self.config.prompt_schema
         repo = ProjectRepo(self.config.project_path)
         graph_repo_pathname = repo.workdir / GRAPH_REPO_FILE_REPO / repo.workdir.name
         self.graph_db = await DiGraphRepository.load_from(str(graph_repo_pathname.with_suffix(".json")))
@@ -59,7 +58,9 @@ class RebuildClassView(Action):
         await GraphRepository.update_graph_db_with_class_relationship_views(self.graph_db, relationship_views)
         await GraphRepository.rebuild_composition_relationship(self.graph_db)
         # use ast
-        direction, diff_path = self._diff_path(path_root=Path(self.i_context).resolve(), package_root=package_root)
+        direction, diff_path = self._diff_path(
+            path_root=Path(self.i_context).resolve(), package_root=Path(package_root).resolve()
+        )
         symbols = repo_parser.generate_symbols()
         for file_info in symbols:
             # Align to the same root directory in accordance with `class_views`.
@@ -204,11 +205,17 @@ class RebuildClassView(Action):
             >>> _diff_path(path_root=Path("/Users/x/github/MetaGPT/metagpt"), package_root=Path("/Users/x/github/MetaGPT/metagpt"))
             "=", "."
         """
-        if len(str(path_root)) > len(str(package_root)):
-            return "+", str(path_root.relative_to(package_root))
-        if len(str(path_root)) < len(str(package_root)):
-            return "-", str(package_root.relative_to(path_root))
-        return "=", "."
+        try:
+            if not package_root or not path_root:
+                return "?", "?"
+            if len(str(path_root)) > len(str(package_root)):
+                return "+", str(path_root.relative_to(package_root))
+            if len(str(path_root)) < len(str(package_root)):
+                return "-", str(package_root.relative_to(path_root))
+            return "=", "."
+        except ValueError as e:
+            logger.warning(f"{e}")
+            return "?", "?"
 
     @staticmethod
     def _align_root(path: str, direction: str, diff_path: str) -> str:
@@ -216,7 +223,7 @@ class RebuildClassView(Action):
 
         Args:
             path (str): The path to be aligned.
-            direction (str): The direction of alignment ('+', '-', '=').
+            direction (str): The direction of alignment ('+', '-', '=', '?').
             diff_path (str): The path representing the difference.
 
         Returns:
@@ -229,6 +236,8 @@ class RebuildClassView(Action):
             >>> _align_root(path="metagpt/software_company.py", direction="-", diff_path="metagpt")
             "software_company.py"
         """
+        if direction == "?":
+            return "?"
         if direction == "=":
             return path
         if direction == "+":
